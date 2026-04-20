@@ -11,8 +11,9 @@ config_version=5
 [application]
 
 config/name="Recoil"
+run/main_scene="uid://cya2rqdruf177"
 config/features=PackedStringArray("4.6", "GL Compatibility")
-config/icon="res://icon.svg"
+config/icon="res://Sprites/icon.svg"
 
 [autoload]
 
