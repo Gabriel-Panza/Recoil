@@ -5,6 +5,15 @@
 [sub_resource type="CircleShape2D" id="CircleShape2D_sgihj"]
 radius = 15.033297
 
+[sub_resource type="Gradient" id="Gradient_sgihj"]
+offsets = PackedFloat32Array(0, 0.5745192, 1)
+colors = PackedColorArray(1, 0.8352941, 0.3529412, 1, 1, 0.36862746, 0, 1, 0.39215687, 0.39215687, 0.39215687, 0.60784316)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_o4esg"]
+gradient = SubResource("Gradient_sgihj")
+width = 1
+height = 1
+
 [node name="Projectile" type="Area2D" unique_id=1086104017 groups=["Projectile"]]
 script = ExtResource("1_sgihj")
 
@@ -15,5 +24,15 @@ shape = SubResource("CircleShape2D_sgihj")
 
 [node name="VisibleOnScreenNotifier2D" type="VisibleOnScreenNotifier2D" parent="." unique_id=754933066]
 rect = Rect2(-14, -14, 28, 28)
+
+[node name="CPUParticles2D" type="CPUParticles2D" parent="." unique_id=742465443]
+amount = 48
+texture = SubResource("GradientTexture2D_o4esg")
+lifetime = 0.4
+direction = Vector2(0, 1)
+spread = 90.0
+gravity = Vector2(0, 0)
+initial_velocity_min = 20.0
+initial_velocity_max = 60.0
 
 [connection signal="screen_exited" from="VisibleOnScreenNotifier2D" to="." method="_on_screen_exited"]
