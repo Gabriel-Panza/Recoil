@@ -9,7 +9,7 @@
 [node name="Fundo" type="Sprite2D" parent="." unique_id=1853213105]
 modulate = Color(0, 1, 0, 1)
 position = Vector2(575.5, 323)
-scale = Vector2(13.5, 7.5)
+scale = Vector2(9, 5)
 texture = ExtResource("1_11gbw")
 
 [node name="StaticBody2D" type="StaticBody2D" parent="Fundo" unique_id=1749266307]
