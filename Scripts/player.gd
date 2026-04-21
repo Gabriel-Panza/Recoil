@@ -56,7 +56,6 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	var mouse_pos = get_global_mouse_position()
 	var look_direction = global_position.direction_to(mouse_pos)
-	rotation = look_direction.angle()
 
 	# Dash na direção do mouse
 	if Input.is_action_just_pressed("dash") and can_dash and not is_dashing:
