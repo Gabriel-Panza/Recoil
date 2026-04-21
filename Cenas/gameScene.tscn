@@ -1,14 +1,23 @@
 [gd_scene format=3 uid="uid://cya2rqdruf177"]
 
 [ext_resource type="Texture2D" uid="uid://bu8ebewoxx14s" path="res://Sprites/icon.svg" id="1_11gbw"]
-[ext_resource type="PackedScene" uid="uid://56ftx5purtp6" path="res://Cenas/Player.tscn" id="2_6gco8"]
+[ext_resource type="PackedScene" uid="uid://56ftx5purtp6" path="res://Cenas/Player/Player.tscn" id="2_6gco8"]
+[ext_resource type="PackedScene" uid="uid://dwd2oyh8qwgdd" path="res://Cenas/Player/projectile.tscn" id="3_bwuk2"]
 
 [node name="GameScene" type="Node2D" unique_id=1227710897]
 
 [node name="Fundo" type="Sprite2D" parent="." unique_id=1853213105]
+modulate = Color(0, 1, 0, 1)
 position = Vector2(575.5, 323)
-scale = Vector2(9, 5)
+scale = Vector2(13.5, 7.5)
 texture = ExtResource("1_11gbw")
+
+[node name="StaticBody2D" type="StaticBody2D" parent="Fundo" unique_id=1749266307]
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Fundo/StaticBody2D" unique_id=909779123]
+build_mode = 1
+polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63.199997, 64.083336, -51.5, 63.694443, 53.7, 54.805557, 63.400005, -55.13889, 63.8, -64.02778, 52.400005)
 
 [node name="Player" parent="." unique_id=1733015852 instance=ExtResource("2_6gco8")]
 position = Vector2(574, 341)
+pistol_bullet_scene = ExtResource("3_bwuk2")
