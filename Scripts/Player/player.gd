@@ -25,6 +25,18 @@ var contact_damage_timer: Timer
 # --- Sprites ---
 var aparencia
 
+# Variáveis de XP e Nível
+@export var level: int = 1
+@export var current_xp: int = 0
+@export var xp_to_next_level: int = 100
+var upando = false
+
+# Sinais para comunicação entre códigos
+signal xp_updated(current_xp, xp_to_next_level)
+signal level_updated(level, current_xp, xp_to_next_level)
+signal hp_updated(health, maxHealth)
+signal stats_updated()
+
 # --- ESTADOS DO JOGADOR ---
 var can_shoot: bool = true
 var can_dash: bool = true
@@ -34,8 +46,19 @@ var is_dashing: bool = false
 var shoot_timer: Timer
 var dash_cd_timer: Timer
 
+# --- Paths ---
+var pause_control_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/PauseControl"
+var pause_control: Control
+var game_over_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/PauseControl/GameOver"
+var game_over: Panel
+var game_win_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/PauseControl/GameWin"
+var game_win: Panel
+
 func _ready() -> void:
 	aparencia = get_node_or_null("Aparencia")
+	pause_control = get_node_or_null(pause_control_path)
+	game_over = get_node_or_null(game_over_path)
+	game_win = get_node_or_null(game_win_path)
 
 	shoot_timer = Timer.new()
 	shoot_timer.one_shot = true
@@ -57,13 +80,14 @@ func _physics_process(delta: float) -> void:
 	var mouse_pos = get_global_mouse_position()
 	var look_direction = global_position.direction_to(mouse_pos)
 
-	# Dash na direção do mouse
-	if Input.is_action_just_pressed("dash") and can_dash and not is_dashing:
-		perform_dash(look_direction)
+	if pause_control.canMove:
+		# Dash na direção do mouse
+		if Input.is_action_just_pressed("dash") and can_dash and not is_dashing:
+			perform_dash(look_direction)
 
-	# Atirar / Movimentação por Recuo
-	if Input.is_action_pressed("shoot") and can_shoot and not is_dashing:
-		shoot(look_direction)
+		# Atirar / Movimentação por Recuo
+		if Input.is_action_pressed("shoot") and can_shoot and not is_dashing:
+			shoot(look_direction)
 
 	# Aplicar Atrito se não estiver no meio de um dash
 	if not is_dashing:
@@ -114,8 +138,32 @@ func perform_dash(direction: Vector2) -> void:
 
 func take_damage(amount: int) -> void:
 	current_health -= amount
+	emit_signal("hp_updated", current_health, max_health)
+	
 	if current_health <= 0:
-		print("Morreu! Game Over")
+		die()
+	
+	# Feedback visual de dano
+	var tween = create_tween()
+	tween.tween_property(aparencia, "modulate", Color.RED, 0.2)
+	tween.tween_property(aparencia, "modulate", Color.WHITE, 0.2)
+
+func die():
+	# aparencia.play("death")
+	if pause_control:
+		pause_control.freeze()
+	for musica in get_tree().get_nodes_in_group("Music"):
+		musica.stop()
+	$Lose.play()
+	await get_tree().create_timer(1.0).timeout
+	game_over.visible = true
+
+func win():
+	for musica in get_tree().get_nodes_in_group("Music"):
+		musica.stop()
+	get_tree().paused = true
+	$Win.play()
+	game_win.visible = true
 
 func _on_shoot_timer_timeout() -> void:
 	can_shoot = true
@@ -148,3 +196,19 @@ func _on_contact_damage_timer_timeout() -> void:
 		take_damage(20)
 	else:
 		contact_damage_timer.stop()
+
+
+func gain_xp(amount: int) -> void:
+	current_xp += amount
+	emit_signal("xp_updated", current_xp, xp_to_next_level)
+
+	if not upando and current_xp >= xp_to_next_level:
+		upando = true
+		level_up()
+
+func level_up() -> void:
+	level += 1
+	current_xp -= xp_to_next_level
+	xp_to_next_level = int(xp_to_next_level * 1.05)
+	emit_signal("level_updated", level, current_xp, xp_to_next_level)
+	emit_signal("xp_updated", current_xp, xp_to_next_level)

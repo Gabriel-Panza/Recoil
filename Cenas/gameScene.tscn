@@ -1,10 +1,12 @@
 [gd_scene format=3 uid="uid://cya2rqdruf177"]
 
 [ext_resource type="Texture2D" uid="uid://bu8ebewoxx14s" path="res://Sprites/icon.svg" id="1_11gbw"]
+[ext_resource type="Script" uid="uid://cxq03fhvhbjhy" path="res://Scripts/game_scene.gd" id="1_f8j25"]
 [ext_resource type="PackedScene" uid="uid://56ftx5purtp6" path="res://Cenas/Player/Player.tscn" id="2_6gco8"]
 [ext_resource type="PackedScene" uid="uid://dwd2oyh8qwgdd" path="res://Cenas/Player/projectile.tscn" id="3_bwuk2"]
 
 [node name="GameScene" type="Node2D" unique_id=1227710897]
+script = ExtResource("1_f8j25")
 
 [node name="Fundo" type="Sprite2D" parent="." unique_id=1853213105]
 modulate = Color(0, 1, 0, 1)

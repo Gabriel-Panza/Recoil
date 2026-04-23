@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://56ftx5purtp6"]
 
-[ext_resource type="Script" uid="uid://c4t04x7b3woy5" path="res://Scripts/player.gd" id="1_7k6h6"]
+[ext_resource type="Script" uid="uid://c4t04x7b3woy5" path="res://Scripts/Player/player.gd" id="1_7k6h6"]
+[ext_resource type="PackedScene" uid="uid://cqimjgvjf1le5" path="res://Cenas/HUDs/HUD.tscn" id="2_htvwm"]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_7k6h6"]
 radius = 11.0
@@ -21,10 +22,21 @@ shape = SubResource("CapsuleShape2D_7k6h6")
 [node name="Camera2D" type="Camera2D" parent="." unique_id=337466116]
 zoom = Vector2(2, 2)
 
+[node name="CanvasLayer" type="CanvasLayer" parent="Camera2D" unique_id=1327528987]
+
+[node name="HUD" parent="Camera2D/CanvasLayer" unique_id=1927285508 instance=ExtResource("2_htvwm")]
+script = null
+
 [node name="Hitbox" type="Area2D" parent="." unique_id=1955563848]
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Hitbox" unique_id=129379797]
 shape = SubResource("CapsuleShape2D_ybxfy")
+
+[node name="Win" type="AudioStreamPlayer2D" parent="." unique_id=1862766686]
+volume_db = -10.0
+
+[node name="Lose" type="AudioStreamPlayer2D" parent="." unique_id=1593843345]
+volume_db = -10.0
 
 [connection signal="area_entered" from="Hitbox" to="." method="_on_hitbox_area_entered"]
 [connection signal="area_exited" from="Hitbox" to="." method="_on_hitbox_area_exited"]
