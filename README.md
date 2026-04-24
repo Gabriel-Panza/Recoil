@@ -34,7 +34,7 @@ Sem memórias e incapaz de se defender, ele recebe a ajuda de um demônio metamo
 
 * **Movimentação por Recuo:** O jogador não anda de forma convencional; cada tiro disparado impulsiona o personagem na direção oposta.
 * **Progressão em Loops:** * **Loop Principal:** 7 fases temáticas (uma para cada pecado capital).
-    * **Loop Secundário:** Combate contra hordas, coleta de loot, encontros com mercadores e batalhas contra chefes.
+	* **Loop Secundário:** Combate contra hordas, coleta de loot, encontros com mercadores e batalhas contra chefes.
 * **Upgrades:** Ao derrotar chefes ou subir de nível, o jogador escolhe entre novas armas, melhorias de vida ou direções extras de movimento.
 * **Pilares:** Mistério, Coragem (risco vs. recompensa) e Estratégia na sinergia de itens.
 

@@ -7,6 +7,7 @@ extends CharacterBody2D
 @export var fire_rate: float = 1.0
 @export var recoil_force: float = 500.0
 @export var friction: float = 900.0
+var is_invulnerable: bool = false
 
 # --- DASH ---
 @export var dash_speed: float = 600.0
@@ -137,16 +138,28 @@ func perform_dash(direction: Vector2) -> void:
 	dash_cd_timer.start(dash_cooldown)
 
 func take_damage(amount: int) -> void:
+	# 1. Se já estiver invulnerável, sai da função e não faz nada
+	if is_invulnerable: 
+		return
+
 	current_health -= amount
 	emit_signal("hp_updated", current_health, max_health)
 	
 	if current_health <= 0:
 		die()
+		return # Interrompe aqui se morreu
+
+	# 2. Ativa a invulnerabilidade
+	is_invulnerable = true
 	
-	# Feedback visual de dano
+	# 3. O seu feedback visual (Piscar vermelho)
 	var tween = create_tween()
-	tween.tween_property(aparencia, "modulate", Color.RED, 0.2)
-	tween.tween_property(aparencia, "modulate", Color.WHITE, 0.2)
+	tween.tween_property(aparencia, "modulate", Color.RED, 0.1)
+	tween.tween_property(aparencia, "modulate", Color.WHITE, 0.1)
+	
+	# 4. Espera meio segundo e desativa a invulnerabilidade
+	await get_tree().create_timer(0.5).timeout
+	is_invulnerable = false
 
 func die():
 	# aparencia.play("death")
@@ -173,7 +186,7 @@ func _on_dash_cd_timer_timeout() -> void:
 
 func _on_hitbox_area_entered(area: Area2D) -> void:
 	var parent = area.get_parent()
-	if parent.is_in_group("Inimigo"): 
+	if parent.is_in_group("Enemy"): 
 		if not enemies_in_contact.has(parent):
 			enemies_in_contact.append(parent)
 		

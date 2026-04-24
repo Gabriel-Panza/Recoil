@@ -4,6 +4,7 @@
 [ext_resource type="Script" uid="uid://cxq03fhvhbjhy" path="res://Scripts/game_scene.gd" id="1_f8j25"]
 [ext_resource type="PackedScene" uid="uid://56ftx5purtp6" path="res://Cenas/Player/Player.tscn" id="2_6gco8"]
 [ext_resource type="PackedScene" uid="uid://dwd2oyh8qwgdd" path="res://Cenas/Player/projectile.tscn" id="3_bwuk2"]
+[ext_resource type="PackedScene" uid="uid://c5x7jf1xo4s4k" path="res://Cenas/Inimigos/melee_enemy.tscn" id="5_vvy1a"]
 
 [node name="GameScene" type="Node2D" unique_id=1227710897]
 script = ExtResource("1_f8j25")
@@ -23,3 +24,7 @@ polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63
 [node name="Player" parent="." unique_id=1733015852 instance=ExtResource("2_6gco8")]
 position = Vector2(574, 341)
 pistol_bullet_scene = ExtResource("3_bwuk2")
+
+[node name="MeleeEnemy" parent="." unique_id=1495177720 instance=ExtResource("5_vvy1a")]
+position = Vector2(1032, 87)
+collision_layer = 2

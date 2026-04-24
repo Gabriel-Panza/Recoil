@@ -23,7 +23,7 @@ func _process(delta):
 func _on_area_entered(area):
 	var parent = area.get_parent()
 	
-	if self.is_in_group("Projectile") and parent.is_in_group("Inimigo"):
+	if self.is_in_group("Projectile") and parent.is_in_group("Enemy"):
 		if parent not in hit_queue:
 			hit_queue.append(parent)
 	
@@ -44,7 +44,7 @@ func process_hit_queue():
 		if not is_instance_valid(target):
 			continue
 
-		if target.is_in_group("Inimigo") and target.has_method("take_damage"):
+		if target.is_in_group("Enemy") and target.has_method("take_damage"):
 			target.take_damage(player.ataque)
 		elif target.is_in_group("Player") and target.has_method("take_damage"):
 			target.take_damage(damage)

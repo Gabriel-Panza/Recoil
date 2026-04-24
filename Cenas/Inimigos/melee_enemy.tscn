@@ -1,0 +1,15 @@
+[gd_scene format=3 uid="uid://c5x7jf1xo4s4k"]
+
+[ext_resource type="Script" uid="uid://dhbxvcw7j76k2" path="res://Scripts/melee_enemy.gd" id="1_mridg"]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_tkyp0"]
+radius = 13.0
+height = 54.0
+
+[node name="MeleeEnemy" type="CharacterBody2D" unique_id=1495177720]
+collision_layer = 2
+script = ExtResource("1_mridg")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1013482035]
+shape = SubResource("CapsuleShape2D_tkyp0")
+debug_color = Color(0.7882353, 0, 0, 0.41960785)
