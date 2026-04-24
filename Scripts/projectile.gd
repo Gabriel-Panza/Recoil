@@ -15,7 +15,8 @@ var hit_queue: Array = []
 func _ready():
 	player = get_node_or_null(player_path)
 	rotation = direction.angle()
-
+	area_entered.connect(_on_area_entered) # Conecta o sinal de colisão
+	
 func _process(delta):
 	position += direction * speed * delta
 	process_hit_queue()
