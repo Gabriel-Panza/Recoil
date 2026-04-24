@@ -15,8 +15,8 @@ width = 1
 height = 1
 
 [node name="Projectile" type="Area2D" unique_id=1086104017 groups=["Projectile"]]
-light_mask = 0
-visibility_layer = 6
+collision_layer = 0
+collision_mask = 5
 script = ExtResource("1_sgihj")
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=1133076180]
