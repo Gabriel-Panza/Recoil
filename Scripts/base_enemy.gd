@@ -21,9 +21,16 @@ func _physics_process(delta: float) -> void:
 
 # Função virtual que pode ser reescrita pelos filhos
 func mover(_delta: float) -> void:
-	var direction = global_position.direction_to(player.global_position)
-	velocity = direction * speed
-	move_and_slide()
+	var distance = global_position.distance_to(player.global_position)
+	
+	# Só se move se estiver a mais de 45 pixels (distância segura para não "entrar")
+	if distance > 45.0:
+		var direction = global_position.direction_to(player.global_position)
+		velocity = direction * speed
+		move_and_slide()
+	else:
+		# Para na sua frente e tenta te dar dano
+		velocity = Vector2.ZERO
 
 # O seu projectile.gd já chama essa função "take_damage"
 func take_damage(amount: int) -> void:

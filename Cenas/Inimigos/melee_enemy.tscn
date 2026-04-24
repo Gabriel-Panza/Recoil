@@ -1,15 +1,31 @@
 [gd_scene format=3 uid="uid://c5x7jf1xo4s4k"]
 
 [ext_resource type="Script" uid="uid://dhbxvcw7j76k2" path="res://Scripts/melee_enemy.gd" id="1_mridg"]
+[ext_resource type="Texture2D" uid="uid://bk3aapiblrc46" path="res://Sprites/enemy.png" id="2_mridg"]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_tkyp0"]
 radius = 13.0
 height = 54.0
 
-[node name="MeleeEnemy" type="CharacterBody2D" unique_id=1495177720]
+[node name="MeleeEnemy" type="CharacterBody2D" unique_id=1495177720 groups=["Enemy"]]
 collision_layer = 2
+collision_mask = 4
 script = ExtResource("1_mridg")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1013482035]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1013482035 groups=["Enemy"]]
 shape = SubResource("CapsuleShape2D_tkyp0")
 debug_color = Color(0.7882353, 0, 0, 0.41960785)
+
+[node name="Hurtbox" type="Area2D" parent="." unique_id=82768934]
+light_mask = 2
+visibility_layer = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox" unique_id=630176412 groups=["Enemy"]]
+visibility_layer = 2
+shape = SubResource("CapsuleShape2D_tkyp0")
+debug_color = Color(0.7882353, 0, 0, 0.41960785)
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=749225102]
+position = Vector2(-13, 1.1920929e-07)
+scale = Vector2(0.2, 0.2)
+texture = ExtResource("2_mridg")

@@ -16,6 +16,8 @@ scale = Vector2(9, 5)
 texture = ExtResource("1_11gbw")
 
 [node name="StaticBody2D" type="StaticBody2D" parent="Fundo" unique_id=1749266307]
+light_mask = 4
+visibility_layer = 0
 
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Fundo/StaticBody2D" unique_id=909779123]
 build_mode = 1
@@ -23,8 +25,9 @@ polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63
 
 [node name="Player" parent="." unique_id=1733015852 instance=ExtResource("2_6gco8")]
 position = Vector2(574, 341)
+collision_mask = 4
 pistol_bullet_scene = ExtResource("3_bwuk2")
 
 [node name="MeleeEnemy" parent="." unique_id=1495177720 instance=ExtResource("5_vvy1a")]
 position = Vector2(1032, 87)
-collision_layer = 2
+collision_mask = 4

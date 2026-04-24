@@ -21,6 +21,7 @@ func _process(delta):
 	process_hit_queue()
 
 func _on_area_entered(area):
+	print("O tiro encostou em: ", area.name) 
 	var parent = area.get_parent()
 	
 	if self.is_in_group("Projectile") and parent.is_in_group("Enemy"):
@@ -45,7 +46,7 @@ func process_hit_queue():
 			continue
 
 		if target.is_in_group("Enemy") and target.has_method("take_damage"):
-			target.take_damage(player.ataque)
+			target.take_damage(player.attack_damage)
 		elif target.is_in_group("Player") and target.has_method("take_damage"):
 			target.take_damage(damage)
 			

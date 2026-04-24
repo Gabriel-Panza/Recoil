@@ -15,11 +15,14 @@ width = 1
 height = 1
 
 [node name="Projectile" type="Area2D" unique_id=1086104017 groups=["Projectile"]]
+light_mask = 0
+visibility_layer = 6
 script = ExtResource("1_sgihj")
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=1133076180]
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1827623167]
+visibility_layer = 2
 shape = SubResource("CircleShape2D_sgihj")
 
 [node name="VisibleOnScreenNotifier2D" type="VisibleOnScreenNotifier2D" parent="." unique_id=754933066]

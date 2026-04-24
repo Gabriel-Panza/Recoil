@@ -2,6 +2,9 @@
 
 [ext_resource type="Script" uid="uid://c4t04x7b3woy5" path="res://Scripts/Player/player.gd" id="1_7k6h6"]
 [ext_resource type="PackedScene" uid="uid://cqimjgvjf1le5" path="res://Cenas/HUDs/HUD.tscn" id="2_htvwm"]
+[ext_resource type="Texture2D" uid="uid://bnocs54jgw7ve" path="res://Sprites/Tarma.png" id="3_r8ryd"]
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_htvwm"]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_7k6h6"]
 radius = 11.0
@@ -12,9 +15,12 @@ radius = 13.0
 height = 54.0
 
 [node name="Player" type="CharacterBody2D" unique_id=1733015852 groups=["Player"]]
+collision_mask = 4
 script = ExtResource("1_7k6h6")
+fire_rate = 2.0
 
 [node name="Aparencia" type="AnimatedSprite2D" parent="." unique_id=840580555]
+sprite_frames = SubResource("SpriteFrames_htvwm")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1215789747]
 shape = SubResource("CapsuleShape2D_7k6h6")
@@ -25,9 +31,10 @@ zoom = Vector2(2, 2)
 [node name="CanvasLayer" type="CanvasLayer" parent="Camera2D" unique_id=1327528987]
 
 [node name="HUD" parent="Camera2D/CanvasLayer" unique_id=1927285508 instance=ExtResource("2_htvwm")]
-script = null
 
 [node name="Hitbox" type="Area2D" parent="." unique_id=1955563848]
+light_mask = 0
+visibility_layer = 2
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Hitbox" unique_id=129379797]
 shape = SubResource("CapsuleShape2D_ybxfy")
@@ -37,6 +44,10 @@ volume_db = -10.0
 
 [node name="Lose" type="AudioStreamPlayer2D" parent="." unique_id=1593843345]
 volume_db = -10.0
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=442485395]
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("3_r8ryd")
 
 [connection signal="area_entered" from="Hitbox" to="." method="_on_hitbox_area_entered"]
 [connection signal="area_exited" from="Hitbox" to="." method="_on_hitbox_area_exited"]
