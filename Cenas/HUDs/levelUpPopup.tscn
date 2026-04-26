@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://dvd6e6gm54ydp" path="res://Scripts/HUDs/LevelUpPopup.gd" id="1_n24re"]
 
 [node name="LevelUpPopup" type="Panel" unique_id=775706461]
+process_mode = 3
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5

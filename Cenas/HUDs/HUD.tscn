@@ -8,12 +8,13 @@
 bg_color = Color(0, 0, 0, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tafyd"]
-bg_color = Color(1, 0.25882354, 0.2, 1)
+bg_color = Color(1, 0, 0, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wo74x"]
-bg_color = Color(0.96, 0, 0, 1)
+bg_color = Color(1, 0, 0, 1)
 
 [node name="HUD" type="Node2D" unique_id=1927285508]
+process_mode = 3
 script = ExtResource("1_esuf2")
 
 [node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=1070815487]
@@ -87,16 +88,6 @@ theme_override_font_sizes/font_size = 20
 text = "Recoil Force: 500"
 horizontal_alignment = 2
 
-[node name="Friction" type="Label" parent="HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer" unique_id=1904077683]
-layout_mode = 2
-tooltip_text = "This represents how strong is the force that slows you down after a recoil move"
-mouse_filter = 0
-theme_override_colors/font_color = Color(1, 0.25882354, 0.2, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 20
-text = "Friction: 900"
-horizontal_alignment = 2
-
 [node name="Separador 2" type="Label" parent="HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer" unique_id=296376618]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.25882354, 0.2, 1)
@@ -104,43 +95,39 @@ text = "-----------------------------------"
 horizontal_alignment = 1
 
 [node name="Label" type="Label" parent="." unique_id=1256540352]
-visible = false
-offset_left = 1048.0
-offset_top = -38.0
-offset_right = 1191.0
-offset_bottom = 4.0
+offset_left = 1066.0
+offset_top = -1.0
+offset_right = 1209.0
+offset_bottom = 41.0
 scale = Vector2(0.6, 0.731)
-theme_override_colors/font_color = Color(0.88235295, 0, 0, 1)
+theme_override_colors/font_color = Color(1, 0.12156863, 0, 1)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 30
 text = "Level: 1"
 
 [node name="ProgressBar" type="ProgressBar" parent="." unique_id=901963391]
-visible = false
-offset_left = -6.0
-offset_top = -37.0001
-offset_right = 78.0
-offset_bottom = 4.999901
+offset_right = 84.0
+offset_bottom = 42.0
 scale = Vector2(13.72, 0.669526)
 theme_override_styles/fill = SubResource("StyleBoxFlat_tafyd")
 show_percentage = false
 
 [node name="Label2" type="Label" parent="." unique_id=558653432]
 offset_left = 12.0
-offset_top = 1.0
-offset_right = 155.0
-offset_bottom = 43.0
+offset_top = 39.0
+offset_right = 166.0
+offset_bottom = 106.0
 scale = Vector2(0.6, 0.731)
-theme_override_colors/font_color = Color(0.88235295, 0, 0, 1)
+theme_override_colors/font_color = Color(1, 0.12156863, 0, 1)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 48
 text = "Health"
 
 [node name="ProgressBar2" type="ProgressBar" parent="." unique_id=323660297]
 offset_left = 12.0
-offset_top = 48.0
+offset_top = 86.0
 offset_right = 256.0
-offset_bottom = 80.0
+offset_bottom = 118.0
 theme_override_constants/outline_size = 4
 theme_override_styles/fill = SubResource("StyleBoxFlat_wo74x")
 max_value = 500.0

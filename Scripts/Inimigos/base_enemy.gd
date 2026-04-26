@@ -2,38 +2,37 @@ extends CharacterBody2D
 class_name BaseEnemy 
 
 @export var max_health: int = 100
-@export var speed: float = 100.0
+@export var speed: float = 9000.0 # 75 m/s * 120fps
 @export var damage: int = 20
 @export var xp_drop: int = 10
 
 var current_health: int
 var player: Node2D
+@onready var aparencia = $Aparencia
 
 func _ready() -> void:
 	current_health = max_health
-	# Busca o player na cena dinamicamente
 	player = get_tree().get_first_node_in_group("Player")
-	add_to_group("Enemy") # Garante que está no grupo para o tiro reconhecer
+	add_to_group("Enemy")
 
 func _physics_process(delta: float) -> void:
-	if player and not get_tree().paused:
+	if player:
 		mover(delta)
 
-# Função virtual que pode ser reescrita pelos filhos
 func mover(_delta: float) -> void:
 	var direction = global_position.direction_to(player.global_position)
-	velocity = direction * speed
+	velocity = direction * speed * _delta
 	move_and_slide()
-# O seu projectile.gd já chama essa função "take_damage"
+
 func take_damage(amount: int) -> void:
 	current_health -= amount
-	# Feedback visual rápido de dano
-	modulate = Color.RED
-	await get_tree().create_timer(0.1).timeout
-	modulate = Color.WHITE
-	
 	if current_health <= 0:
 		die()
+
+	# Tween para demonstrar que tomou dano
+	var tween = create_tween()
+	tween.tween_property(aparencia, "modulate", Color.RED, 0.1)
+	tween.tween_property(aparencia, "modulate", Color.WHITE, 0.1)
 
 func die() -> void:
 	if player and player.has_method("gain_xp"):

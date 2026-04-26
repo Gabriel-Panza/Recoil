@@ -3,16 +3,16 @@ extends CharacterBody2D
 # --- Status melhoráveis via Level Ups ---
 @export var max_health: int = 300
 @export var current_health: int = 300
-@export var attack_damage: float = 20.0
+@export var attack_damage: float = 25.0
 @export var fire_rate: float = 1.0
-@export var recoil_force: float = 500.0
+@export var recoil_force: float = 550.0
 @export var friction: float = 900.0
 var is_invulnerable: bool = false
 
 # --- DASH ---
 @export var dash_speed: float = 600.0
 @export var dash_duration: float = 0.2
-@export var dash_cooldown: float = 3.0
+@export var dash_cooldown: float = 5.0
 
 # --- TIRO ---
 @export var pistol_bullet_scene: PackedScene
@@ -87,7 +87,7 @@ func _physics_process(delta: float) -> void:
 			perform_dash(look_direction)
 
 		# Atirar / Movimentação por Recuo
-		if Input.is_action_pressed("shoot") and can_shoot and not is_dashing:
+		if Input.is_action_just_pressed("shoot") and can_shoot and not is_dashing:
 			shoot(look_direction)
 
 	# Aplicar Atrito se não estiver no meio de um dash
@@ -138,7 +138,6 @@ func perform_dash(direction: Vector2) -> void:
 	dash_cd_timer.start(dash_cooldown)
 
 func take_damage(amount: int) -> void:
-	# 1. Se já estiver invulnerável, sai da função e não faz nada
 	if is_invulnerable: 
 		return
 
@@ -147,18 +146,15 @@ func take_damage(amount: int) -> void:
 	
 	if current_health <= 0:
 		die()
-		return # Interrompe aqui se morreu
 
-	# 2. Ativa a invulnerabilidade
 	is_invulnerable = true
 	
-	# 3. O seu feedback visual (Piscar vermelho)
+	# Tween para demonstrar que tomou dano
 	var tween = create_tween()
 	tween.tween_property(aparencia, "modulate", Color.RED, 0.1)
 	tween.tween_property(aparencia, "modulate", Color.WHITE, 0.1)
 	
-	# 4. Espera meio segundo e desativa a invulnerabilidade
-	await get_tree().create_timer(0.5).timeout
+	await get_tree().create_timer(0.2).timeout
 	is_invulnerable = false
 
 func die():

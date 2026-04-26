@@ -1,27 +1,27 @@
-[gd_scene format=3 uid="uid://c5x7jf1xo4s4k"]
+[gd_scene format=3 uid="uid://bxfbsw1g3soe6"]
 
-[ext_resource type="Script" uid="uid://dhbxvcw7j76k2" path="res://Scripts/Inimigos/melee_enemy.gd" id="1_mridg"]
-[ext_resource type="Texture2D" uid="uid://bk3aapiblrc46" path="res://Sprites/enemy.png" id="2_mridg"]
+[ext_resource type="Script" uid="uid://drel5qgbivm7c" path="res://Scripts/Inimigos/ranged_enemy.gd" id="1_cqedb"]
+[ext_resource type="Texture2D" uid="uid://bk3aapiblrc46" path="res://Sprites/enemy.png" id="2_6x3df"]
 
-[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_mridg"]
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_cqedb"]
 radius = 15.0
 height = 50.0
 
-[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_tkyp0"]
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_6x3df"]
 radius = 17.0
 height = 54.0
 
-[node name="MeleeEnemy" type="CharacterBody2D" unique_id=1495177720 groups=["Enemy"]]
+[node name="RangedEnemy" type="CharacterBody2D" unique_id=1495177720 groups=["Enemy"]]
 collision_layer = 4
-script = ExtResource("1_mridg")
+script = ExtResource("1_cqedb")
 
 [node name="Aparencia" type="Sprite2D" parent="." unique_id=749225102]
 position = Vector2(-13, 1.1920929e-07)
 scale = Vector2(0.2, 0.2)
-texture = ExtResource("2_mridg")
+texture = ExtResource("2_6x3df")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1013482035 groups=["Enemy"]]
-shape = SubResource("CapsuleShape2D_mridg")
+shape = SubResource("CapsuleShape2D_cqedb")
 debug_color = Color(0.7882353, 0, 0, 0.41960785)
 
 [node name="Hurtbox" type="Area2D" parent="." unique_id=82768934]
@@ -30,5 +30,5 @@ collision_mask = 0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox" unique_id=630176412 groups=["Enemy"]]
 visibility_layer = 2
-shape = SubResource("CapsuleShape2D_tkyp0")
+shape = SubResource("CapsuleShape2D_6x3df")
 debug_color = Color(0.7882353, 0, 0, 0.41960785)

@@ -16,8 +16,6 @@ var atk_speed_label_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLaye
 var atk_speed_label: Label
 var recoil_label_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer/Recoil"
 var recoil_label: Label
-var friction_label_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer/Friction"
-var friction_label: Label
 
 var speedEnemy
 var speedProjectile
@@ -33,7 +31,6 @@ func _ready() -> void:
 	attack_label = get_node_or_null(attack_label_path)
 	atk_speed_label = get_node_or_null(atk_speed_label_path)
 	recoil_label = get_node_or_null(recoil_label_path)
-	friction_label = get_node_or_null(friction_label_path)
 
 	if player:
 		player.connect("stats_updated", Callable(self, "update_status_labels"))
@@ -63,7 +60,6 @@ func update_status_labels():
 		attack_label.text = "Attack: %.1f" % player.attack_damage
 		atk_speed_label.text = "Atk-Speed: %.1f%%" % (player.fire_rate * 100)
 		recoil_label.text = "Recoil Force: %.1f" % (player.recoil_force/100)
-		friction_label.text = "Friction: %.1f" % (player.friction/100)
 
 func freeze():
 	canMove = false

@@ -17,10 +17,13 @@ height = 54.0
 [node name="Player" type="CharacterBody2D" unique_id=1733015852 groups=["Player"]]
 collision_layer = 2
 script = ExtResource("1_7k6h6")
-fire_rate = 2.0
 
 [node name="Aparencia" type="AnimatedSprite2D" parent="." unique_id=840580555]
 sprite_frames = SubResource("SpriteFrames_htvwm")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=442485395]
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("3_r8ryd")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1215789747]
 shape = SubResource("CapsuleShape2D_7k6h6")
@@ -46,10 +49,6 @@ volume_db = -10.0
 
 [node name="Lose" type="AudioStreamPlayer2D" parent="." unique_id=1593843345]
 volume_db = -10.0
-
-[node name="Sprite2D" type="Sprite2D" parent="." unique_id=442485395]
-scale = Vector2(0.5, 0.5)
-texture = ExtResource("3_r8ryd")
 
 [connection signal="area_entered" from="Hitbox" to="." method="_on_hitbox_area_entered"]
 [connection signal="area_exited" from="Hitbox" to="." method="_on_hitbox_area_exited"]

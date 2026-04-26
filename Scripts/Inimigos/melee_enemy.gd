@@ -3,6 +3,5 @@ extends BaseEnemy
 func _ready() -> void:
 	super() 
 	
-	max_health = 50
-	speed = 200.0
+	max_health = 100
 	current_health = max_health

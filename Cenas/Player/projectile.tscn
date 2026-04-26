@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://dwd2oyh8qwgdd"]
 
-[ext_resource type="Script" uid="uid://binxodd7w4itw" path="res://Scripts/projectile.gd" id="1_sgihj"]
+[ext_resource type="Script" uid="uid://binxodd7w4itw" path="res://Scripts/Player/projectile.gd" id="1_sgihj"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_sgihj"]
 radius = 15.033297

@@ -45,16 +45,13 @@ func _on_level_updated(level, current_xp, xp_to_next_level) -> void:
 func _apply_effect(option):
 	match option:
 		"option_1":
-			player.speed += 15
-			player.original_speed += 15
+			player.recoil_force += player.recoil_force * 0.05
 		"option_2":
-			player.health += player.original_health * 0.05
-			player.maxHealth += player.original_maxHealth * 0.05
+			player.current_health += player.current_health * 0.05
+			player.max_health += player.max_health * 0.05
 			_on_hp_updated(player.health, player.maxHealth)
 		"option_3":
-			player.ataque += player.original_ataque * 0.1
+			player.attack_damage += player.attack_damage * 0.1
 		"option_4":
-			player.atkSpeed += 0.05
-			if player.has_method("upgrade_attack_speed_stat"):
-				player.upgrade_attack_speed_stat()
+			player.fire_rate -= 0.025
 	player.pause_control.update_status_labels()
