@@ -19,7 +19,7 @@ func _ready():
 	area_entered.connect(_on_area_entered)
 	
 	if self.is_in_group("EnemyProjectile"):
-		speed = 550.0
+		speed = 500.0
 	
 func _process(delta):
 	position += direction * speed * delta

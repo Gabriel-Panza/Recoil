@@ -70,8 +70,9 @@ func get_random_edge_position() -> Vector2:
 func _on_enemy_died() -> void:
 	if not is_wave_active:
 		return
-		
-	await get_tree().process_frame
+	
+	if get_tree():
+		await get_tree().process_frame
 	
 	# Checa se ainda existem inimigos vivos
 	var remaining_enemies = get_tree().get_nodes_in_group("Enemy")

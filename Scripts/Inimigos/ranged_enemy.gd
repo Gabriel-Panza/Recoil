@@ -52,5 +52,5 @@ func shoot() -> void:
 	projectile.global_position = global_position
 	var aim_direction = global_position.direction_to(player.global_position)
 	projectile.direction = aim_direction
-	projectile.damage = damage*1.5
+	projectile.damage = damage*1.25
 	get_tree().current_scene.add_child(projectile)

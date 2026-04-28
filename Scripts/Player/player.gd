@@ -55,6 +55,9 @@ var game_over: Panel
 var game_win_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/PauseControl/GameWin"
 var game_win: Panel
 
+
+var type_animation
+
 func _ready() -> void:
 	aparencia = get_node_or_null("Aparencia")
 	pause_control = get_node_or_null(pause_control_path)
@@ -80,7 +83,13 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	var mouse_pos = get_global_mouse_position()
 	var look_direction = global_position.direction_to(mouse_pos)
-
+	
+	if velocity != Vector2.ZERO:
+		aparencia.play(type_animation)
+	else:
+		type_animation = "idle"
+		aparencia.play(type_animation)
+	
 	if pause_control.canMove:
 		# Dash na direção do mouse
 		if Input.is_action_just_pressed("dash") and can_dash and not is_dashing:
@@ -106,9 +115,9 @@ func shoot(direction: Vector2) -> void:
 	
 	var mouse_pos = get_global_mouse_position()
 	if mouse_pos.x < global_position.x:
-		aparencia.flip_h = true  # Olha para esquerda
+		type_animation = "walk_left"
 	else:
-		aparencia.flip_h = false # Olha para direita
+		type_animation = "walk_right"
 	
 	var base_direction = (mouse_pos - global_position).normalized()
 	var base_angle = base_direction.angle()
