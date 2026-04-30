@@ -22,5 +22,4 @@ polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63
 
 [node name="Player" parent="." unique_id=1733015852 instance=ExtResource("3_v7wsa")]
 position = Vector2(574, 341)
-attack_damage = 100.0
 pistol_bullet_scene = ExtResource("4_v2jpr")
