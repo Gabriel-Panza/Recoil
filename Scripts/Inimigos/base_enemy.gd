@@ -2,7 +2,7 @@ extends CharacterBody2D
 class_name BaseEnemy 
 
 @export var max_health: int = 100
-@export var speed: float = 9000.0 # 75 m/s * 120fps
+@export var speed: float = 7500.0 # 75 m/s * 100fps
 @export var damage: int = 20
 @export var xp_drop: int = 10
 

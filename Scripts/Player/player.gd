@@ -6,7 +6,7 @@ extends CharacterBody2D
 @export var attack_damage: float = 25.0
 @export var fire_rate: float = 1.0
 @export var recoil_force: float = 550.0
-@export var friction: float = 900.0
+@export var friction: float = 750.0
 var is_invulnerable: bool = false
 
 # --- DASH ---

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bnocs54jgw7ve"
-path="res://.godot/imported/Tarma.png-23015a77396e6c8e57d815bab9697347.ctex"
+uid="uid://tgm4okhcbtl"
+path="res://.godot/imported/demonho_melee.png-2c94f134ece50fcf791d297a5fed373d.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Sprites/Tarma.png"
-dest_files=["res://.godot/imported/Tarma.png-23015a77396e6c8e57d815bab9697347.ctex"]
+source_file="res://Sprites/demonho_melee.png"
+dest_files=["res://.godot/imported/demonho_melee.png-2c94f134ece50fcf791d297a5fed373d.ctex"]
 
 [params]
 

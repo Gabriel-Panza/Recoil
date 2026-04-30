@@ -61,4 +61,5 @@ func process_hit_queue():
 	hit_queue.clear()
 
 func _on_screen_exited():
+	await get_tree().create_timer(1).timeout
 	queue_free()

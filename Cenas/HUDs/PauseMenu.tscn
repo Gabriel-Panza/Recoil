@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://cxkyc58pgy43i"]
 
 [ext_resource type="Script" uid="uid://2eucq1m8b8ff" path="res://Scripts/HUDs/pauseMenu.gd" id="1_2v82j"]
+[ext_resource type="Texture2D" uid="uid://cyj0hvnu4w84x" path="res://Sprites/Menu/panel.png" id="2_1ms7m"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_428n7"]
 bg_color = Color(0.2, 0.239216, 0.270588, 1)
@@ -23,12 +24,27 @@ script = ExtResource("1_2v82j")
 
 [node name="PauseMenu" type="Panel" parent="." unique_id=1057074581]
 visible = false
+self_modulate = Color(1, 1, 1, 0)
 layout_mode = 0
 offset_left = 5.0
 offset_top = 52.0
 offset_right = 45.0
 offset_bottom = 92.00001
 scale = Vector2(16.279999, 9.96)
+
+[node name="NinePatchRect" type="NinePatchRect" parent="PauseMenu" unique_id=1777051219]
+layout_mode = 0
+offset_right = 80.0
+offset_bottom = 80.0
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("2_1ms7m")
+region_rect = Rect2(1, 1, 94, 94)
+patch_margin_left = 31
+patch_margin_top = 31
+patch_margin_right = 31
+patch_margin_bottom = 31
+axis_stretch_horizontal = 2
+axis_stretch_vertical = 2
 
 [node name="HBoxContainer" type="HBoxContainer" parent="PauseMenu" unique_id=147565823]
 layout_mode = 0

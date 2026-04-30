@@ -28,6 +28,7 @@ window/stretch/aspect="expand"
 
 folder_colors={
 "res://Cenas/": "green",
+"res://Fonts/": "teal",
 "res://Music&SFX/": "red",
 "res://Scripts/": "purple",
 "res://Sprites/": "yellow"

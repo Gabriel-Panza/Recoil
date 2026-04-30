@@ -2,16 +2,16 @@
 
 [ext_resource type="Script" uid="uid://noday66pkgto" path="res://Scripts/HUDs/hud.gd" id="1_esuf2"]
 [ext_resource type="PackedScene" uid="uid://72d6vlngrfmv" path="res://Cenas/HUDs/levelUpPopup.tscn" id="2_jet5o"]
+[ext_resource type="Texture2D" uid="uid://cyj0hvnu4w84x" path="res://Sprites/Menu/panel.png" id="2_xed4y"]
 [ext_resource type="PackedScene" uid="uid://cxkyc58pgy43i" path="res://Cenas/HUDs/PauseMenu.tscn" id="3_4wqrd"]
+[ext_resource type="FontFile" uid="uid://dr0q6xustje40" path="res://Fonts/cg-pixel-4x5.otf" id="3_7w3ya"]
+[ext_resource type="Texture2D" uid="uid://bwllbs2xlqje0" path="res://Sprites/Menu/level.png" id="3_irtw3"]
+[ext_resource type="Texture2D" uid="uid://ddhpi484jgi1q" path="res://Sprites/Menu/health.png" id="3_lkwe8"]
+[ext_resource type="Texture2D" uid="uid://ihnahr7k3pga" path="res://Sprites/Menu/health_fill.png" id="4_7j4vm"]
+[ext_resource type="Texture2D" uid="uid://c3vdftd30i0oo" path="res://Sprites/Menu/level_fill.png" id="4_curni"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_p8kxm"]
-bg_color = Color(0, 0, 0, 1)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tafyd"]
-bg_color = Color(1, 0, 0, 1)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_wo74x"]
-bg_color = Color(1, 0, 0, 1)
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_xed4y"]
+texture = ExtResource("2_xed4y")
 
 [node name="HUD" type="Node2D" unique_id=1927285508]
 process_mode = 3
@@ -22,9 +22,9 @@ visible = false
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 960.0
+offset_left = 950.5
 offset_top = 210.0
-offset_right = 1141.0
+offset_right = 1150.5
 offset_bottom = 420.0
 grow_horizontal = 2
 grow_vertical = 2
@@ -33,19 +33,18 @@ size_flags_vertical = 3
 
 [node name="BarraLateralDireita" type="PanelContainer" parent="HBoxContainer" unique_id=553205918]
 layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_p8kxm")
+theme_override_styles/panel = SubResource("StyleBoxTexture_xed4y")
 
 [node name="MarginContainer" type="MarginContainer" parent="HBoxContainer/BarraLateralDireita" unique_id=1095379107]
+custom_minimum_size = Vector2(220, 0)
 layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 16
 
 [node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/BarraLateralDireita/MarginContainer" unique_id=800542999]
 layout_mode = 2
-
-[node name="Separador 1" type="Label" parent="HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer" unique_id=1259386730]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.25882354, 0.2, 1)
-text = "-----------------------------------"
-horizontal_alignment = 1
 
 [node name="HP_MaxHealth" type="Label" parent="HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer" unique_id=1234186629]
 layout_mode = 2
@@ -88,50 +87,37 @@ theme_override_font_sizes/font_size = 20
 text = "Recoil Force: 500"
 horizontal_alignment = 2
 
-[node name="Separador 2" type="Label" parent="HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer" unique_id=296376618]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 0.25882354, 0.2, 1)
-text = "-----------------------------------"
+[node name="Label" type="Label" parent="." unique_id=1256540352]
+z_index = 1
+offset_left = 522.0
+offset_top = 18.0
+offset_right = 633.0
+offset_bottom = 33.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_fonts/font = ExtResource("3_7w3ya")
+theme_override_font_sizes/font_size = 15
+text = "Level 32"
 horizontal_alignment = 1
 
-[node name="Label" type="Label" parent="." unique_id=1256540352]
-offset_left = 1066.0
-offset_top = -1.0
-offset_right = 1209.0
-offset_bottom = 41.0
-scale = Vector2(0.6, 0.731)
-theme_override_colors/font_color = Color(1, 0.12156863, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 30
-text = "Level: 1"
-
-[node name="ProgressBar" type="ProgressBar" parent="." unique_id=901963391]
-offset_right = 84.0
+[node name="ProgressBar" type="TextureProgressBar" parent="." unique_id=1518424678]
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 1143.0
 offset_bottom = 42.0
-scale = Vector2(13.72, 0.669526)
-theme_override_styles/fill = SubResource("StyleBoxFlat_tafyd")
-show_percentage = false
+nine_patch_stretch = true
+texture_under = ExtResource("3_irtw3")
+texture_progress = ExtResource("4_curni")
 
-[node name="Label2" type="Label" parent="." unique_id=558653432]
+[node name="ProgressBar2" type="TextureProgressBar" parent="." unique_id=2042334151]
 offset_left = 12.0
-offset_top = 39.0
-offset_right = 166.0
-offset_bottom = 106.0
-scale = Vector2(0.6, 0.731)
-theme_override_colors/font_color = Color(1, 0.12156863, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 48
-text = "Health"
-
-[node name="ProgressBar2" type="ProgressBar" parent="." unique_id=323660297]
-offset_left = 12.0
-offset_top = 86.0
-offset_right = 256.0
-offset_bottom = 118.0
-theme_override_constants/outline_size = 4
-theme_override_styles/fill = SubResource("StyleBoxFlat_wo74x")
+offset_top = 30.0
+offset_right = 219.0
+offset_bottom = 84.0
 max_value = 500.0
 value = 500.0
+nine_patch_stretch = true
+texture_under = ExtResource("3_lkwe8")
+texture_progress = ExtResource("4_7j4vm")
 
 [node name="LevelUpPopup" parent="." unique_id=1017833206 instance=ExtResource("2_jet5o")]
 visible = false

@@ -74,12 +74,11 @@ func _on_enemy_died() -> void:
 	if get_tree():
 		await get_tree().process_frame
 	
-	# Checa se ainda existem inimigos vivos
-	var remaining_enemies = get_tree().get_nodes_in_group("Enemy")
-	if remaining_enemies.is_empty():
-		is_wave_active = false
-		await get_tree().create_timer(0.5).timeout
-		start_next_wave()
+		# Checa se ainda existem inimigos vivos
+		if not get_tree().get_nodes_in_group("Enemy"):
+			is_wave_active = false
+			await get_tree().create_timer(0.5).timeout
+			start_next_wave()
 
 func pause_timers():
 	pass
