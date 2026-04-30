@@ -96,7 +96,7 @@ offset_bottom = 33.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("3_7w3ya")
 theme_override_font_sizes/font_size = 15
-text = "Level 32"
+text = "Level 1"
 horizontal_alignment = 1
 
 [node name="ProgressBar" type="TextureProgressBar" parent="." unique_id=1518424678]
