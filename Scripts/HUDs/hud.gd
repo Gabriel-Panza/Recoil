@@ -53,5 +53,5 @@ func _apply_effect(option):
 		"option_3":
 			player.attack_damage += player.attack_damage * 0.1
 		"option_4":
-			player.fire_rate -= 0.025
+			player.fire_rate -= 0.015
 	player.pause_control.update_status_labels()

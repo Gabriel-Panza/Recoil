@@ -14,7 +14,24 @@ var passive_options = [
 	{ "id": "option_4", "text": "Atk-Speed (+3%)", "rarity": "passive_common" }
 ]
 var active_options = [
-	{ "id": "Shield_Protection", "text": " Gain a one-hit shield", "rarity": "active" }
+	{ "id": "Shield_Protection", "text": " Gain a one-hit shield", "rarity": "active" },
+	{ "id": "recoil_explosion", "text": " Your next recoil creates a small shockwave", "rarity": "active" }
+]
+var boss_options = [
+	{ "id": "wrath_overheat", "text": "Wrath: Every 3th shot deals double damage", "rarity": "passive_sin" },
+	{ "id": "active_wrath_burst", "text": "Wrath: Fire a radial burst of bullets", "rarity": "active_sin" },
+	{ "id": "pride_fall", "text": "Pride: Huge damage at full HP, but lose bonus when hit", "rarity": "passive_sin" },
+	{ "id": "active_pride_perfection", "text": "Pride: Become invulnerable briefly", "rarity": "active_sin" },
+	{ "id": "gluttony_heal_xp", "text": "Gluttony: Heal a small amount when collecting XP", "rarity": "passive_sin" },
+	{ "id": "active_gluttony_devour", "text": "Gluttony: Consume nearby XP to heal yourself", "rarity": "active_sin" },
+	{ "id": "greed_cursed_xp", "text": "Greed: XP +30%, but enemies move +10% faster", "rarity": "passive_sin" },
+	{ "id": "active_greed_treasure_rain", "text": "Greed: Rain golden projectiles from above", "rarity": "active_sin" },
+	{ "id": "sloth_slow_aura", "text": "Sloth: Enemies near you move slower", "rarity": "passive_sin" },
+	{ "id": "active_sloth_field", "text": "Sloth: Create a field that slows all nearby enemies", "rarity": "active_sin" },
+	{ "id": "envy_mirror_shot", "text": "Envy: Chance to fire a second mirrored bullet", "rarity": "passive_sin" },
+	{ "id": "active_envy_mirror_clone", "text": "Envy: Summon a mirror clone that shoots with you", "rarity": "active_sin" },	{ "id": "active_pride_perfection", "text": "Pride: Become invulnerable and stronger for a short time", "rarity": "active_sin" },
+	{ "id": "lust_dangerous_attraction", "text": "Lust: Enemies drop more XP, but chase you faster", "rarity": "passive_sin" },
+	{ "id": "active_lust_charm_wave", "text": "Lust: Charm nearby enemies for a few seconds", "rarity": "active_sin" }
 ]
 signal option_selected(option)
 
