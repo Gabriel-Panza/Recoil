@@ -39,6 +39,7 @@ folder_colors={
 Player=""
 Projectile=""
 Enemy=""
+Boss=""
 
 [input]
 

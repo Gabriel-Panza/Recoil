@@ -8,18 +8,104 @@
 [node name="GameScene" type="Node2D" unique_id=1227710897]
 script = ExtResource("1_6fp5d")
 
-[node name="Fundo" type="Sprite2D" parent="." unique_id=1853213105]
-position = Vector2(575.5, 323)
+[node name="Arenas" type="Node2D" parent="." unique_id=526981497]
+
+[node name="ArenaEnemy" type="Sprite2D" parent="Arenas" unique_id=1853213105]
+position = Vector2(770.00006, 390)
 scale = Vector2(12, 6)
 texture = ExtResource("2_devmc")
 
-[node name="StaticBody2D" type="StaticBody2D" parent="Fundo" unique_id=1749266307]
+[node name="StaticBody2D" type="StaticBody2D" parent="Arenas/ArenaEnemy" unique_id=1749266307]
 collision_mask = 0
 
-[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Fundo/StaticBody2D" unique_id=909779123]
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Arenas/ArenaEnemy/StaticBody2D" unique_id=909779123]
+build_mode = 1
+polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63.199997, 64.083336, -51.5, 63.694443, 53.7, 54.805557, 63.400005, -55.13889, 63.8, -64.02778, 52.400005)
+
+[node name="Pecado1" type="Sprite2D" parent="Arenas" unique_id=90380552]
+position = Vector2(2263, -960)
+scale = Vector2(12, 6)
+texture = ExtResource("2_devmc")
+
+[node name="StaticBody2D" type="StaticBody2D" parent="Arenas/Pecado1" unique_id=1155165009]
+collision_mask = 0
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Arenas/Pecado1/StaticBody2D" unique_id=145652430]
+build_mode = 1
+polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63.199997, 64.083336, -51.5, 63.694443, 53.7, 54.805557, 63.400005, -55.13889, 63.8, -64.02778, 52.400005)
+
+[node name="Pecado2" type="Sprite2D" parent="Arenas" unique_id=1381154649]
+position = Vector2(4545, -960)
+scale = Vector2(12, 6)
+texture = ExtResource("2_devmc")
+
+[node name="StaticBody2D" type="StaticBody2D" parent="Arenas/Pecado2" unique_id=910169492]
+collision_mask = 0
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Arenas/Pecado2/StaticBody2D" unique_id=1148293379]
+build_mode = 1
+polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63.199997, 64.083336, -51.5, 63.694443, 53.7, 54.805557, 63.400005, -55.13889, 63.8, -64.02778, 52.400005)
+
+[node name="Pecado3" type="Sprite2D" parent="Arenas" unique_id=1664075302]
+position = Vector2(6808, -960)
+scale = Vector2(12, 6)
+texture = ExtResource("2_devmc")
+
+[node name="StaticBody2D" type="StaticBody2D" parent="Arenas/Pecado3" unique_id=1716634973]
+collision_mask = 0
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Arenas/Pecado3/StaticBody2D" unique_id=1129433933]
+build_mode = 1
+polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63.199997, 64.083336, -51.5, 63.694443, 53.7, 54.805557, 63.400005, -55.13889, 63.8, -64.02778, 52.400005)
+
+[node name="Pecado4" type="Sprite2D" parent="Arenas" unique_id=1789608018]
+position = Vector2(2263, 1704)
+scale = Vector2(12, 6)
+texture = ExtResource("2_devmc")
+
+[node name="StaticBody2D" type="StaticBody2D" parent="Arenas/Pecado4" unique_id=1885269317]
+collision_mask = 0
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Arenas/Pecado4/StaticBody2D" unique_id=301094355]
+build_mode = 1
+polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63.199997, 64.083336, -51.5, 63.694443, 53.7, 54.805557, 63.400005, -55.13889, 63.8, -64.02778, 52.400005)
+
+[node name="Pecado5" type="Sprite2D" parent="Arenas" unique_id=643689195]
+position = Vector2(4545, 1704)
+scale = Vector2(12, 6)
+texture = ExtResource("2_devmc")
+
+[node name="StaticBody2D" type="StaticBody2D" parent="Arenas/Pecado5" unique_id=800296856]
+collision_mask = 0
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Arenas/Pecado5/StaticBody2D" unique_id=736678164]
+build_mode = 1
+polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63.199997, 64.083336, -51.5, 63.694443, 53.7, 54.805557, 63.400005, -55.13889, 63.8, -64.02778, 52.400005)
+
+[node name="Pecado6" type="Sprite2D" parent="Arenas" unique_id=11392063]
+position = Vector2(6808, 1704)
+scale = Vector2(12, 6)
+texture = ExtResource("2_devmc")
+
+[node name="StaticBody2D" type="StaticBody2D" parent="Arenas/Pecado6" unique_id=1957166289]
+collision_mask = 0
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Arenas/Pecado6/StaticBody2D" unique_id=1089338823]
+build_mode = 1
+polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63.199997, 64.083336, -51.5, 63.694443, 53.7, 54.805557, 63.400005, -55.13889, 63.8, -64.02778, 52.400005)
+
+[node name="Pecado7" type="Sprite2D" parent="Arenas" unique_id=1273363467]
+position = Vector2(8620, 390)
+scale = Vector2(12, 6)
+texture = ExtResource("2_devmc")
+
+[node name="StaticBody2D" type="StaticBody2D" parent="Arenas/Pecado7" unique_id=439330336]
+collision_mask = 0
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Arenas/Pecado7/StaticBody2D" unique_id=1880385974]
 build_mode = 1
 polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63.199997, 64.083336, -51.5, 63.694443, 53.7, 54.805557, 63.400005, -55.13889, 63.8, -64.02778, 52.400005)
 
 [node name="Player" parent="." unique_id=1733015852 instance=ExtResource("3_v7wsa")]
-position = Vector2(574, 341)
+position = Vector2(770, 414)
 pistol_bullet_scene = ExtResource("4_v2jpr")

@@ -5,21 +5,22 @@ func _ready() -> void:
 	
 	max_health = 100
 	current_health = max_health
-
+	aparencia = $AparenciaAnimada
+	
 func _physics_process(delta: float) -> void:
 	super(delta)
 	
 	if Global.pecado == 1:
-		$AparenciaAnimada.play("pecado1")
+		aparencia.play("pecado1")
 	elif Global.pecado == 2:
-		$AparenciaAnimada.play("pecado2")
+		aparencia.play("pecado2")
 	elif Global.pecado == 3:
-		$AparenciaAnimada.play("pecado3")
+		aparencia.play("pecado3")
 	elif Global.pecado == 4:
-		$AparenciaAnimada.play("pecado4")
+		aparencia.play("pecado4")
 	elif Global.pecado == 5:
-		$AparenciaAnimada.play("pecado5")
+		aparencia.play("pecado5")
 	elif Global.pecado == 6:
-		$AparenciaAnimada.play("pecado6")
+		aparencia.play("pecado6")
 	elif Global.pecado == 7:
-		$AparenciaAnimada.play("pecado7")
+		aparencia.play("pecado7")

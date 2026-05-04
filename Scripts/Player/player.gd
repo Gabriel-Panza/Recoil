@@ -1,8 +1,8 @@
 extends CharacterBody2D
 
 # --- Status melhoráveis via Level Ups ---
-@export var max_health: int = 300
-@export var current_health: int = 300
+@export var max_health: int = 500
+@export var current_health: int = 500
 @export var attack_damage: float = 25.0
 @export var fire_rate: float = 1.0
 @export var recoil_force: float = 550.0

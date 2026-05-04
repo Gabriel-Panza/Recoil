@@ -63,8 +63,6 @@ func update_status_labels():
 
 func freeze():
 	canMove = false
-	if game_scene:
-		game_scene.pause_timers()
 	for obj in get_tree().get_nodes_in_group("Vivos"):
 		if obj in get_tree().get_nodes_in_group("Inimigo"):
 			speedEnemy = obj.speed
@@ -79,5 +77,3 @@ func unfreeze():
 			obj.speed = speedEnemy
 		else:
 			obj.speed = speedProjectile
-	if game_scene:
-		game_scene.resume_timers()
