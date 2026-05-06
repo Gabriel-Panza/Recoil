@@ -34,6 +34,8 @@ collision_mask = 0
 build_mode = 1
 polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63.199997, 64.083336, -51.5, 63.694443, 53.7, 54.805557, 63.400005, -55.13889, 63.8, -64.02778, 52.400005)
 
+[node name="Centro" type="Marker2D" parent="Arenas/Pecado1" unique_id=1599619679]
+
 [node name="Pecado2" type="Sprite2D" parent="Arenas" unique_id=1381154649]
 position = Vector2(4545, -960)
 scale = Vector2(12, 6)
@@ -45,6 +47,8 @@ collision_mask = 0
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Arenas/Pecado2/StaticBody2D" unique_id=1148293379]
 build_mode = 1
 polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63.199997, 64.083336, -51.5, 63.694443, 53.7, 54.805557, 63.400005, -55.13889, 63.8, -64.02778, 52.400005)
+
+[node name="Centro" type="Marker2D" parent="Arenas/Pecado2" unique_id=728806620]
 
 [node name="Pecado3" type="Sprite2D" parent="Arenas" unique_id=1664075302]
 position = Vector2(6808, -960)
@@ -58,6 +62,8 @@ collision_mask = 0
 build_mode = 1
 polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63.199997, 64.083336, -51.5, 63.694443, 53.7, 54.805557, 63.400005, -55.13889, 63.8, -64.02778, 52.400005)
 
+[node name="Centro" type="Marker2D" parent="Arenas/Pecado3" unique_id=1257344601]
+
 [node name="Pecado4" type="Sprite2D" parent="Arenas" unique_id=1789608018]
 position = Vector2(2263, 1704)
 scale = Vector2(12, 6)
@@ -69,6 +75,8 @@ collision_mask = 0
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Arenas/Pecado4/StaticBody2D" unique_id=301094355]
 build_mode = 1
 polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63.199997, 64.083336, -51.5, 63.694443, 53.7, 54.805557, 63.400005, -55.13889, 63.8, -64.02778, 52.400005)
+
+[node name="Centro" type="Marker2D" parent="Arenas/Pecado4" unique_id=633933364]
 
 [node name="Pecado5" type="Sprite2D" parent="Arenas" unique_id=643689195]
 position = Vector2(4545, 1704)
@@ -82,6 +90,8 @@ collision_mask = 0
 build_mode = 1
 polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63.199997, 64.083336, -51.5, 63.694443, 53.7, 54.805557, 63.400005, -55.13889, 63.8, -64.02778, 52.400005)
 
+[node name="Centro" type="Marker2D" parent="Arenas/Pecado5" unique_id=1441165745]
+
 [node name="Pecado6" type="Sprite2D" parent="Arenas" unique_id=11392063]
 position = Vector2(6808, 1704)
 scale = Vector2(12, 6)
@@ -94,6 +104,8 @@ collision_mask = 0
 build_mode = 1
 polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63.199997, 64.083336, -51.5, 63.694443, 53.7, 54.805557, 63.400005, -55.13889, 63.8, -64.02778, 52.400005)
 
+[node name="Centro" type="Marker2D" parent="Arenas/Pecado6" unique_id=1612643186]
+
 [node name="Pecado7" type="Sprite2D" parent="Arenas" unique_id=1273363467]
 position = Vector2(8620, 390)
 scale = Vector2(12, 6)
@@ -105,6 +117,8 @@ collision_mask = 0
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Arenas/Pecado7/StaticBody2D" unique_id=1880385974]
 build_mode = 1
 polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63.199997, 64.083336, -51.5, 63.694443, 53.7, 54.805557, 63.400005, -55.13889, 63.8, -64.02778, 52.400005)
+
+[node name="Centro" type="Marker2D" parent="Arenas/Pecado7" unique_id=1027328167]
 
 [node name="Player" parent="." unique_id=1733015852 instance=ExtResource("3_v7wsa")]
 position = Vector2(770, 414)

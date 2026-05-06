@@ -102,6 +102,9 @@ func spawn_wave(data: Dictionary):
 		spawn_enemy(RANGED_ENEMY)
 
 func spawn_boss():
+	var centro_node = current_arena.get_node("Centro")
+	$Player.global_position = centro_node.global_position
+	await get_tree().create_timer(1).timeout
 	var boss = BOSS_ENEMY.instantiate()
 	boss.global_position = get_random_camera_edge_position()
 	boss.add_to_group("Boss")
@@ -190,6 +193,7 @@ func _on_boss_died():
 	if boss_phase:
 		boss_phase = false
 		current_wave_index = 0
+		$Player.position = Vector2(770,414)
 		start_next_wave()
 
 func _on_pecado_changed(new_pecado):
