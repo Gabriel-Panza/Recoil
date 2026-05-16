@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://cug5y4r6000kg"]
 
-[ext_resource type="Script" uid="uid://dhbxvcw7j76k2" path="res://Scripts/Inimigos/melee_enemy.gd" id="1_ybw6v"]
+[ext_resource type="Script" uid="uid://brxnusu8kbo44" path="res://Scripts/Inimigos/boss.gd" id="1_ybw6v"]
 [ext_resource type="Texture2D" uid="uid://tgm4okhcbtl" path="res://Sprites/demonho_melee.png" id="2_kv3vv"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_i1tjc"]

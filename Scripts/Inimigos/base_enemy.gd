@@ -4,7 +4,7 @@ class_name BaseEnemy
 @export var max_health: int = 100
 @export var speed: float = 7500.0 # 75 m/s * 100fps
 @export var damage: int = 20
-@export var xp_drop: int = 10
+@export var xp_drop: int = 1
 
 var current_health: int
 var player: Node2D
@@ -28,6 +28,7 @@ func take_damage(amount: int) -> void:
 	current_health -= amount
 	if current_health <= 0:
 		die()
+		return
 
 	# Tween para demonstrar que tomou dano
 	var tween = create_tween()

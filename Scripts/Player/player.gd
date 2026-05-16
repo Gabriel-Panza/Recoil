@@ -224,9 +224,13 @@ func gain_xp(amount: int) -> void:
 		upando = true
 		level_up()
 
+func start_wave_xp_goal(enemy_count: int) -> void:
+	current_xp = 0
+	xp_to_next_level = max(enemy_count, 1)
+	emit_signal("xp_updated", current_xp, xp_to_next_level)
+
 func level_up() -> void:
 	level += 1
 	current_xp -= xp_to_next_level
-	xp_to_next_level = int(xp_to_next_level * 1.05)
 	emit_signal("level_updated", level, current_xp, xp_to_next_level)
 	emit_signal("xp_updated", current_xp, xp_to_next_level)

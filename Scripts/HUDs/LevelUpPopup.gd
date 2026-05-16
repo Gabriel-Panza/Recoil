@@ -13,25 +13,34 @@ var passive_options = [
 	{ "id": "option_3", "text": "Attack (+10%)", "rarity": "passive_common" },
 	{ "id": "option_4", "text": "Atk-Speed (+3%)", "rarity": "passive_common" }
 ]
+var cursed_passive_options = [
+	{ "id": "glass_canon", "text": "Attack (+25%), Health (-20%)", "rarity": "passive_cursed" },
+	{ "id": "tanky", "text": "Health (+20%), Attack (-25%)", "rarity": "passive_cursed" },
+	{ "id": "deadly_slow", "text": "Recoil Force (-50%), Attack (+50%)", "rarity": "passive_cursed" }
+]
 var active_options = [
-	{ "id": "Shield_Protection", "text": " Gain a one-hit shield", "rarity": "active" },
-	{ "id": "recoil_explosion", "text": " Your next recoil creates a small shockwave", "rarity": "active" }
+	{ "id": "Shield_Protection", "text": "Gain a one-hit shield", "rarity": "active" },
+	{ "id": "Recoil_Explosion", "text": "Your next recoil creates a small shockwave", "rarity": "active" },
+	{ "id": "Double_Dash", "text": "You have two charges of dash", "rarity": "active" }
 ]
 var boss_options = [
-	{ "id": "wrath_overheat", "text": "Wrath: Every 3th shot deals double damage", "rarity": "passive_sin" },
-	{ "id": "active_wrath_burst", "text": "Wrath: Fire a radial burst of bullets", "rarity": "active_sin" },
-	{ "id": "pride_fall", "text": "Pride: Huge damage at full HP, but lose bonus when hit", "rarity": "passive_sin" },
-	{ "id": "active_pride_perfection", "text": "Pride: Become invulnerable briefly", "rarity": "active_sin" },
-	{ "id": "gluttony_heal_xp", "text": "Gluttony: Heal a small amount when collecting XP", "rarity": "passive_sin" },
-	{ "id": "active_gluttony_devour", "text": "Gluttony: Consume nearby XP to heal yourself", "rarity": "active_sin" },
-	{ "id": "greed_cursed_xp", "text": "Greed: XP +30%, but enemies move +10% faster", "rarity": "passive_sin" },
-	{ "id": "active_greed_treasure_rain", "text": "Greed: Rain golden projectiles from above", "rarity": "active_sin" },
-	{ "id": "sloth_slow_aura", "text": "Sloth: Enemies near you move slower", "rarity": "passive_sin" },
-	{ "id": "active_sloth_field", "text": "Sloth: Create a field that slows all nearby enemies", "rarity": "active_sin" },
+	{ "id": "sloth_slow_aura", "text": "Sloth: Enemies near you move slightly slower", "rarity": "passive_sin" },
+	{ "id": "sloth_field", "text": "Sloth: Create a field that slows all enemies inside greatly, but you become slightly slow too", "rarity": "active_sin" },
+	
+	{ "id": "gluttony_heal_kill", "text": "Gluttony: Heal a small amount when killing enemies", "rarity": "passive_sin" },
+	{ "id": "gluttony_devour", "text": "Gluttony: Consume two nearby enemies to heal yourself for a great amount, but become very slow for 5s", "rarity": "active_sin" },
+	
 	{ "id": "envy_mirror_shot", "text": "Envy: Chance to fire a second mirrored bullet", "rarity": "passive_sin" },
-	{ "id": "active_envy_mirror_clone", "text": "Envy: Summon a mirror clone that shoots with you", "rarity": "active_sin" },	{ "id": "active_pride_perfection", "text": "Pride: Become invulnerable and stronger for a short time", "rarity": "active_sin" },
-	{ "id": "lust_dangerous_attraction", "text": "Lust: Enemies drop more XP, but chase you faster", "rarity": "passive_sin" },
-	{ "id": "active_lust_charm_wave", "text": "Lust: Charm nearby enemies for a few seconds", "rarity": "active_sin" }
+	{ "id": "envy_mirror_clone", "text": "Envy: Summon a mirror clone that shoots with you for some time, but the clone bullet can hit anything (including you)", "rarity": "active_sin" },	{ "id": "active_pride_perfection", "text": "Pride: Become invulnerable and stronger for a short time", "rarity": "active_sin" },
+
+	{ "id": "wrath_overheat", "text": "Wrath: Every 3th shot deals double damage", "rarity": "passive_sin" },
+	{ "id": "wrath_burst", "text": "Wrath: Fire a radial burst of bullets, but take some damage", "rarity": "active_sin" },
+	
+	{ "id": "lust_for_vengeance", "text": "Lust: Huge damage at full HP, but lose bonus when hit", "rarity": "passive_sin" },
+	{ "id": "lust_for_perfection", "text": "Lust: Become invulnerable briefly, but take double damage for 5s after leaving invulnerability", "rarity": "active_sin" },
+	
+	{ "id": "greed_cursed_level", "text": "Greed: Gain 1 bonus level per wave. Enemies move +25% faster", "rarity": "passive_sin" },
+	{ "id": "greed_treasure_rain", "text": "Greed: Rain golden projectiles from above, dealing damage to everything (including you)", "rarity": "active_sin" }
 ]
 signal option_selected(option)
 
@@ -66,9 +75,13 @@ func show_popup():
 			button.visible = true
 			button.get_child(0).text = randomized_options[i]["text"]
 			if randomized_options[i]["rarity"] == "passive_common":
-				button.self_modulate = Color(0, 1, 0.2, 1) # Verde
+				button.self_modulate = Color(0, 1, 0.1, 1) # Verde
+			elif randomized_options[i]["rarity"] == "active":
+				button.self_modulate = Color(0.1, 0.0, 1, 1.0) # Roxo
+			elif randomized_options[i]["rarity"] == "passive_cursed":
+				button.self_modulate = Color(0.6, 0.0, 0.6, 1.0) # Roxo
 			else:
-				button.self_modulate = Color(1, 0, 0.2, 1) # Vermelho
+				button.self_modulate = Color(1, 0, 0.1, 1) # Vermelho
 			button.disconnect("pressed", Callable(self, "_on_option_pressed"))
 			button.connect("pressed", Callable(self, "_on_option_pressed").bind(randomized_options[i]["id"]))
 		else:
