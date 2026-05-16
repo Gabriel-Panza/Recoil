@@ -133,8 +133,8 @@ func handle_sloth(delta: float):
 	# Implemente lógica específica para Sloth
 	pass
 
-func take_damage(amount: int) -> void:
-	current_health -= amount
+func take_damage(amount: float) -> void:
+	current_health -= int(round(amount))
 	if current_health <= 0:
 		die()
 		return
@@ -146,8 +146,9 @@ func take_damage(amount: int) -> void:
 
 func die() -> void:
 	if player and player.has_method("gain_xp"):
-		if Global.pecado < 7:
-			player.gain_xp(xp_drop)
+		player.gain_xp(xp_drop)
+	if player and player.has_method("on_enemy_killed"):
+		player.on_enemy_killed(self)
 	
 	Global.pecado += 1
 	

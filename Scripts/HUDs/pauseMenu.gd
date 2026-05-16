@@ -16,6 +16,10 @@ var atk_speed_label_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLaye
 var atk_speed_label: Label
 var recoil_label_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer/Recoil"
 var recoil_label: Label
+var active_skill_e_label_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer/ActiveSkillE"
+var active_skill_e_label: Label
+var active_skill_r_label_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer/ActiveSkillR"
+var active_skill_r_label: Label
 
 var speedEnemy
 var speedProjectile
@@ -31,6 +35,8 @@ func _ready() -> void:
 	attack_label = get_node_or_null(attack_label_path)
 	atk_speed_label = get_node_or_null(atk_speed_label_path)
 	recoil_label = get_node_or_null(recoil_label_path)
+	active_skill_e_label = get_node_or_null(active_skill_e_label_path)
+	active_skill_r_label = get_node_or_null(active_skill_r_label_path)
 
 	if player:
 		player.connect("stats_updated", Callable(self, "update_status_labels"))
@@ -46,6 +52,7 @@ func _process(delta):
 func _pause_game():
 	pause_menu.show()
 	$"../HBoxContainer".visible = true
+	update_status_labels()
 	get_tree().paused = true
 
 func _unpause_game():
@@ -56,10 +63,53 @@ func _unpause_game():
 
 func update_status_labels():
 	if player:
-		health_label.text = "Health: %.2f/%d" % [player.current_health, player.max_health]
-		attack_label.text = "Attack: %.1f" % player.attack_damage
-		atk_speed_label.text = "Atk-Speed: %.1f%%" % (player.fire_rate * 100)
-		recoil_label.text = "Recoil Force: %.1f" % (player.recoil_force/100)
+		if health_label:
+			health_label.text = "Health: %.2f/%d" % [player.current_health, player.max_health]
+		if attack_label:
+			attack_label.text = "Attack: %.1f" % player.attack_damage
+		if atk_speed_label:
+			atk_speed_label.text = "Atk-Speed: %.1f%%" % (player.fire_rate * 100)
+		if recoil_label:
+			recoil_label.text = "Recoil Force: %.1f" % (player.recoil_force/100)
+		_update_active_skill_labels()
+
+func _update_active_skill_labels() -> void:
+	_update_active_skill_slot_label(active_skill_e_label, "E")
+	_update_active_skill_slot_label(active_skill_r_label, "R")
+
+func _update_active_skill_slot_label(label: Label, slot: String) -> void:
+	if not label:
+		return
+
+	if not player.has_method("get_active_ability_slots"):
+		label.text = "%s: -" % slot
+		label.tooltip_text = "No active skill equipped"
+		return
+
+	var active_slots = player.get_active_ability_slots()
+	var ability_id = active_slots.get(slot, "")
+	if ability_id == "":
+		label.text = "%s: -" % slot
+		label.tooltip_text = "No active skill equipped"
+		return
+
+	var skill_name = ability_id
+	var skill_description = ability_id
+	if player.has_method("get_active_ability_name"):
+		skill_name = player.get_active_ability_name(ability_id)
+	if player.has_method("get_active_ability_description"):
+		skill_description = player.get_active_ability_description(ability_id)
+
+	var cooldown = 0.0
+	if player.has_method("get_active_slot_cooldown"):
+		cooldown = player.get_active_slot_cooldown(slot)
+
+	if cooldown > 0.0:
+		label.text = "%s: %s (%.1fs)" % [slot, skill_name, cooldown]
+	else:
+		label.text = "%s: %s" % [slot, skill_name]
+
+	label.tooltip_text = "%s\nCooldown: %.1fs" % [skill_description, cooldown]
 
 func freeze():
 	canMove = false

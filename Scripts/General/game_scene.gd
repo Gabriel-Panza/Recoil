@@ -11,17 +11,15 @@ var fade_layer: CanvasLayer
 var fade_rect: ColorRect
 var is_transitioning: bool = false
 
-# Troque estes placeholders pelos sprites reais da ArenaEnemy.
 # Indice 0 = visual inicial; indice 1 = apos o primeiro boss; indice 2 = apos o segundo boss; etc.
 var enemy_arena_textures: Array[Texture2D] = [
-	preload("res://Sprites/icon.svg"),
-	preload("res://Sprites/icon.svg"),
-	preload("res://Sprites/icon.svg"),
-	preload("res://Sprites/icon.svg"),
-	preload("res://Sprites/icon.svg"),
-	preload("res://Sprites/icon.svg"),
-	preload("res://Sprites/icon.svg"),
-	preload("res://Sprites/icon.svg")
+	preload("res://Sprites/icon.svg"), # Sloth
+	preload("res://Sprites/icon.svg"), # Gluttony
+	preload("res://Sprites/icon.svg"), # Envy
+	preload("res://Sprites/icon.svg"), # Wrath
+	preload("res://Sprites/icon.svg"), # Greed
+	preload("res://Sprites/icon.svg"), # Lust
+	preload("res://Sprites/icon.svg")  # Pride
 ]
 
 # Preload dos inimigos
@@ -31,25 +29,25 @@ const BOSS_ENEMY = preload("res://Cenas/Inimigos/boss.tscn")
 
 # Conjuntos de waves baseados no pecado
 var wave_sets = {
-	1: [  # Pride
+	1: [  # Sloth
 		{"melee": 4, "ranged": 0},
 		{"melee": 5, "ranged": 2},
 		{"melee": 6, "ranged": 3},
 		{"melee": 7, "ranged": 4}
 	],
-	2: [  # Greed
+	2: [  # Gluttony
 		{"melee": 5, "ranged": 1},
 		{"melee": 6, "ranged": 3},
 		{"melee": 7, "ranged": 5},
 		{"melee": 8, "ranged": 7}
 	],
-	3: [  # Wrath
+	3: [  # Envy
 		{"melee": 6, "ranged": 2},
 		{"melee": 7, "ranged": 4},
 		{"melee": 8, "ranged": 6},
 		{"melee": 9, "ranged": 8}
 	],
-	4: [  # Envy
+	4: [  # Wrath
 		{"melee": 7, "ranged": 3},
 		{"melee": 8, "ranged": 5},
 		{"melee": 9, "ranged": 7},
@@ -61,13 +59,13 @@ var wave_sets = {
 		{"melee": 10, "ranged": 8},
 		{"melee": 11, "ranged": 10}
 	],
-	6: [  # Gluttony
+	6: [  # Greed
 		{"melee": 9, "ranged": 5},
 		{"melee": 10, "ranged": 7},
 		{"melee": 11, "ranged": 9},
 		{"melee": 12, "ranged": 11}
 	],
-	7: [  # Sloth
+	7: [  # Pride
 		{"melee": 10, "ranged": 6},
 		{"melee": 11, "ranged": 8},
 		{"melee": 12, "ranged": 10},
@@ -124,9 +122,9 @@ func _transition_player_to(target_position: Vector2) -> void:
 	await _fade_to(0.0)
 	is_transitioning = false
 
-func _set_player_xp_goal(enemy_count: int) -> void:
+func _set_player_xp_goal(enemy_count: int, context: String = "normal", boss_pecado: int = 0) -> void:
 	if $Player.has_method("start_wave_xp_goal"):
-		$Player.start_wave_xp_goal(enemy_count)
+		$Player.start_wave_xp_goal(enemy_count, context, boss_pecado)
 
 func _wait_for_level_up_selection() -> void:
 	while $Player.upando:
@@ -156,7 +154,11 @@ func start_next_wave():
 	current_wave_index += 1
 
 func spawn_wave(data: Dictionary):
-	_set_player_xp_goal(data["melee"] + data["ranged"])
+	var level_context = "pre_boss" if current_arena == arena_nodes[0] and current_wave_index == waves.size() - 1 else "normal"
+	_set_player_xp_goal(data["melee"] + data["ranged"], level_context, Global.pecado)
+
+	if $Player.greed_cursed_level_enabled:
+		$Player.grant_bonus_level_up("normal")
 
 	# Spawna melee
 	for i in range(data["melee"]):
@@ -168,11 +170,12 @@ func spawn_wave(data: Dictionary):
 
 func spawn_boss():
 	var centro_node = current_arena.get_node("Centro")
-	_set_player_xp_goal(1)
+	_set_player_xp_goal(1, "boss", Global.pecado)
 	await _transition_player_to(centro_node.global_position)
 	await get_tree().create_timer(1).timeout
 
 	var boss = BOSS_ENEMY.instantiate()
+	_apply_enemy_spawn_modifiers(boss)
 	boss.global_position = get_random_camera_edge_position()
 	boss.add_to_group("Boss")
 	boss.tree_exited.connect(_on_boss_died)
@@ -180,6 +183,7 @@ func spawn_boss():
 
 func spawn_enemy(enemy_scene: PackedScene):
 	var enemy = enemy_scene.instantiate()
+	_apply_enemy_spawn_modifiers(enemy)
 	add_child(enemy)
 
 	# Posiciona nas bordas da camera, dentro do mapa
@@ -188,10 +192,14 @@ func spawn_enemy(enemy_scene: PackedScene):
 	# Monitora a morte do inimigo
 	enemy.tree_exited.connect(_on_enemy_died)
 
+func _apply_enemy_spawn_modifiers(enemy: Node) -> void:
+	if $Player.greed_cursed_level_enabled and enemy.get("speed") != null:
+		enemy.set("speed", enemy.get("speed") * 1.25)
+
 func get_random_camera_edge_position() -> Vector2:
 	var camera = get_viewport().get_camera_2d()
 	if not camera:
-		return get_random_edge_position()
+		return get_random_arena_position()
 
 	var cam_pos = camera.global_position
 	var viewport_size = get_viewport_rect().size
@@ -214,33 +222,48 @@ func get_random_camera_edge_position() -> Vector2:
 			3: # Direita
 				pos = Vector2(cam_rect.end.x + margin, randf_range(cam_rect.position.y, cam_rect.end.y))
 
-		# Verifica se a posicao esta dentro do mapa (poligono de colisao)
-		var collision_polygon = current_arena.get_node("StaticBody2D/CollisionPolygon2D")
-		if collision_polygon and Geometry2D.is_point_in_polygon(pos, collision_polygon.polygon):
+		if _is_position_inside_current_arena(pos):
 			var player = get_tree().get_first_node_in_group("Player")
 			if player and pos.distance_to(player.global_position) > 100.0:
 				return pos
 
-	return get_random_edge_position()
+	return get_random_arena_position()
 
-func get_random_edge_position() -> Vector2:
-	var viewport_rect = get_viewport_rect()
-	var margin = 50.0
+func get_random_arena_position() -> Vector2:
+	var collision_polygon = _get_current_arena_collision_polygon()
+	if collision_polygon == null:
+		return current_arena.global_position
 
-	var side = randi() % 4 # 0: Cima, 1: Baixo, 2: Esquerda, 3: Direita
-	var spawn_pos = Vector2.ZERO
+	var global_points = []
+	for point in collision_polygon.polygon:
+		global_points.append(collision_polygon.to_global(point))
 
-	match side:
-		0: # Cima
-			spawn_pos = Vector2(randf_range(0, viewport_rect.size.x), -margin)
-		1: # Baixo
-			spawn_pos = Vector2(randf_range(0, viewport_rect.size.x), viewport_rect.size.y + margin)
-		2: # Esquerda
-			spawn_pos = Vector2(-margin, randf_range(0, viewport_rect.size.y))
-		3: # Direita
-			spawn_pos = Vector2(viewport_rect.size.x + margin, randf_range(0, viewport_rect.size.y))
+	var arena_rect = Rect2(global_points[0], Vector2.ZERO)
+	for point in global_points:
+		arena_rect = arena_rect.expand(point)
 
-	return spawn_pos
+	for i in range(30):
+		var pos = Vector2(
+			randf_range(arena_rect.position.x, arena_rect.end.x),
+			randf_range(arena_rect.position.y, arena_rect.end.y)
+		)
+		if _is_position_inside_current_arena(pos):
+			var player = get_tree().get_first_node_in_group("Player")
+			if player == null or pos.distance_to(player.global_position) > 100.0:
+				return pos
+
+	return current_arena.global_position
+
+func _is_position_inside_current_arena(global_pos: Vector2) -> bool:
+	var collision_polygon = _get_current_arena_collision_polygon()
+	if collision_polygon == null:
+		return true
+
+	var local_pos = collision_polygon.to_local(global_pos)
+	return Geometry2D.is_point_in_polygon(local_pos, collision_polygon.polygon)
+
+func _get_current_arena_collision_polygon() -> CollisionPolygon2D:
+	return current_arena.get_node_or_null("StaticBody2D/CollisionPolygon2D")
 
 func _on_enemy_died() -> void:
 	if not is_wave_active:
@@ -275,7 +298,7 @@ func _on_boss_died():
 	start_next_wave()
 
 func _on_pecado_changed(new_pecado):
-	if new_pecado == 8:
+	if new_pecado > 7:
 		await _wait_for_level_up_selection()
 		var player = get_tree().get_first_node_in_group("Player")
 		if player and player.has_method("win"):

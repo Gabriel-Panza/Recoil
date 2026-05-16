@@ -17,9 +17,12 @@ func _ready():
 	player = get_node_or_null(player_path)
 	rotation = direction.angle()
 	area_entered.connect(_on_area_entered)
+	body_entered.connect(_on_body_entered)
 	
 	if self.is_in_group("EnemyProjectile"):
 		speed = 500.0
+		collision_layer = 0
+		collision_mask = 6 if self.is_in_group("Projectile") else 2
 	
 func _process(delta):
 	position += direction * speed * delta
@@ -29,12 +32,18 @@ func _on_area_entered(area):
 	var parent = area.get_parent()
 	
 	if self.is_in_group("Projectile") and parent.is_in_group("Enemy"):
-		if parent not in hit_queue:
-			hit_queue.append(parent)
+		_queue_hit(parent)
 	
 	elif self.is_in_group("EnemyProjectile") and parent.is_in_group("Player"):
-		if parent not in hit_queue:
-			hit_queue.append(parent)
+		_queue_hit(parent)
+
+func _on_body_entered(body: Node) -> void:
+	if self.is_in_group("EnemyProjectile") and body.is_in_group("Player"):
+		_queue_hit(body)
+
+func _queue_hit(target: Node) -> void:
+	if target not in hit_queue:
+		hit_queue.append(target)
 
 func process_hit_queue():
 	if hit_queue.is_empty():
@@ -49,9 +58,11 @@ func process_hit_queue():
 			continue
 
 		if target.is_in_group("Enemy") and target.has_method("take_damage"):
-			target.take_damage(player.attack_damage)
+			var enemy_damage = damage if damage != null else player.attack_damage
+			target.take_damage(enemy_damage)
 		elif target.is_in_group("Player") and target.has_method("take_damage"):
-			target.take_damage(damage)
+			var player_damage = damage if damage != null else 20.0
+			target.take_damage(player_damage)
 			
 		# Destrói o projétil e interrompe o loop imediatamente
 		queue_free()

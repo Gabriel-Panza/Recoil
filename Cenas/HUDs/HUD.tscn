@@ -87,6 +87,34 @@ theme_override_font_sizes/font_size = 20
 text = "Recoil Force: 500"
 horizontal_alignment = 2
 
+[node name="ActiveSkillTitle" type="Label" parent="HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.6, 1, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 18
+text = "Active Skills"
+horizontal_alignment = 2
+
+[node name="ActiveSkillE" type="Label" parent="HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer"]
+layout_mode = 2
+tooltip_text = "No active skill equipped"
+mouse_filter = 0
+theme_override_colors/font_color = Color(0.2, 0.6, 1, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 16
+text = "E: -"
+horizontal_alignment = 2
+
+[node name="ActiveSkillR" type="Label" parent="HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer"]
+layout_mode = 2
+tooltip_text = "No active skill equipped"
+mouse_filter = 0
+theme_override_colors/font_color = Color(0.2, 0.6, 1, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 16
+text = "R: -"
+horizontal_alignment = 2
+
 [node name="Label" type="Label" parent="." unique_id=1256540352]
 z_index = 1
 offset_left = 522.0

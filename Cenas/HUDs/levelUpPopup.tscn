@@ -18,12 +18,12 @@ grow_vertical = 2
 script = ExtResource("1_n24re")
 
 [node name="TextureRect" type="TextureRect" parent="." unique_id=232983202]
-custom_minimum_size = Vector2(720, 240)
+custom_minimum_size = Vector2(720, 300)
 layout_mode = 0
 offset_left = -33.0
 offset_top = -43.0
 offset_right = 687.0
-offset_bottom = 221.0
+offset_bottom = 261.0
 
 [node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=298487115]
 layout_mode = 0
@@ -78,3 +78,17 @@ theme_override_colors/font_color = Color(1, 0.25882354, 0.2, 1)
 theme_override_font_sizes/font_size = 36
 text = "Option 3"
 horizontal_alignment = 1
+
+[node name="SkipButton" type="Button" parent="."]
+visible = false
+layout_mode = 0
+offset_left = 260.0
+offset_top = 214.0
+offset_right = 388.0
+offset_bottom = 252.0
+tooltip_text = "Skip this level up"
+theme_override_colors/font_color = Color(0.72, 0.72, 0.72, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 20
+text = "Skip"
