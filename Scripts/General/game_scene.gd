@@ -79,6 +79,7 @@ var is_wave_active: bool = false
 var boss_phase: bool = false
 
 func _ready() -> void:
+	randomize()
 	Global.pecado_changed.connect(_on_pecado_changed)
 	current_arena = arena_nodes[0]
 	_setup_fade_overlay()
@@ -178,7 +179,7 @@ func spawn_boss():
 	_apply_enemy_spawn_modifiers(boss)
 	boss.global_position = get_random_camera_edge_position()
 	boss.add_to_group("Boss")
-	boss.tree_exited.connect(_on_boss_died)
+	boss.connect("boss_defeated", Callable(self, "_on_boss_died"))
 	add_child(boss)
 
 func spawn_enemy(enemy_scene: PackedScene):
@@ -266,18 +267,23 @@ func _get_current_arena_collision_polygon() -> CollisionPolygon2D:
 	return current_arena.get_node_or_null("StaticBody2D/CollisionPolygon2D")
 
 func _on_enemy_died() -> void:
-	if not is_wave_active:
+	if not is_inside_tree() or not is_wave_active:
 		return
 
-	if get_tree():
-		await get_tree().process_frame
+	await get_tree().process_frame
+	if not is_inside_tree():
+		return
 
-		# Checa se ainda existem inimigos vivos
-		if not get_tree().get_nodes_in_group("Enemy"):
-			is_wave_active = false
-			await get_tree().create_timer(0.5).timeout
-			await _wait_for_level_up_selection()
-			start_next_wave()
+	# Checa se ainda existem inimigos vivos
+	if not get_tree().get_nodes_in_group("Enemy"):
+		is_wave_active = false
+		await get_tree().create_timer(0.5).timeout
+		if not is_inside_tree():
+			return
+		await _wait_for_level_up_selection()
+		if not is_inside_tree():
+			return
+		start_next_wave()
 
 func _on_boss_died():
 	if not boss_phase:

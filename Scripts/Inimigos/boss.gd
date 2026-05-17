@@ -10,6 +10,8 @@ enum LustSubState { IDLE, PREPARE, ATTACK, SPECIAL }
 enum GreedSubState { IDLE, PREPARE, ATTACK, SPECIAL }
 enum PrideSubState { IDLE, PREPARE, ATTACK, SPECIAL }
 
+signal boss_defeated
+
 @export var max_health: int = 500
 @export var speed: float = 5000.0
 @export var damage: int = 50
@@ -19,6 +21,7 @@ var current_health: int
 var player: Node2D
 var aparencia
 var health_bar: ProgressBar
+var is_dead: bool = false
 
 var current_state: BossState
 var current_sub_state = null
@@ -136,6 +139,9 @@ func handle_sloth(delta: float):
 	pass
 
 func take_damage(amount: float) -> void:
+	if is_dead:
+		return
+
 	current_health -= int(round(amount))
 	_update_health_bar()
 	if current_health <= 0:
@@ -148,12 +154,21 @@ func take_damage(amount: float) -> void:
 	tween.tween_property(aparencia, "modulate", Color.WHITE, 0.1)
 
 func die() -> void:
+	if is_dead:
+		return
+
+	is_dead = true
+	current_health = 0
+	_update_health_bar()
+	set_physics_process(false)
+
 	if player and player.has_method("gain_xp"):
 		player.gain_xp(xp_drop)
 	if player and player.has_method("on_enemy_killed"):
 		player.on_enemy_killed(self)
 	
 	Global.pecado += 1
+	boss_defeated.emit()
 	
 	queue_free()
 

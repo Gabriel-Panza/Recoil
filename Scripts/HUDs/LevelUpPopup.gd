@@ -16,30 +16,31 @@ var passive_options = [
 ]
 
 var cursed_passive_options = [
-	{ "id": "glass_canon", "text": "Attack (+25%), Health (-20%)", "description": "Greatly increases damage, but lowers your maximum health. Strong if you can avoid hits.", "rarity": "passive_cursed" },
-	{ "id": "tanky", "text": "Health (+20%), Attack (-25%)", "description": "Greatly increases survivability, but lowers your damage output.", "rarity": "passive_cursed" },
+	{ "id": "glass_canon", "text": "Attack (+50%), Health (-25%)", "description": "Greatly increases damage, but lowers your maximum health. Strong if you can avoid hits.", "rarity": "passive_cursed" },
+	{ "id": "tanky", "text": "Health (+25%), Attack (-50%)", "description": "Greatly increases survivability, but lowers your damage output.", "rarity": "passive_cursed" },
 	{ "id": "deadly_slow", "text": "Recoil Force (-50%), Attack (+50%)", "description": "Greatly increases damage, but weakens your recoil movement by cutting pushback force.", "rarity": "passive_cursed" }
 ]
 
 var rare_options = [
 	{ "id": "Shield_Protection", "text": "Gain a one-hit shield", "description": "Grants a shield that blocks the next damage instance. Only one rare passive can be active at a time.", "rarity": "passive_rare" },
-	{ "id": "Recoil_Explosion", "text": "Your recoil creates a small shockwave", "description": "Every shot creates a short-range shockwave around you. Only one rare passive can be active at a time.", "rarity": "passive_rare" },
-	{ "id": "Double_Dash", "text": "You have two charges of dash", "description": "Gives you an extra dash charge before the dash cooldown starts. Only one rare passive can be active at a time.", "rarity": "passive_rare" }
+	{ "id": "Recoil_Explosion", "text": "Your recoil creates a small shockwave", "description": "Every shot creates a 180px shockwave that deals 50% of your attack damage. Only one rare passive can be active at a time.", "rarity": "passive_rare" },
+	{ "id": "Double_Dash", "text": "You have two charges of dash", "description": "Gives you an extra dash charge before the dash cooldown starts. Only one rare passive can be active at a time.", "rarity": "passive_rare" },
+	{ "id": "Offensive_Dash", "text": "Offensive Dash", "description": "Dashing blocks damage and releases a 180px shockwave at the end of the dash, dealing the same damage as Recoil Explosion. Only one rare passive can be active at a time.", "rarity": "passive_rare" }
 ]
 
 var boss_options = [
-	{ "id": "sloth_slow_aura", "name": "Slow Aura", "text": "Slow Aura", "description": "Enemies near you move slightly slower.", "rarity": "passive_sin" },
-	{ "id": "sloth_field", "name": "Sloth Field", "text": "Sloth Field", "description": "Create a field that greatly slows all enemies inside it, but you become slightly slower too.", "rarity": "active_sin" },
-	{ "id": "gluttony_heal_kill", "name": "Blood Feast", "text": "Blood Feast", "description": "Heal a small amount whenever you kill an enemy.", "rarity": "passive_sin" },
-	{ "id": "gluttony_devour", "name": "Devour", "text": "Devour", "description": "Consume two nearby enemies to heal yourself for a large amount, but become very slow for 5 seconds.", "rarity": "active_sin" },
-	{ "id": "envy_mirror_shot", "name": "Mirror Shot", "text": "Mirror Shot", "description": "Gain a chance to fire a second mirrored bullet.", "rarity": "passive_sin" },
-	{ "id": "envy_mirror_clone", "name": "Mirror Clone", "text": "Mirror Clone", "description": "Summon a mirror clone that shoots with you for a short time. Clone bullets can hit anything, including you.", "rarity": "active_sin" },
+	{ "id": "sloth_slow_aura", "name": "Slow Aura", "text": "Slow Aura", "description": "Enemies within 180px move at 75% speed.", "rarity": "passive_sin" },
+	{ "id": "sloth_field", "name": "Sloth Field", "text": "Sloth Field", "description": "Create a 180px field for 5 seconds. Enemies inside drop to 35% speed, but your dash speed drops to 75% during the field.", "rarity": "active_sin" },
+	{ "id": "gluttony_heal_kill", "name": "Blood Feast", "text": "Blood Feast", "description": "Killing an enemy releases green motes that heal 1% max health when they return.", "rarity": "passive_sin" },
+	{ "id": "gluttony_devour", "name": "Devour", "text": "Devour", "description": "Consume up to two enemies within 180px. Green motes fly back and heal up to 12.5% max health when they arrive, but your dash speed is halved for 5 seconds.", "rarity": "active_sin" },
+	{ "id": "envy_mirror_shot", "name": "Mirror Shot", "text": "Mirror Shot", "description": "Gain a 25% chance to fire a second bullet mirrored across the shot's secondary axis for 75% damage.", "rarity": "passive_sin" },
+	{ "id": "envy_mirror_clone", "name": "Mirror Clone", "text": "Mirror Clone", "description": "Summon a mirror clone that fires random risky shots with you for a short time. Clone bullets can hit anything, including you.", "rarity": "active_sin" },
 	{ "id": "wrath_overheat", "name": "Overheat", "text": "Overheat", "description": "Every 3rd shot deals double damage.", "rarity": "passive_sin" },
-	{ "id": "wrath_burst", "name": "Wrath Burst", "text": "Wrath Burst", "description": "Fire a radial burst of bullets, but take some damage.", "rarity": "active_sin" },
-	{ "id": "lust_for_vengeance", "name": "Vengeance", "text": "Vengeance", "description": "Deal huge damage at full HP, but lose the bonus when hit.", "rarity": "passive_sin" },
-	{ "id": "lust_for_perfection", "name": "Perfection", "text": "Perfection", "description": "Become invulnerable briefly, then take double damage for 5 seconds after the invulnerability ends.", "rarity": "active_sin" },
+	{ "id": "wrath_burst", "name": "Wrath Burst", "text": "Wrath Burst", "description": "Fire 16 radial bullets for 110% attack damage each, then take 20 damage.", "rarity": "active_sin" },
+	{ "id": "lust_for_vengeance", "name": "Vengeance", "text": "Vengeance", "description": "Deal 75% more damage while at full HP, but lose the bonus when hit.", "rarity": "passive_sin" },
+	{ "id": "lust_for_perfection", "name": "Perfection", "text": "Perfection", "description": "Become invulnerable for 3 seconds, then take double damage for 5 seconds.", "rarity": "active_sin" },
 	{ "id": "greed_cursed_level", "name": "Cursed Level", "text": "Cursed Level", "description": "Gain 1 bonus level per wave. Enemies move 25% faster.", "rarity": "passive_sin" },
-	{ "id": "greed_treasure_rain", "name": "Treasure Rain", "text": "Treasure Rain", "description": "Rain golden projectiles from above, dealing damage to everything, including you.", "rarity": "active_sin" },
+	{ "id": "greed_treasure_rain", "name": "Treasure Rain", "text": "Treasure Rain", "description": "Rain golden projectiles from above. Each projectile deals 120% attack damage only when it collides, including with you.", "rarity": "active_sin" },
 ]
 
 var boss_option_ids_by_pecado = {
@@ -184,15 +185,30 @@ func _build_normal_options() -> Array:
 	return current_pool.slice(0, 3)
 
 func _build_pre_boss_options() -> Array:
-	var rare_pool = rare_options.duplicate()
+	var rare_pool = _get_available_rare_options()
 	var passive_pool = _get_available_passive_options()
 	rare_pool.shuffle()
 	passive_pool.shuffle()
 
-	var options = [rare_pool[0]]
-	options.append_array(passive_pool.slice(0, 2))
+	var options = []
+	if rare_pool.size() > 0:
+		options.append(rare_pool[0])
+	options.append_array(passive_pool.slice(0, 3 - options.size()))
 	options.shuffle()
 	return options
+
+func _get_available_rare_options() -> Array:
+	var available_options = []
+	var current_rare_option = ""
+	if player:
+		current_rare_option = player.current_rare_option
+
+	for option in rare_options:
+		if option["id"] == current_rare_option:
+			continue
+		available_options.append(option.duplicate())
+
+	return available_options
 
 func _get_available_passive_options() -> Array:
 	var available_options = []

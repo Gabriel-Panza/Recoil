@@ -11,7 +11,7 @@ var fire_cooldown: float = 0.0
 func _ready() -> void:
 	super() 
 	
-	max_health = 50
+	max_health = 50 + ((Global.pecado - 1) * 30)
 	current_health = max_health
 
 func _physics_process(delta: float) -> void:
