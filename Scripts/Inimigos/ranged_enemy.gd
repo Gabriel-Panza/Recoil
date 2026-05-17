@@ -3,8 +3,8 @@ class_name RangedEnemy
 
 @export var projectile_scene: PackedScene = preload("res://Cenas/Inimigos/enemyProjectile.tscn")
 @export var attack_range: float = 200.0  
-@export var stop_distance: float = 100.0 
-@export var fire_rate: float = 3.0
+@export var stop_distance: float = 80.0 
+@export var fire_rate: float = 2.5
 
 var fire_cooldown: float = 0.0
 
@@ -37,12 +37,12 @@ func mover(_delta: float) -> void:
 func handle_shooting(delta: float) -> void:
 	var distance_to_player = global_position.distance_to(player.global_position)
 	
-	if fire_cooldown > 0:
-		fire_cooldown -= delta
-		
-	if distance_to_player <= attack_range and distance_to_player >= stop_distance and fire_cooldown <= 0:
-		shoot()
-		fire_cooldown = fire_rate
+	if distance_to_player <= attack_range and distance_to_player >= stop_distance:
+		if fire_cooldown > 0:
+			fire_cooldown -= delta
+		if fire_cooldown <= 0:
+			shoot()
+			fire_cooldown = fire_rate
 
 func shoot() -> void:
 	if not projectile_scene:

@@ -18,6 +18,7 @@ enum PrideSubState { IDLE, PREPARE, ATTACK, SPECIAL }
 var current_health: int
 var player: Node2D
 var aparencia
+var health_bar: ProgressBar
 
 var current_state: BossState
 var current_sub_state = null
@@ -63,6 +64,7 @@ func _ready() -> void:
 			current_state = BossState.PRIDE
 			current_sub_state = PrideSubState.IDLE
 	current_health = max_health
+	call_deferred("_setup_health_bar")
 
 func _physics_process(delta: float) -> void:
 	if player:
@@ -135,6 +137,7 @@ func handle_sloth(delta: float):
 
 func take_damage(amount: float) -> void:
 	current_health -= int(round(amount))
+	_update_health_bar()
 	if current_health <= 0:
 		die()
 		return
@@ -153,3 +156,48 @@ func die() -> void:
 	Global.pecado += 1
 	
 	queue_free()
+
+func _setup_health_bar() -> void:
+	if health_bar:
+		return
+
+	health_bar = ProgressBar.new()
+	health_bar.name = "HealthBar"
+	health_bar.show_percentage = false
+	health_bar.custom_minimum_size = Vector2(64, 6)
+	health_bar.size = Vector2(64, 6)
+	health_bar.position = Vector2(-32, _get_health_bar_y_offset())
+	health_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	health_bar.z_index = 20
+
+	var background = StyleBoxFlat.new()
+	background.bg_color = Color(0.08, 0.06, 0.06, 0.9)
+	background.set_corner_radius_all(1)
+
+	var fill = StyleBoxFlat.new()
+	fill.bg_color = Color(0.95, 0.03, 0.03, 0.96)
+	fill.set_corner_radius_all(1)
+
+	health_bar.add_theme_stylebox_override("background", background)
+	health_bar.add_theme_stylebox_override("fill", fill)
+	add_child(health_bar)
+	_update_health_bar()
+
+func _update_health_bar() -> void:
+	if not health_bar:
+		return
+
+	health_bar.max_value = max(max_health, 1)
+	health_bar.value = clamp(current_health, 0, max_health)
+
+func _get_health_bar_y_offset() -> float:
+	var collision = get_node_or_null("CollisionShape2D")
+	if collision and collision.shape:
+		if collision.shape is CapsuleShape2D:
+			return -(collision.shape.height * 0.5) - 12.0
+		if collision.shape is CircleShape2D:
+			return -collision.shape.radius - 12.0
+		if collision.shape is RectangleShape2D:
+			return -(collision.shape.size.y * 0.5) - 12.0
+
+	return -36.0

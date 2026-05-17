@@ -69,7 +69,7 @@ func _apply_effect(option):
 		"option_3":
 			player.attack_damage += player.attack_damage * 0.1
 		"option_4":
-			player.fire_rate -= 0.015
+			player.add_attack_speed_bonus(0.05)
 		"glass_canon":
 			player.attack_damage += player.attack_damage * 0.25
 			player.max_health = int(player.max_health * 0.8)

@@ -9,22 +9,22 @@ var speedEnemy
 var speedProjectile
 
 var passive_options = [
-	{ "id": "option_1", "text": "Recoil Force (+5%)", "rarity": "passive_common" },
-	{ "id": "option_2", "text": "Health (+5%)", "rarity": "passive_common" },
-	{ "id": "option_3", "text": "Attack (+10%)", "rarity": "passive_common" },
-	{ "id": "option_4", "text": "Atk-Speed (+3%)", "rarity": "passive_common" }
+	{ "id": "option_1", "text": "Recoil Force (+5%)", "description": "Increases the pushback force you receive after shooting, helping you move farther with each shot.", "rarity": "passive_common" },
+	{ "id": "option_2", "text": "Health (+5%)", "description": "Increases your maximum health and heals you slightly based on your current health.", "rarity": "passive_common" },
+	{ "id": "option_3", "text": "Attack (+10%)", "description": "Increases the damage dealt by your bullets and damage-based effects.", "rarity": "passive_common" },
+	{ "id": "option_4", "text": "Atk-Speed (+5%)", "description": "+5% attack speed is additive from the original attack speed. Stops appearing at 0.25s shot cooldown.", "rarity": "passive_common" }
 ]
 
 var cursed_passive_options = [
-	{ "id": "glass_canon", "text": "Attack (+25%), Health (-20%)", "rarity": "passive_cursed" },
-	{ "id": "tanky", "text": "Health (+20%), Attack (-25%)", "rarity": "passive_cursed" },
-	{ "id": "deadly_slow", "text": "Recoil Force (-50%), Attack (+50%)", "rarity": "passive_cursed" }
+	{ "id": "glass_canon", "text": "Attack (+25%), Health (-20%)", "description": "Greatly increases damage, but lowers your maximum health. Strong if you can avoid hits.", "rarity": "passive_cursed" },
+	{ "id": "tanky", "text": "Health (+20%), Attack (-25%)", "description": "Greatly increases survivability, but lowers your damage output.", "rarity": "passive_cursed" },
+	{ "id": "deadly_slow", "text": "Recoil Force (-50%), Attack (+50%)", "description": "Greatly increases damage, but weakens your recoil movement by cutting pushback force.", "rarity": "passive_cursed" }
 ]
 
 var rare_options = [
-	{ "id": "Shield_Protection", "text": "Gain a one-hit shield", "rarity": "passive_rare" },
-	{ "id": "Recoil_Explosion", "text": "Your recoil creates a small shockwave", "rarity": "passive_rare" },
-	{ "id": "Double_Dash", "text": "You have two charges of dash", "rarity": "passive_rare" }
+	{ "id": "Shield_Protection", "text": "Gain a one-hit shield", "description": "Grants a shield that blocks the next damage instance. Only one rare passive can be active at a time.", "rarity": "passive_rare" },
+	{ "id": "Recoil_Explosion", "text": "Your recoil creates a small shockwave", "description": "Every shot creates a short-range shockwave around you. Only one rare passive can be active at a time.", "rarity": "passive_rare" },
+	{ "id": "Double_Dash", "text": "You have two charges of dash", "description": "Gives you an extra dash charge before the dash cooldown starts. Only one rare passive can be active at a time.", "rarity": "passive_rare" }
 ]
 
 var boss_options = [
@@ -179,13 +179,13 @@ func _build_options(context: String, boss_pecado: int) -> Array:
 	return _build_normal_options()
 
 func _build_normal_options() -> Array:
-	var current_pool = passive_options.duplicate()
+	var current_pool = _get_available_passive_options()
 	current_pool.shuffle()
 	return current_pool.slice(0, 3)
 
 func _build_pre_boss_options() -> Array:
 	var rare_pool = rare_options.duplicate()
-	var passive_pool = passive_options.duplicate()
+	var passive_pool = _get_available_passive_options()
 	rare_pool.shuffle()
 	passive_pool.shuffle()
 
@@ -193,6 +193,15 @@ func _build_pre_boss_options() -> Array:
 	options.append_array(passive_pool.slice(0, 2))
 	options.shuffle()
 	return options
+
+func _get_available_passive_options() -> Array:
+	var available_options = []
+	for option in passive_options:
+		if option["id"] == "option_4" and player and player.has_method("can_upgrade_attack_speed") and not player.can_upgrade_attack_speed():
+			continue
+		available_options.append(option.duplicate())
+
+	return available_options
 
 func _build_boss_options(boss_pecado: int) -> Array:
 	var options = []
@@ -250,7 +259,7 @@ func _get_option_by_id(option_id: String) -> Dictionary:
 			if option["id"] == option_id:
 				return option.duplicate()
 
-	return { "id": option_id, "text": option_id, "rarity": "passive_common" }
+	return { "id": option_id, "text": option_id, "description": "Unknown upgrade effect.", "rarity": "passive_common" }
 
 func _on_option_button_pressed(index: int) -> void:
 	if index >= current_options.size():

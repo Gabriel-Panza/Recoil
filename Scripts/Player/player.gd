@@ -3,9 +3,12 @@ extends CharacterBody2D
 # --- Status melhoráveis via Level Ups ---
 @export var max_health: int = 1000
 @export var current_health: int = 1000
-@export var attack_damage: float = 25.0
+@export var attack_damage: float = 30.0
 @export var fire_rate: float = 1.0
-@export var recoil_force: float = 550.0
+const MIN_FIRE_RATE: float = 0.25
+var base_fire_rate: float = 1.0
+var attack_speed_bonus: float = 0.0
+@export var recoil_force: float = 500.0
 @export var friction: float = 750.0
 var is_invulnerable: bool = false
 
@@ -129,6 +132,7 @@ var game_win: Panel
 var type_animation = "walk_down"
 
 func _ready() -> void:
+	base_fire_rate = fire_rate
 	aparencia = get_node_or_null("Aparencia")
 	pause_control = get_node_or_null(pause_control_path)
 	game_over = get_node_or_null(game_over_path)
@@ -149,6 +153,22 @@ func _ready() -> void:
 	contact_damage_timer.one_shot = false
 	contact_damage_timer.timeout.connect(_on_contact_damage_timer_timeout)
 	add_child(contact_damage_timer)
+
+func add_attack_speed_bonus(amount: float) -> void:
+	if not can_upgrade_attack_speed():
+		return
+
+	attack_speed_bonus += amount
+	_recalculate_fire_rate()
+
+func get_attack_speed_percent() -> float:
+	return (base_fire_rate / max(fire_rate, MIN_FIRE_RATE)) * 100.0
+
+func can_upgrade_attack_speed() -> bool:
+	return fire_rate > MIN_FIRE_RATE + 0.0001
+
+func _recalculate_fire_rate() -> void:
+	fire_rate = max(base_fire_rate / max(1.0 + attack_speed_bonus, 0.001), MIN_FIRE_RATE)
 
 func _physics_process(delta: float) -> void:
 	_update_active_ability_cooldowns(delta)

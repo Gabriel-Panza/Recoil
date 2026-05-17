@@ -68,7 +68,10 @@ func update_status_labels():
 		if attack_label:
 			attack_label.text = "Attack: %.1f" % player.attack_damage
 		if atk_speed_label:
-			atk_speed_label.text = "Atk-Speed: %.1f%%" % (player.fire_rate * 100)
+			var attack_speed_percent = (1.0 / max(player.fire_rate, 0.001)) * 100.0
+			if player.has_method("get_attack_speed_percent"):
+				attack_speed_percent = player.get_attack_speed_percent()
+			atk_speed_label.text = "Atk-Speed: %.1f%%" % attack_speed_percent
 		if recoil_label:
 			recoil_label.text = "Recoil Force: %.1f" % (player.recoil_force/100)
 		_update_active_skill_labels()
