@@ -9,7 +9,7 @@ class_name BaseEnemy
 var current_health: int
 var player: Node2D
 var health_bar: ProgressBar
-@onready var aparencia = get_node_or_null("Aparencia")
+@onready var aparencia = get_node_or_null("AnimatedAppearence") #alteração aqui
 
 func _ready() -> void:
 	current_health = max_health

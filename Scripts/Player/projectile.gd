@@ -4,7 +4,7 @@ extends Area2D
 var speed: float = 700.0
 var direction: Vector2 = Vector2.RIGHT
 var damage
-@onready var aparencia = $Sprite2D
+@onready var aparencia = get_node_or_null("AnimatedProjectile") if get_node_or_null("AnimatedProjectile") else get_node_or_null("Sprite2D") # aqui tbm
 @onready var particles: CPUParticles2D = get_node_or_null("CPUParticles2D")
 
 # Player
@@ -19,6 +19,10 @@ func _ready():
 	rotation = direction.angle()
 	area_entered.connect(_on_area_entered)
 	body_entered.connect(_on_body_entered)
+	
+	if aparencia and aparencia is AnimatedSprite2D:
+		aparencia.play("default")
+	
 	
 	if self.is_in_group("EnemyProjectile"):
 		speed = 500.0

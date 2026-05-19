@@ -347,7 +347,7 @@ height = 36.0
 collision_layer = 4
 script = ExtResource("1_mridg")
 
-[node name="AparenciaAnimada" type="AnimatedSprite2D" parent="." unique_id=1536830730]
+[node name="AnimatedAppearence" type="AnimatedSprite2D" parent="." unique_id=1536830730]
 scale = Vector2(1.5, 1.5)
 sprite_frames = SubResource("SpriteFrames_oo5g4")
 animation = &"pecado1"

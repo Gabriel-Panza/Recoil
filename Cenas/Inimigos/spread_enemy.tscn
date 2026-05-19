@@ -1,49 +1,49 @@
-[gd_scene format=3 uid="uid://bxfbsw1g3soe6"]
+[gd_scene format=3 uid="uid://dfi4mhvhwaomn"]
 
-[ext_resource type="Script" uid="uid://drel5qgbivm7c" path="res://Scripts/Inimigos/ranged_enemy.gd" id="1_cqedb"]
-[ext_resource type="Texture2D" uid="uid://dthxya6bxd45m" path="res://Sprites/ranged_spritesheet.png" id="2_cqedb"]
+[ext_resource type="Script" uid="uid://dfdil8d8m74p5" path="res://Scripts/Inimigos/spread_enemy.gd" id="1_jkhqv"]
+[ext_resource type="Texture2D" uid="uid://dthxya6bxd45m" path="res://Sprites/ranged_spritesheet.png" id="2_3ush6"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_6x3df"]
-atlas = ExtResource("2_cqedb")
+atlas = ExtResource("2_3ush6")
 region = Rect2(114, 66, 57, 66)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_6hyt7"]
-atlas = ExtResource("2_cqedb")
+atlas = ExtResource("2_3ush6")
 region = Rect2(171, 66, 57, 66)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_vagsp"]
-atlas = ExtResource("2_cqedb")
+atlas = ExtResource("2_3ush6")
 region = Rect2(228, 66, 57, 66)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_b8dv8"]
-atlas = ExtResource("2_cqedb")
+atlas = ExtResource("2_3ush6")
 region = Rect2(285, 66, 57, 66)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_dxcew"]
-atlas = ExtResource("2_cqedb")
+atlas = ExtResource("2_3ush6")
 region = Rect2(342, 66, 57, 66)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_xgiws"]
-atlas = ExtResource("2_cqedb")
+atlas = ExtResource("2_3ush6")
 region = Rect2(399, 66, 57, 66)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_hvytm"]
-atlas = ExtResource("2_cqedb")
+atlas = ExtResource("2_3ush6")
 region = Rect2(456, 66, 57, 66)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_bnoyh"]
-atlas = ExtResource("2_cqedb")
+atlas = ExtResource("2_3ush6")
 region = Rect2(513, 66, 57, 66)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_4d7j8"]
-atlas = ExtResource("2_cqedb")
+atlas = ExtResource("2_3ush6")
 region = Rect2(570, 66, 57, 66)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_wxwkn"]
-atlas = ExtResource("2_cqedb")
+atlas = ExtResource("2_3ush6")
 region = Rect2(627, 66, 57, 66)
 
-[sub_resource type="SpriteFrames" id="SpriteFrames_gmnkf"]
+[sub_resource type="SpriteFrames" id="SpriteFrames_dohpa"]
 animations = [{
 "frames": [{
 "duration": 1.0,
@@ -81,34 +81,33 @@ animations = [{
 "speed": 10.0
 }]
 
-[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_cqedb"]
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_8x1xt"]
 radius = 15.0
 height = 50.0
 
-[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_6x3df"]
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_b0ffl"]
 radius = 17.0
 height = 54.0
 
-[node name="RangedEnemy" type="CharacterBody2D" unique_id=1495177720 groups=["Enemy"]]
-collision_layer = 4
-script = ExtResource("1_cqedb")
+[node name="SpreadEnemy" type="CharacterBody2D" unique_id=1946681980]
+script = ExtResource("1_jkhqv")
 
-[node name="AnimatedAppearence" type="AnimatedSprite2D" parent="." unique_id=261115849]
+[node name="AnimatedAppearence" type="AnimatedSprite2D" parent="." unique_id=2118166219]
 position = Vector2(-4.2500005, 7.1054274e-15)
 scale = Vector2(0.8508771, 0.99999994)
-sprite_frames = SubResource("SpriteFrames_gmnkf")
+sprite_frames = SubResource("SpriteFrames_dohpa")
 autoplay = "default"
-frame_progress = 0.25195184
+frame_progress = 0.9586402
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1013482035 groups=["Enemy"]]
-shape = SubResource("CapsuleShape2D_cqedb")
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1853347804 groups=["Enemy"]]
+shape = SubResource("CapsuleShape2D_8x1xt")
 debug_color = Color(0.7882353, 0, 0, 0.41960785)
 
-[node name="Hurtbox" type="Area2D" parent="." unique_id=82768934]
+[node name="Hurtbox" type="Area2D" parent="." unique_id=757085294]
 collision_layer = 4
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox" unique_id=630176412 groups=["Enemy"]]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox" unique_id=2094221337 groups=["Enemy"]]
 visibility_layer = 2
-shape = SubResource("CapsuleShape2D_6x3df")
+shape = SubResource("CapsuleShape2D_b0ffl")
 debug_color = Color(0.7882353, 0, 0, 0.41960785)

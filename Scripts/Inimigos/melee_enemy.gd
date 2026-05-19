@@ -5,7 +5,7 @@ func _ready() -> void:
 	
 	max_health = 100 + ((Global.pecado - 1) * 50)
 	current_health = max_health
-	aparencia = $AparenciaAnimada
+	aparencia = $AnimatedAppearence
 	
 func _physics_process(delta: float) -> void:
 	super(delta)

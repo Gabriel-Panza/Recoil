@@ -25,51 +25,52 @@ var enemy_arena_textures: Array[Texture2D] = [
 # Preload dos inimigos
 const MELEE_ENEMY = preload("res://Cenas/Inimigos/melee_enemy.tscn")
 const RANGED_ENEMY = preload("res://Cenas/Inimigos/ranged_enemy.tscn")
+const SPREAD_ENEMY = preload("res://Cenas/Inimigos/spread_enemy.tscn")
 const BOSS_ENEMY = preload("res://Cenas/Inimigos/boss.tscn")
 
 # Conjuntos de waves baseados no pecado
 var wave_sets = {
 	1: [  # Sloth
-		{"melee": 4, "ranged": 0},
-		{"melee": 5, "ranged": 2},
-		{"melee": 6, "ranged": 3},
-		{"melee": 7, "ranged": 4}
+		{"melee": 3, "ranged": 0, "spread": 0},
+		{"melee": 2, "ranged": 2, "spread": 2},
+		{"melee": 3, "ranged": 3, "spread": 2},
+		{"melee": 7, "ranged": 4, "spread": 0}
 	],
 	2: [  # Gluttony
-		{"melee": 5, "ranged": 1},
-		{"melee": 6, "ranged": 3},
-		{"melee": 7, "ranged": 5},
-		{"melee": 8, "ranged": 7}
+		{"melee": 5, "ranged": 1, "spread": 0},
+		{"melee": 6, "ranged": 3, "spread": 1},
+		{"melee": 7, "ranged": 5, "spread": 2},
+		{"melee": 8, "ranged": 7, "spread": 3}
 	],
 	3: [  # Envy
-		{"melee": 6, "ranged": 2},
-		{"melee": 7, "ranged": 4},
-		{"melee": 8, "ranged": 6},
-		{"melee": 9, "ranged": 8}
+		{"melee": 6, "ranged": 2, "spread": 1},
+		{"melee": 7, "ranged": 4, "spread": 2},
+		{"melee": 8, "ranged": 6, "spread": 3},
+		{"melee": 9, "ranged": 8, "spread": 4}
 	],
 	4: [  # Wrath
-		{"melee": 7, "ranged": 3},
-		{"melee": 8, "ranged": 5},
-		{"melee": 9, "ranged": 7},
-		{"melee": 10, "ranged": 9}
+		{"melee": 7, "ranged": 3, "spread": 2},
+		{"melee": 8, "ranged": 5, "spread": 3},
+		{"melee": 9, "ranged": 7, "spread": 4},
+		{"melee": 10, "ranged": 9, "spread": 5}
 	],
 	5: [  # Lust
-		{"melee": 8, "ranged": 4},
-		{"melee": 9, "ranged": 6},
-		{"melee": 10, "ranged": 8},
-		{"melee": 11, "ranged": 10}
+		{"melee": 8, "ranged": 4, "spread": 3},
+		{"melee": 9, "ranged": 6, "spread": 4},
+		{"melee": 10, "ranged": 8, "spread": 5},
+		{"melee": 11, "ranged": 10, "spread": 6}
 	],
 	6: [  # Greed
-		{"melee": 9, "ranged": 5},
-		{"melee": 10, "ranged": 7},
-		{"melee": 11, "ranged": 9},
-		{"melee": 12, "ranged": 11}
+		{"melee": 9, "ranged": 5, "spread": 4},
+		{"melee": 10, "ranged": 7, "spread": 5},
+		{"melee": 11, "ranged": 9, "spread": 6},
+		{"melee": 12, "ranged": 11, "spread": 7}
 	],
 	7: [  # Pride
-		{"melee": 10, "ranged": 6},
-		{"melee": 11, "ranged": 8},
-		{"melee": 12, "ranged": 10},
-		{"melee": 13, "ranged": 12}
+		{"melee": 10, "ranged": 6, "spread": 5},
+		{"melee": 11, "ranged": 8, "spread": 6},
+		{"melee": 12, "ranged": 10, "spread": 7},
+		{"melee": 13, "ranged": 12, "spread": 8}
 	]
 }
 
@@ -156,7 +157,7 @@ func start_next_wave():
 
 func spawn_wave(data: Dictionary):
 	var level_context = "pre_boss" if current_arena == arena_nodes[0] and current_wave_index == waves.size() - 1 else "normal"
-	_set_player_xp_goal(data["melee"] + data["ranged"], level_context, Global.pecado)
+	_set_player_xp_goal(data["melee"] + data["ranged"] + data["spread"], level_context, Global.pecado)
 
 	if $Player.greed_cursed_level_enabled:
 		$Player.grant_bonus_level_up("normal")
@@ -168,7 +169,11 @@ func spawn_wave(data: Dictionary):
 	# Spawna ranged
 	for i in range(data["ranged"]):
 		spawn_enemy(RANGED_ENEMY)
-
+	
+	#spawna spread
+	for i in range(data["spread"]):
+		spawn_enemy(SPREAD_ENEMY)
+		
 func spawn_boss():
 	var centro_node = current_arena.get_node("Centro")
 	_set_player_xp_goal(1, "boss", Global.pecado)

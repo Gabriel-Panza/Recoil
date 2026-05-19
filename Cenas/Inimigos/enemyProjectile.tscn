@@ -1,6 +1,64 @@
 [gd_scene format=3 uid="uid://er0mu1kumml3"]
 
 [ext_resource type="Script" uid="uid://binxodd7w4itw" path="res://Scripts/Player/projectile.gd" id="1_femsw"]
+[ext_resource type="Texture2D" uid="uid://dthxya6bxd45m" path="res://Sprites/ranged_spritesheet.png" id="2_1sf8v"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_qiyfk"]
+atlas = ExtResource("2_1sf8v")
+region = Rect2(26, 494, 13, 26)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_op384"]
+atlas = ExtResource("2_1sf8v")
+region = Rect2(39, 494, 13, 26)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_iueem"]
+atlas = ExtResource("2_1sf8v")
+region = Rect2(52, 494, 13, 26)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_056nc"]
+atlas = ExtResource("2_1sf8v")
+region = Rect2(65, 494, 13, 26)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_342vp"]
+atlas = ExtResource("2_1sf8v")
+region = Rect2(78, 494, 13, 26)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_xc8b6"]
+atlas = ExtResource("2_1sf8v")
+region = Rect2(91, 494, 13, 26)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_gxfw5"]
+atlas = ExtResource("2_1sf8v")
+region = Rect2(104, 494, 13, 26)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_h0s3d"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_qiyfk")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_op384")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_iueem")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_056nc")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_342vp")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_xc8b6")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_gxfw5")
+}],
+"loop": true,
+"name": &"default",
+"speed": 10.0
+}]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_h0s3d"]
 radius = 15.0
@@ -10,9 +68,14 @@ collision_layer = 0
 collision_mask = 2
 script = ExtResource("1_femsw")
 
-[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1133076180]
+[node name="AnimatedProjectile" type="AnimatedSprite2D" parent="." unique_id=807400641]
+position = Vector2(0.5000007, 3)
+scale = Vector2(1.6153847, 1.2307693)
+sprite_frames = SubResource("SpriteFrames_h0s3d")
+autoplay = "default"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=985012146]
+visible = false
 shape = SubResource("CircleShape2D_h0s3d")
 
 [node name="VisibleOnScreenNotifier2D" type="VisibleOnScreenNotifier2D" parent="." unique_id=754933066]
