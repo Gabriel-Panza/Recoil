@@ -4,8 +4,10 @@ extends Node2D
 @onready var arena_nodes = [$Arenas/ArenaEnemy, $Arenas/Pecado1, $Arenas/Pecado2, $Arenas/Pecado3, $Arenas/Pecado4, $Arenas/Pecado5, $Arenas/Pecado6, $Arenas/Pecado7]
 var current_arena: Node2D
 
-const FADE_DURATION: float = 0.35
+const FADE_DURATION: float = 0.4
 const ENEMY_ARENA_PLAYER_POSITION: Vector2 = Vector2(770, 414)
+const SPAWN_WALL_PADDING: float = 8.0
+const SPAWN_PLAYER_MIN_DISTANCE: float = 100.0
 
 var fade_layer: CanvasLayer
 var fade_rect: ColorRect
@@ -32,45 +34,45 @@ const BOSS_ENEMY = preload("res://Cenas/Inimigos/boss.tscn")
 var wave_sets = {
 	1: [  # Sloth
 		{"melee": 3, "ranged": 0, "spread": 0},
-		{"melee": 2, "ranged": 2, "spread": 2},
-		{"melee": 3, "ranged": 3, "spread": 2},
-		{"melee": 7, "ranged": 4, "spread": 0}
+		{"melee": 3, "ranged": 1, "spread": 1},
+		{"melee": 3, "ranged": 2, "spread": 2},
+		{"melee": 3, "ranged": 3, "spread": 3}
 	],
 	2: [  # Gluttony
-		{"melee": 5, "ranged": 1, "spread": 0},
-		{"melee": 6, "ranged": 3, "spread": 1},
-		{"melee": 7, "ranged": 5, "spread": 2},
-		{"melee": 8, "ranged": 7, "spread": 3}
+		{"melee": 4, "ranged": 1, "spread": 0},
+		{"melee": 5, "ranged": 3, "spread": 1},
+		{"melee": 6, "ranged": 5, "spread": 2},
+		{"melee": 7, "ranged": 7, "spread": 3}
 	],
 	3: [  # Envy
-		{"melee": 6, "ranged": 2, "spread": 1},
-		{"melee": 7, "ranged": 4, "spread": 2},
-		{"melee": 8, "ranged": 6, "spread": 3},
-		{"melee": 9, "ranged": 8, "spread": 4}
+		{"melee": 5, "ranged": 2, "spread": 1},
+		{"melee": 6, "ranged": 4, "spread": 2},
+		{"melee": 7, "ranged": 6, "spread": 3},
+		{"melee": 8, "ranged": 8, "spread": 4}
 	],
 	4: [  # Wrath
-		{"melee": 7, "ranged": 3, "spread": 2},
-		{"melee": 8, "ranged": 5, "spread": 3},
-		{"melee": 9, "ranged": 7, "spread": 4},
-		{"melee": 10, "ranged": 9, "spread": 5}
+		{"melee": 6, "ranged": 3, "spread": 2},
+		{"melee": 7, "ranged": 5, "spread": 3},
+		{"melee": 8, "ranged": 7, "spread": 4},
+		{"melee": 8, "ranged": 9, "spread": 5}
 	],
 	5: [  # Lust
-		{"melee": 8, "ranged": 4, "spread": 3},
-		{"melee": 9, "ranged": 6, "spread": 4},
-		{"melee": 10, "ranged": 8, "spread": 5},
-		{"melee": 11, "ranged": 10, "spread": 6}
+		{"melee": 7, "ranged": 4, "spread": 3},
+		{"melee": 8, "ranged": 6, "spread": 4},
+		{"melee": 8, "ranged": 8, "spread": 5},
+		{"melee": 8, "ranged": 10, "spread": 6}
 	],
 	6: [  # Greed
-		{"melee": 9, "ranged": 5, "spread": 4},
-		{"melee": 10, "ranged": 7, "spread": 5},
-		{"melee": 11, "ranged": 9, "spread": 6},
-		{"melee": 12, "ranged": 11, "spread": 7}
+		{"melee": 8, "ranged": 5, "spread": 4},
+		{"melee": 8, "ranged": 7, "spread": 5},
+		{"melee": 8, "ranged": 9, "spread": 6},
+		{"melee": 8, "ranged": 9, "spread": 7}
 	],
 	7: [  # Pride
-		{"melee": 10, "ranged": 6, "spread": 5},
-		{"melee": 11, "ranged": 8, "spread": 6},
-		{"melee": 12, "ranged": 10, "spread": 7},
-		{"melee": 13, "ranged": 12, "spread": 8}
+		{"melee": 9, "ranged": 6, "spread": 5},
+		{"melee": 9, "ranged": 8, "spread": 6},
+		{"melee": 9, "ranged": 10, "spread": 7},
+		{"melee": 10, "ranged": 10, "spread": 8}
 	]
 }
 
@@ -182,7 +184,8 @@ func spawn_boss():
 
 	var boss = BOSS_ENEMY.instantiate()
 	_apply_enemy_spawn_modifiers(boss)
-	boss.global_position = get_random_camera_edge_position()
+	var spawn_margin = _get_body_spawn_margin(boss)
+	boss.global_position = get_random_camera_edge_position(spawn_margin)
 	boss.add_to_group("Boss")
 	boss.connect("boss_defeated", Callable(self, "_on_boss_died"))
 	add_child(boss)
@@ -192,8 +195,8 @@ func spawn_enemy(enemy_scene: PackedScene):
 	_apply_enemy_spawn_modifiers(enemy)
 	add_child(enemy)
 
-	# Posiciona nas bordas da camera, dentro do mapa
-	enemy.global_position = get_random_camera_edge_position()
+	var spawn_margin = _get_body_spawn_margin(enemy)
+	enemy.global_position = get_random_camera_edge_position(spawn_margin)
 
 	# Monitora a morte do inimigo
 	enemy.tree_exited.connect(_on_enemy_died)
@@ -202,17 +205,17 @@ func _apply_enemy_spawn_modifiers(enemy: Node) -> void:
 	if $Player.greed_cursed_level_enabled and enemy.get("speed") != null:
 		enemy.set("speed", enemy.get("speed") * 1.25)
 
-func get_random_camera_edge_position() -> Vector2:
+func get_random_camera_edge_position(spawn_margin: float = 0.0) -> Vector2:
 	var camera = get_viewport().get_camera_2d()
 	if not camera:
-		return get_random_arena_position()
+		return get_random_arena_position(spawn_margin)
 
 	var cam_pos = camera.global_position
 	var viewport_size = get_viewport_rect().size
 	var cam_rect = Rect2(cam_pos - viewport_size / 2, viewport_size)
 
 	var margin = 50.0
-	var attempts = 10
+	var attempts = 20
 
 	for i in range(attempts):
 		var side = randi() % 4
@@ -228,14 +231,14 @@ func get_random_camera_edge_position() -> Vector2:
 			3: # Direita
 				pos = Vector2(cam_rect.end.x + margin, randf_range(cam_rect.position.y, cam_rect.end.y))
 
-		if _is_position_inside_current_arena(pos):
+		if _is_position_safe_in_current_arena(pos, spawn_margin):
 			var player = get_tree().get_first_node_in_group("Player")
-			if player and pos.distance_to(player.global_position) > 100.0:
+			if player == null or pos.distance_to(player.global_position) > SPAWN_PLAYER_MIN_DISTANCE:
 				return pos
 
-	return get_random_arena_position()
+	return get_random_arena_position(spawn_margin)
 
-func get_random_arena_position() -> Vector2:
+func get_random_arena_position(spawn_margin: float = 0.0) -> Vector2:
 	var collision_polygon = _get_current_arena_collision_polygon()
 	if collision_polygon == null:
 		return current_arena.global_position
@@ -248,15 +251,92 @@ func get_random_arena_position() -> Vector2:
 	for point in global_points:
 		arena_rect = arena_rect.expand(point)
 
-	for i in range(30):
+	for i in range(80):
 		var pos = Vector2(
 			randf_range(arena_rect.position.x, arena_rect.end.x),
 			randf_range(arena_rect.position.y, arena_rect.end.y)
 		)
-		if _is_position_inside_current_arena(pos):
+		if _is_position_safe_in_current_arena(pos, spawn_margin):
 			var player = get_tree().get_first_node_in_group("Player")
-			if player == null or pos.distance_to(player.global_position) > 100.0:
+			if player == null or pos.distance_to(player.global_position) > SPAWN_PLAYER_MIN_DISTANCE:
 				return pos
+
+	return clamp_position_to_current_arena(current_arena.global_position, spawn_margin)
+
+func clamp_position_to_current_arena(global_pos: Vector2, safety_margin: float = 0.0) -> Vector2:
+	if _is_position_safe_in_current_arena(global_pos, safety_margin):
+		return global_pos
+
+	var center = _get_current_arena_center()
+	if not _is_position_safe_in_current_arena(center, safety_margin):
+		center = current_arena.global_position
+
+	if not _is_position_safe_in_current_arena(center, 0.0):
+		return global_pos
+
+	var best_position = center
+	var low = 0.0
+	var high = 1.0
+	for i in range(18):
+		var mid = (low + high) * 0.5
+		var candidate = center.lerp(global_pos, mid)
+		if _is_position_safe_in_current_arena(candidate, safety_margin):
+			best_position = candidate
+			low = mid
+		else:
+			high = mid
+
+	return best_position
+
+func _is_position_safe_in_current_arena(global_pos: Vector2, safety_margin: float = 0.0) -> bool:
+	if not _is_position_inside_current_arena(global_pos):
+		return false
+
+	if safety_margin <= 0.0:
+		return true
+
+	var diagonal_margin = safety_margin * 0.70710678
+	var offsets = [
+		Vector2(safety_margin, 0.0),
+		Vector2(-safety_margin, 0.0),
+		Vector2(0.0, safety_margin),
+		Vector2(0.0, -safety_margin),
+		Vector2(diagonal_margin, diagonal_margin),
+		Vector2(-diagonal_margin, diagonal_margin),
+		Vector2(diagonal_margin, -diagonal_margin),
+		Vector2(-diagonal_margin, -diagonal_margin)
+	]
+
+	for offset in offsets:
+		if not _is_position_inside_current_arena(global_pos + offset):
+			return false
+
+	return true
+
+func _get_body_spawn_margin(body: Node) -> float:
+	if body.has_method("_get_separation_radius"):
+		return float(body.call("_get_separation_radius")) + SPAWN_WALL_PADDING
+
+	var collision = body.get_node_or_null("CollisionShape2D")
+	return _get_collision_shape_radius(collision) + SPAWN_WALL_PADDING
+
+func _get_collision_shape_radius(collision) -> float:
+	if collision == null or not (collision is CollisionShape2D) or collision.shape == null:
+		return 24.0
+
+	if collision.shape is CapsuleShape2D:
+		return max(collision.shape.radius, collision.shape.height * 0.25)
+	if collision.shape is CircleShape2D:
+		return collision.shape.radius
+	if collision.shape is RectangleShape2D:
+		return min(collision.shape.size.x, collision.shape.size.y) * 0.5
+
+	return 24.0
+
+func _get_current_arena_center() -> Vector2:
+	var center_marker = current_arena.get_node_or_null("Centro")
+	if center_marker is Node2D:
+		return center_marker.global_position
 
 	return current_arena.global_position
 

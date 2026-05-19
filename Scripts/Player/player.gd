@@ -8,8 +8,8 @@ extends CharacterBody2D
 const MIN_FIRE_RATE: float = 0.25
 var base_fire_rate: float = 1.0
 var attack_speed_bonus: float = 0.0
-@export var recoil_force: float = 500.0
-@export var friction: float = 750.0
+@export var recoil_force: float = 480.0
+@export var friction: float = 725.0
 var is_invulnerable: bool = false
 
 # --- DASH ---
@@ -20,7 +20,8 @@ const MAX_ABILITY_AREA_RADIUS: float = 180.0
 const DEVOUR_RADIUS: float = MAX_ABILITY_AREA_RADIUS
 const SLOW_AURA_RADIUS: float = MAX_ABILITY_AREA_RADIUS
 const SHOCKWAVE_RADIUS: float = MAX_ABILITY_AREA_RADIUS
-const SHOCKWAVE_DAMAGE_MULTIPLIER: float = 0.5
+const SHOCKWAVE_DAMAGE_MULTIPLIER: float = 0.35
+const SHOCKWAVE_DASH_DAMAGE_MULTIPLIER: float = 0.75
 
 # --- TIRO ---
 @export var pistol_bullet_scene: PackedScene
@@ -627,10 +628,12 @@ func _trigger_offensive_dash_explosion() -> void:
 	_spawn_ring_vfx(global_position, 120.0, Color(0.25, 0.95, 1.0, 0.68), 0.3)
 	for enemy in get_tree().get_nodes_in_group("Enemy"):
 		if is_instance_valid(enemy) and enemy.has_method("take_damage") and enemy.global_position.distance_to(global_position) <= SHOCKWAVE_RADIUS:
-			enemy.take_damage(_get_shockwave_damage())
+			enemy.take_damage(_get_shockwave_dash_damage())
 
 func _get_shockwave_damage() -> float:
 	return attack_damage * SHOCKWAVE_DAMAGE_MULTIPLIER
+func _get_shockwave_dash_damage() -> float:
+	return attack_damage * SHOCKWAVE_DASH_DAMAGE_MULTIPLIER
 
 func _apply_sloth_slow_aura() -> void:
 	for enemy in get_tree().get_nodes_in_group("Enemy"):

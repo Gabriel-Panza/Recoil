@@ -17,6 +17,9 @@ signal boss_defeated
 @export var damage: int = 50
 @export var xp_drop: int = 1
 
+const ENEMY_COLLISION_MASK: int = 4
+const ENEMY_BODY_COLLISION_SCALE: float = 0.7
+
 var current_health: int
 var player: Node2D
 var aparencia
@@ -30,6 +33,7 @@ func _ready() -> void:
 	player = get_tree().get_first_node_in_group("Player")
 	add_to_group("Boss")
 	add_to_group("Enemy")
+	_setup_enemy_body_collision()
 	aparencia = $AparenciaAnimada
 
 	# Define o estado baseado no pecado atual
@@ -39,23 +43,23 @@ func _ready() -> void:
 			current_state = BossState.PRIDE
 			current_sub_state = PrideSubState.IDLE
 		6:
-			max_health = 1125
+			max_health = 1100
 			current_state = BossState.GREED
 			current_sub_state = GreedSubState.IDLE
 		5:
-			max_health = 1000
+			max_health = 950
 			current_state = BossState.LUST
 			current_sub_state = LustSubState.IDLE
 		4:
-			max_health = 875
+			max_health = 800
 			current_state = BossState.WRATH
 			current_sub_state = WrathSubState.IDLE
 		3:
-			max_health = 750
+			max_health = 700
 			current_state = BossState.ENVY
 			current_sub_state = EnvySubState.IDLE
 		2:
-			max_health = 625
+			max_health = 600
 			current_state = BossState.GLUTTONY
 			current_sub_state = GluttonySubState.IDLE
 		1:
@@ -113,6 +117,27 @@ func handle_pride(delta: float):
 	var direction = global_position.direction_to(player.global_position)
 	velocity = direction * speed * delta
 	move_and_slide()
+
+func _setup_enemy_body_collision() -> void:
+	collision_mask = collision_mask | ENEMY_COLLISION_MASK
+	_shrink_body_collision_shape()
+
+func _shrink_body_collision_shape() -> void:
+	var collision = get_node_or_null("CollisionShape2D")
+	if collision == null or collision.shape == null:
+		return
+
+	var shape = collision.shape.duplicate()
+
+	if shape is CapsuleShape2D:
+		shape.radius = max(shape.radius * ENEMY_BODY_COLLISION_SCALE, 4.0)
+		shape.height = max(shape.height * ENEMY_BODY_COLLISION_SCALE, shape.radius * 2.0)
+	elif shape is CircleShape2D:
+		shape.radius = max(shape.radius * ENEMY_BODY_COLLISION_SCALE, 4.0)
+	elif shape is RectangleShape2D:
+		shape.size *= ENEMY_BODY_COLLISION_SCALE
+
+	collision.shape = shape
 
 func handle_greed(delta: float):
 	# Implemente lógica específica para Greed

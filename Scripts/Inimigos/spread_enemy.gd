@@ -1,16 +1,15 @@
 extends RangedEnemy
 class_name SpreadEnemy
 
-@export var bullets_per_shot: int = 3
-@export var spread_angle: float = 25.0 # Ângulo total de dispersão em graus
+@export var bullets_per_shot: int = 4
+@export var spread_angle: float = 25.0
 
 func _ready() -> void:
 	super()
-	# Status de shotgun (um pouco mais de vida que o ranged comum)
+
 	max_health = 75 + ((Global.pecado - 1) * 35)
 	current_health = max_health
 
-# Sobrescreve apenas o tiro para soltar várias balas
 func shoot() -> void:
 	if not projectile_scene:
 		return

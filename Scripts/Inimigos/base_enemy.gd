@@ -6,6 +6,9 @@ class_name BaseEnemy
 @export var damage: int = 20
 @export var xp_drop: int = 1
 
+const ENEMY_COLLISION_MASK: int = 4
+const ENEMY_BODY_COLLISION_SCALE: float = 0.7
+
 var current_health: int
 var player: Node2D
 var health_bar: ProgressBar
@@ -15,6 +18,7 @@ func _ready() -> void:
 	current_health = max_health
 	player = get_tree().get_first_node_in_group("Player")
 	add_to_group("Enemy")
+	_setup_enemy_body_collision()
 	call_deferred("_setup_health_bar")
 
 func _physics_process(delta: float) -> void:
@@ -25,6 +29,27 @@ func mover(_delta: float) -> void:
 	var direction = global_position.direction_to(player.global_position)
 	velocity = direction * speed * _delta
 	move_and_slide()
+
+func _setup_enemy_body_collision() -> void:
+	collision_mask = collision_mask | ENEMY_COLLISION_MASK
+	_shrink_body_collision_shape()
+
+func _shrink_body_collision_shape() -> void:
+	var collision = get_node_or_null("CollisionShape2D")
+	if collision == null or collision.shape == null:
+		return
+
+	var shape = collision.shape.duplicate()
+
+	if shape is CapsuleShape2D:
+		shape.radius = max(shape.radius * ENEMY_BODY_COLLISION_SCALE, 4.0)
+		shape.height = max(shape.height * ENEMY_BODY_COLLISION_SCALE, shape.radius * 2.0)
+	elif shape is CircleShape2D:
+		shape.radius = max(shape.radius * ENEMY_BODY_COLLISION_SCALE, 4.0)
+	elif shape is RectangleShape2D:
+		shape.size *= ENEMY_BODY_COLLISION_SCALE
+
+	collision.shape = shape
 
 func take_damage(amount: float) -> void:
 	current_health -= int(round(amount))

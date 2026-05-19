@@ -23,9 +23,9 @@ var cursed_passive_options = [
 
 var rare_options = [
 	{ "id": "Shield_Protection", "text": "Gain a one-hit shield", "description": "Grants a shield that blocks the next damage instance. Only one rare passive can be active at a time.", "rarity": "passive_rare" },
-	{ "id": "Recoil_Explosion", "text": "Your recoil creates a small shockwave", "description": "Every shot creates a 180px shockwave that deals 50% of your attack damage. Only one rare passive can be active at a time.", "rarity": "passive_rare" },
+	{ "id": "Recoil_Explosion", "text": "Your recoil creates a small shockwave", "description": "Every shot creates a 180px shockwave that deals 35% of your attack damage. Only one rare passive can be active at a time.", "rarity": "passive_rare" },
 	{ "id": "Double_Dash", "text": "You have two charges of dash", "description": "Gives you an extra dash charge before the dash cooldown starts. Only one rare passive can be active at a time.", "rarity": "passive_rare" },
-	{ "id": "Offensive_Dash", "text": "Offensive Dash", "description": "Dashing blocks damage and releases a 180px shockwave at the end of the dash, dealing the same damage as Recoil Explosion. Only one rare passive can be active at a time.", "rarity": "passive_rare" }
+	{ "id": "Offensive_Dash", "text": "Offensive Dash", "description": "Dashing blocks damage and releases a 180px shockwave at the end of the dash, dealing 75% of your attack damage. Only one rare passive can be active at a time.", "rarity": "passive_rare" }
 ]
 
 var boss_options = [
@@ -54,6 +54,7 @@ var boss_option_ids_by_pecado = {
 
 var current_options: Array = []
 var saved_level_options: Array = []
+var blocked_level_option_ids: Array = []
 var current_mode: String = "level_up"
 var pending_active_option: String = ""
 var pending_old_rare_option: String = ""
@@ -127,6 +128,7 @@ func show_popup(context: String = "normal", boss_pecado: int = 0):
 	pending_active_option = ""
 	pending_old_rare_option = ""
 	pending_new_rare_option = ""
+	blocked_level_option_ids = []
 	title_label.visible = false
 	saved_level_options = _build_options(context, boss_pecado).duplicate(true)
 	_render_options(saved_level_options, true)
@@ -165,10 +167,12 @@ func show_rare_discard_popup(old_option: String, new_option: String) -> void:
 	title_label.visible = true
 
 	var old_option_data = _get_option_by_id(old_option).duplicate()
-	old_option_data["text"] = "Atual - %s" % _get_option_button_text(old_option_data)
+	old_option_data["discard_target"] = "old"
+	old_option_data["text"] = "Descartar atual - %s" % _get_option_button_text(old_option_data)
 
 	var new_option_data = _get_option_by_id(new_option).duplicate()
-	new_option_data["text"] = "Nova - %s" % _get_option_button_text(new_option_data)
+	new_option_data["discard_target"] = "new"
+	new_option_data["text"] = "Recusar nova - %s" % _get_option_button_text(new_option_data)
 
 	_render_options([old_option_data, new_option_data], false)
 
@@ -243,13 +247,23 @@ func _render_options(options: Array, show_skip: bool) -> void:
 	for i in range(3):
 		var button = container.get_child(i)
 		if i < current_options.size():
+			var option = current_options[i]
+			var option_id = str(option.get("id", ""))
+			var is_blocked = current_mode == "level_up" and option_id in blocked_level_option_ids
+			var tooltip = _get_option_tooltip(option)
+
 			button.visible = true
-			button.get_child(0).text = _get_option_button_text(current_options[i])
-			button.tooltip_text = _get_option_tooltip(current_options[i])
+			button.disabled = is_blocked
+			button.get_child(0).text = _get_option_button_text(option)
+			button.tooltip_text = tooltip
+			if is_blocked:
+				var blocked_tooltip = "Bloqueado neste level up porque voce recusou esta opcao."
+				button.tooltip_text = blocked_tooltip if tooltip == "" else "%s\n%s" % [tooltip, blocked_tooltip]
 			button.get_child(0).tooltip_text = button.tooltip_text
-			button.self_modulate = _get_color_for_rarity(current_options[i]["rarity"])
+			button.self_modulate = _get_option_button_color(option, is_blocked)
 		else:
 			button.visible = false
+			button.disabled = false
 			button.tooltip_text = ""
 
 func _get_option_button_text(option: Dictionary) -> String:
@@ -269,6 +283,13 @@ func _get_color_for_rarity(rarity: String) -> Color:
 		_:
 			return Color(1, 0, 0.1, 1)
 
+func _get_option_button_color(option: Dictionary, is_blocked: bool) -> Color:
+	var color = _get_color_for_rarity(str(option.get("rarity", "")))
+	if is_blocked:
+		return Color(color.r * 0.28, color.g * 0.28, color.b * 0.28, 0.78)
+
+	return color
+
 func _get_option_by_id(option_id: String) -> Dictionary:
 	for pool in [passive_options, cursed_passive_options, rare_options, boss_options]:
 		for option in pool:
@@ -282,19 +303,32 @@ func _on_option_button_pressed(index: int) -> void:
 		return
 
 	var option = current_options[index]
+	if current_mode == "level_up" and str(option.get("id", "")) in blocked_level_option_ids:
+		return
+
 	if current_mode == "discard_active":
 		var discarded_slot = option.get("slot", "new")
 		emit_signal("active_discard_selected", discarded_slot, pending_active_option)
 		if discarded_slot == "new":
+			_block_level_option(pending_active_option)
 			_return_to_saved_level_options()
 		else:
 			_complete_level_up_choice()
 		return
 
 	if current_mode == "discard_rare":
-		var discarded_option = option.get("id", pending_new_rare_option)
+		var discard_target = str(option.get("discard_target", ""))
+		var discarded_option = pending_new_rare_option
+		if discard_target == "old":
+			discarded_option = pending_old_rare_option
+		elif discard_target == "new":
+			discarded_option = pending_new_rare_option
+		else:
+			discarded_option = option.get("id", pending_new_rare_option)
+
 		emit_signal("rare_discard_selected", discarded_option, pending_old_rare_option, pending_new_rare_option)
 		if discarded_option == pending_new_rare_option:
+			_block_level_option(pending_new_rare_option)
 			_return_to_saved_level_options()
 		else:
 			_complete_level_up_choice()
@@ -317,6 +351,12 @@ func _return_to_saved_level_options() -> void:
 	pending_new_rare_option = ""
 	title_label.visible = false
 	_render_options(saved_level_options, true)
+
+func _block_level_option(option_id: String) -> void:
+	if option_id == "" or option_id in blocked_level_option_ids:
+		return
+
+	blocked_level_option_ids.append(option_id)
 
 func _complete_level_up_choice() -> void:
 	_close_popup()
