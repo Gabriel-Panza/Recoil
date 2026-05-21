@@ -90,6 +90,7 @@ radius = 17.0
 height = 54.0
 
 [node name="AgileEnemy" type="CharacterBody2D" unique_id=371555087]
+collision_layer = 4
 script = ExtResource("1_ju8yt")
 
 [node name="AnimatedAppearence" type="AnimatedSprite2D" parent="." unique_id=2027991643]

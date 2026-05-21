@@ -13,7 +13,9 @@ var fade_layer: CanvasLayer
 var fade_rect: ColorRect
 var is_transitioning: bool = false
 
-# Indice 0 = visual inicial; indice 1 = apos o primeiro boss; indice 2 = apos o segundo boss; etc.
+# Indice 0 = visual inicial;
+# indice 1 = apos o primeiro boss; indice 2 = apos o segundo boss;
+# etc.
 var enemy_arena_textures: Array[Texture2D] = [
 	preload("res://Sprites/icon.svg"), # Sloth
 	preload("res://Sprites/icon.svg"), # Gluttony
@@ -28,51 +30,53 @@ var enemy_arena_textures: Array[Texture2D] = [
 const MELEE_ENEMY = preload("res://Cenas/Inimigos/melee_enemy.tscn")
 const RANGED_ENEMY = preload("res://Cenas/Inimigos/ranged_enemy.tscn")
 const SPREAD_ENEMY = preload("res://Cenas/Inimigos/spread_enemy.tscn")
+const TANK_ENEMY = preload("res://Cenas/Inimigos/tank_enemy.tscn")       # ADICIONADO
+const AGILE_ENEMY = preload("res://Cenas/Inimigos/agile_enemy.tscn")     # ADICIONADO
 const BOSS_ENEMY = preload("res://Cenas/Inimigos/boss.tscn")
 
-# Conjuntos de waves baseados no pecado
+# Conjuntos de waves baseados no pecado (Agile zerado por enquanto)
 var wave_sets = {
 	1: [  # Sloth
-		{"melee": 3, "ranged": 0, "spread": 0},
-		{"melee": 3, "ranged": 1, "spread": 1},
-		{"melee": 3, "ranged": 2, "spread": 2},
-		{"melee": 3, "ranged": 3, "spread": 3}
+		{"melee": 3, "ranged": 0, "spread": 0, "tank": 0, "agile": 0},
+		{"melee": 2, "ranged": 2, "spread": 0, "tank": 0, "agile": 0},
+		{"melee": 3, "ranged": 2, "spread": 2, "tank": 1, "agile": 0}, 
+		{"melee": 3, "ranged": 3, "spread": 3, "tank": 1, "agile": 1}
 	],
 	2: [  # Gluttony
-		{"melee": 4, "ranged": 1, "spread": 0},
-		{"melee": 5, "ranged": 3, "spread": 1},
-		{"melee": 6, "ranged": 5, "spread": 2},
-		{"melee": 7, "ranged": 7, "spread": 3}
+		{"melee": 4, "ranged": 1, "spread": 0, "tank": 1, "agile": 0},
+		{"melee": 5, "ranged": 3, "spread": 1, "tank": 1, "agile": 0},
+		{"melee": 6, "ranged": 5, "spread": 2, "tank": 2, "agile": 0},
+		{"melee": 7, "ranged": 7, "spread": 3, "tank": 2, "agile": 0}
 	],
 	3: [  # Envy
-		{"melee": 5, "ranged": 2, "spread": 1},
-		{"melee": 6, "ranged": 4, "spread": 2},
-		{"melee": 7, "ranged": 6, "spread": 3},
-		{"melee": 8, "ranged": 8, "spread": 4}
+		{"melee": 5, "ranged": 2, "spread": 1, "tank": 2, "agile": 0},
+		{"melee": 6, "ranged": 4, "spread": 2, "tank": 2, "agile": 0},
+		{"melee": 7, "ranged": 6, "spread": 3, "tank": 3, "agile": 0},
+		{"melee": 8, "ranged": 8, "spread": 4, "tank": 3, "agile": 0}
 	],
 	4: [  # Wrath
-		{"melee": 6, "ranged": 3, "spread": 2},
-		{"melee": 7, "ranged": 5, "spread": 3},
-		{"melee": 8, "ranged": 7, "spread": 4},
-		{"melee": 8, "ranged": 9, "spread": 5}
+		{"melee": 6, "ranged": 3, "spread": 2, "tank": 3, "agile": 0},
+		{"melee": 7, "ranged": 5, "spread": 3, "tank": 3, "agile": 0},
+		{"melee": 8, "ranged": 7, "spread": 4, "tank": 4, "agile": 0},
+		{"melee": 8, "ranged": 9, "spread": 5, "tank": 4, "agile": 0}
 	],
 	5: [  # Lust
-		{"melee": 7, "ranged": 4, "spread": 3},
-		{"melee": 8, "ranged": 6, "spread": 4},
-		{"melee": 8, "ranged": 8, "spread": 5},
-		{"melee": 8, "ranged": 10, "spread": 6}
+		{"melee": 7, "ranged": 4, "spread": 3, "tank": 4, "agile": 0},
+		{"melee": 8, "ranged": 6, "spread": 4, "tank": 4, "agile": 0},
+		{"melee": 8, "ranged": 8, "spread": 5, "tank": 5, "agile": 0},
+		{"melee": 8, "ranged": 10, "spread": 6, "tank": 5, "agile": 0}
 	],
 	6: [  # Greed
-		{"melee": 8, "ranged": 5, "spread": 4},
-		{"melee": 8, "ranged": 7, "spread": 5},
-		{"melee": 8, "ranged": 9, "spread": 6},
-		{"melee": 8, "ranged": 9, "spread": 7}
+		{"melee": 8, "ranged": 5, "spread": 4, "tank": 5, "agile": 0},
+		{"melee": 8, "ranged": 7, "spread": 5, "tank": 5, "agile": 0},
+		{"melee": 8, "ranged": 9, "spread": 6, "tank": 6, "agile": 0},
+		{"melee": 8, "ranged": 9, "spread": 7, "tank": 6, "agile": 0}
 	],
 	7: [  # Pride
-		{"melee": 9, "ranged": 6, "spread": 5},
-		{"melee": 9, "ranged": 8, "spread": 6},
-		{"melee": 9, "ranged": 10, "spread": 7},
-		{"melee": 10, "ranged": 10, "spread": 8}
+		{"melee": 9, "ranged": 6, "spread": 5, "tank": 6, "agile": 0},
+		{"melee": 9, "ranged": 8, "spread": 6, "tank": 6, "agile": 0},
+		{"melee": 9, "ranged": 10, "spread": 7, "tank": 7, "agile": 0},
+		{"melee": 10, "ranged": 10, "spread": 8, "tank": 8, "agile": 0}
 	]
 }
 
@@ -80,6 +84,7 @@ var waves = []
 var current_wave_index: int = 0
 var is_wave_active: bool = false
 var boss_phase: bool = false
+var enemies_left_to_spawn: int = 0
 
 func _ready() -> void:
 	randomize()
@@ -159,22 +164,46 @@ func start_next_wave():
 
 func spawn_wave(data: Dictionary):
 	var level_context = "pre_boss" if current_arena == arena_nodes[0] and current_wave_index == waves.size() - 1 else "normal"
-	_set_player_xp_goal(data["melee"] + data["ranged"] + data["spread"], level_context, Global.pecado)
+	
+	var total_enemies = data["melee"] + data["ranged"] + data["spread"] + data["tank"] + data["agile"]
+	_set_player_xp_goal(total_enemies, level_context, Global.pecado)
 
 	if $Player.greed_cursed_level_enabled:
 		$Player.grant_bonus_level_up("normal")
 
-	# Spawna melee
-	for i in range(data["melee"]):
-		spawn_enemy(MELEE_ENEMY)
-
-	# Spawna ranged
-	for i in range(data["ranged"]):
-		spawn_enemy(RANGED_ENEMY)
+	# Cria filas separadas
+	var melee_queue = []
+	var other_queue = []
 	
-	#spawna spread
-	for i in range(data["spread"]):
-		spawn_enemy(SPREAD_ENEMY)
+	# Coloca todos os melees na primeira fila
+	for i in range(data["melee"]): 
+		melee_queue.append(MELEE_ENEMY)
+
+	# Coloca o resto na segunda fila
+	for i in range(data["ranged"]): other_queue.append(RANGED_ENEMY)
+	for i in range(data["spread"]): other_queue.append(SPREAD_ENEMY)
+	for i in range(data["tank"]): other_queue.append(TANK_ENEMY)
+	for i in range(data["agile"]): other_queue.append(AGILE_ENEMY)
+	
+	# Embaralha APENAS a fila do resto (ranged, spread, tank, agile)
+	other_queue.shuffle()
+	
+	# Junta as duas filas (Melees na frente, resto bagunçado atrás)
+	var spawn_queue = melee_queue + other_queue
+	
+	enemies_left_to_spawn = spawn_queue.size()
+
+	# Spawna um por um com delay
+	for enemy_scene in spawn_queue:
+		# Se a wave foi cancelada ou o player morreu, para de spawnar
+		if not is_inside_tree() or not is_wave_active: 
+			break
+			
+		spawn_enemy(enemy_scene)
+		enemies_left_to_spawn -= 1
+		
+		# Espera 0.8 segundos entre cada inimigo
+		await get_tree().create_timer(2).timeout
 		
 func spawn_boss():
 	var centro_node = current_arena.get_node("Centro")

@@ -3,7 +3,7 @@ extends CharacterBody2D
 # --- Status melhoráveis via Level Ups ---
 @export var max_health: int = 1000
 @export var current_health: int = 1000
-@export var attack_damage: float = 30.0
+@export var attack_damage: float = 40.0
 @export var fire_rate: float = 1.0
 const MIN_FIRE_RATE: float = 0.25
 var base_fire_rate: float = 1.0
@@ -351,7 +351,7 @@ func perform_dash(direction: Vector2, uses_double_dash_charge: bool = false) -> 
 		double_dash_charges = max(max_dash_charges - 1, 0)
 		dash_cd_timer.start(dash_cooldown)
 
-func take_damage(amount: float) -> void:
+func take_damage(amount: float, attacker_position: Vector2 = Vector2.ZERO) -> void:
 	if is_invulnerable: 
 		return
 
@@ -364,6 +364,12 @@ func take_damage(amount: float) -> void:
 		_spawn_burst_particles(global_position, Color(0.35, 0.9, 1.0, 0.95), 34, 0.35, 150.0)
 		emit_signal("stats_updated")
 		return
+
+	# >>> ALTERAÇÃO AQUI: APLICA O KNOCKBACK SE TOMAR DANO FÍSICO
+	if attacker_position != Vector2.ZERO:
+		var knockback_direction = attacker_position.direction_to(global_position)
+		var knockback_force = 300.0 
+		velocity = knockback_direction * knockback_force
 
 	current_health -= int(round(amount * damage_taken_multiplier))
 	emit_signal("hp_updated", current_health, max_health)
@@ -413,7 +419,8 @@ func _on_hitbox_area_entered(area: Area2D) -> void:
 			enemies_in_contact.append(parent)
 		
 		if contact_damage_timer.is_stopped():
-			take_damage(20)
+			# >>> ALTERAÇÃO AQUI: Manda a posição do inimigo pro dano
+			take_damage(20, parent.global_position)
 			contact_damage_timer.start()
 
 func _on_hitbox_area_exited(area: Area2D) -> void:
@@ -428,7 +435,9 @@ func _on_contact_damage_timer_timeout() -> void:
 	enemies_in_contact = enemies_in_contact.filter(func(e): return is_instance_valid(e))
 	
 	if not enemies_in_contact.is_empty():
-		take_damage(20)
+		# >>> ALTERAÇÃO AQUI: Se ele ficar encostado, continua empurrando
+		var prime_enemy = enemies_in_contact[0]
+		take_damage(20, prime_enemy.global_position)
 	else:
 		contact_damage_timer.stop()
 

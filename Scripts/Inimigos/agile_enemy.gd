@@ -3,14 +3,17 @@ class_name AgileEnemy
 
 @export var orbit_distance: float = 180.0
 @export var orbit_speed: float = 12000.0
-@export var dash_speed: float = 35000.0
-@export var time_to_dash: float = 3.5 # Tempo rodeando antes de atacar
-@export var dash_duration: float = 0.5 # Duração do rasante
+@export var dash_speed: float = 28000.0 
+@export var time_to_dash: float = 3.5 
+@export var dash_duration: float = 0.5 
 
 var state_timer: float = 0.0
 var is_dashing: bool = false
 var dash_direction: Vector2 = Vector2.ZERO
 var orbit_direction: int = 1
+
+# >>> ALTERAÇÃO AQUI: Variável de respiro para ele não "tremer" ao bater na parede
+var bump_cooldown: float = 0.0
 
 func _ready() -> void:
 	super()
@@ -25,17 +28,29 @@ func _ready() -> void:
 func mover(_delta: float) -> void:
 	var dir_to_player = global_position.direction_to(player.global_position)
 	
+	# >>> ALTERAÇÃO AQUI: Diminui o cooldown de batida a cada frame
+	if bump_cooldown > 0:
+		bump_cooldown -= _delta
+	
 	if is_dashing:
 		# Estado de Ataque (Dash)
 		velocity = dash_direction * dash_speed * _delta
 		state_timer -= _delta
-		if state_timer <= 0:
+		
+		# Verifica impacto
+		if state_timer <= 0 or get_slide_collision_count() > 0:
 			is_dashing = false
 			state_timer = 0.0
+			velocity = -dash_direction * (dash_speed * 0.6) * _delta
 	else:
 		# Estado de Órbita (Rodeando)
 		state_timer += _delta
 		var dist_to_player = global_position.distance_to(player.global_position)
+		
+		# >>> ALTERAÇÃO AQUI: Se bateu na quina enquanto tenta rodear, dá meia volta!
+		if get_slide_collision_count() > 0 and bump_cooldown <= 0:
+			orbit_direction *= -1
+			bump_cooldown = 0.5 # Fica meio segundo sem poder virar de novo para escapar da parede
 		
 		# Calcula o vetor perpendicular para fazer a curva
 		var tangent = dir_to_player.rotated(PI/2 * orbit_direction)

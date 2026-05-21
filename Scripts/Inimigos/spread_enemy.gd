@@ -1,8 +1,8 @@
 extends RangedEnemy
 class_name SpreadEnemy
 
-@export var bullets_per_shot: int = 4
-@export var spread_angle: float = 25.0
+@export var bullets_per_shot: int = 5
+@export var spread_angle: float = 10.0
 
 func _ready() -> void:
 	super()
