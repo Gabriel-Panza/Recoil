@@ -3,7 +3,7 @@ class_name RangedEnemy
 
 @export var projectile_scene: PackedScene = preload("res://Cenas/Inimigos/enemyProjectile.tscn")
 @export var attack_range: float = 200.0  
-@export var stop_distance: float = 80.0 
+@export var stop_distance: float = 60.0 
 @export var fire_rate: float = 2.5
 
 var fire_cooldown: float = 0.0

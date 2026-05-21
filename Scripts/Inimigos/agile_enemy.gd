@@ -4,7 +4,7 @@ class_name AgileEnemy
 @export var orbit_distance: float = 180.0
 @export var orbit_speed: float = 12000.0
 @export var dash_speed: float = 35000.0
-@export var time_to_dash: float = 2.5 # Tempo rodeando antes de atacar
+@export var time_to_dash: float = 3.5 # Tempo rodeando antes de atacar
 @export var dash_duration: float = 0.5 # Duração do rasante
 
 var state_timer: float = 0.0
