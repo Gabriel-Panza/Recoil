@@ -611,7 +611,8 @@ func win():
 		musica.stop()
 	get_tree().paused = true
 	# $Win.play()
-	game_win.visible = true
+	if game_win:
+		game_win.visible = true
 
 func _finish_current_run() -> void:
 	var game_scene = get_tree().current_scene

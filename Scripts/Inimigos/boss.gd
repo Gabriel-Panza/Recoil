@@ -19,12 +19,15 @@ signal boss_defeated
 
 const ENEMY_COLLISION_MASK: int = 4
 const ENEMY_BODY_COLLISION_SCALE: float = 0.7
+const ENRAGE_HEALTH_RATIO: float = 0.5
+const ENRAGE_STAT_MULTIPLIER: float = 1.25
 
 var current_health: int
 var player: Node2D
 var aparencia
 var health_bar: ProgressBar
 var is_dead: bool = false
+var is_enraged: bool = false
 
 var current_state: BossState
 var current_sub_state = null
@@ -184,11 +187,26 @@ func take_damage(amount: float) -> void:
 	if current_health <= 0:
 		die()
 		return
+
+	_try_activate_enrage()
 	
 	# Tween para dano
 	var tween = create_tween()
 	tween.tween_property(aparencia, "modulate", Color.RED, 0.1)
 	tween.tween_property(aparencia, "modulate", Color.WHITE, 0.1)
+
+func _try_activate_enrage() -> void:
+	if is_enraged:
+		return
+
+	if current_health > max_health * ENRAGE_HEALTH_RATIO:
+		return
+
+	is_enraged = true
+	speed *= ENRAGE_STAT_MULTIPLIER
+	damage = int(round(float(damage) * ENRAGE_STAT_MULTIPLIER))
+	if has_meta("base_speed"):
+		set_meta("base_speed", float(get_meta("base_speed")) * ENRAGE_STAT_MULTIPLIER)
 
 func die() -> void:
 	if is_dead:

@@ -142,8 +142,8 @@ func _update_skill_status_background(line_count: int) -> void:
 		return
 
 	var height = max(72.0, 30.0 + float(line_count) * 18.0)
-	skill_status_background.size = Vector2(240.0, height)
-	passive_status_label.size = Vector2(224.0, max(44.0, height - 44.0))
+	skill_status_background.size = Vector2(200.0, height)
+	passive_status_label.size = Vector2(196.0, max(44.0, height - 44.0))
 
 func _update_active_skill_hud_label(label: Label, slot: String) -> void:
 	if label == null:

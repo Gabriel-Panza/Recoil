@@ -12,6 +12,8 @@
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_xed4y"]
 texture = ExtResource("2_xed4y")
+expand_margin_left = 5.0
+expand_margin_right = 5.0
 
 [node name="HUD" type="Node2D" unique_id=1927285508]
 process_mode = 3
@@ -22,9 +24,9 @@ visible = false
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 918.0
+offset_left = 895.0
 offset_top = 195.0
-offset_right = 1138.0
+offset_right = 1135.0
 offset_bottom = 435.0
 grow_horizontal = 2
 grow_vertical = 2
@@ -69,7 +71,7 @@ horizontal_alignment = 2
 
 [node name="Atk_Speed" type="Label" parent="HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer" unique_id=357342291]
 layout_mode = 2
-tooltip_text = "+5% attack speed is additive from the original attack speed. Higher percentage means faster shooting. Minimum shot cooldown: 0.25s."
+tooltip_text = "How fast you can shot. Shot cooldown: 1s"
 mouse_filter = 0
 theme_override_colors/font_color = Color(1, 0.25882354, 0.2, 1)
 theme_override_constants/outline_size = 4
