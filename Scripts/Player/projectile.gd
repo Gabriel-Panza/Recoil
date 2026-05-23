@@ -36,6 +36,12 @@ func _process(delta):
 	process_hit_queue()
 
 func _on_area_entered(area):
+	if self.is_in_group("Projectile") and area.has_meta("projectile_special_owner"):
+		var special_owner = area.get_meta("projectile_special_owner")
+		if is_instance_valid(special_owner) and special_owner.has_method("_on_projectile_hit_special_area"):
+			special_owner.call("_on_projectile_hit_special_area", area, self)
+			return
+
 	var parent = area.get_parent()
 	
 	if self.is_in_group("Projectile") and parent.is_in_group("Enemy"):

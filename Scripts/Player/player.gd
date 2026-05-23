@@ -34,45 +34,42 @@ const WRATH_OVERHEAT_SHOT_INTERVAL: int = 4
 var shot_count = 1
 var spread_angle = 15.0 
 
-const ACTIVE_ABILITY_IDS = [
-	"sloth_field",
-	"gluttony_devour",
-	"envy_mirror_clone",
-	"wrath_burst",
-	"lust_for_perfection",
-	"greed_treasure_rain"
-]
-
 const ACTIVE_ABILITY_DATA = {
 	"sloth_field": {
 		"name": "Sloth Field",
 		"description": "Create a 180px field for 5 seconds. Enemies inside drop to 35% speed, but your dash speed drops to 75% during the field.",
-		"cooldown": 20.0
+		"cooldown": 20.0,
+		"method": "activate_sloth_field"
 	},
 	"gluttony_devour": {
 		"name": "Devour",
 		"description": "Consume up to two enemies within 180px. Green motes fly back and heal up to 12.5% max health when they arrive, but your dash speed is halved for 5 seconds.",
-		"cooldown": 24.0
+		"cooldown": 24.0,
+		"method": "activate_gluttony_devour"
 	},
 	"envy_mirror_clone": {
 		"name": "Mirror Clone",
 		"description": "Summon a mirror clone that fires random risky shots with you for a short time. Clone bullets can hit anything, including you.",
-		"cooldown": 20.0
+		"cooldown": 20.0,
+		"method": "activate_envy_mirror_clone"
 	},
 	"wrath_burst": {
 		"name": "Wrath Burst",
 		"description": "Fire 16 radial bullets for 110% attack damage each, then take 20 damage.",
-		"cooldown": 24.0
+		"cooldown": 24.0,
+		"method": "activate_wrath_burst"
 	},
 	"lust_for_perfection": {
 		"name": "Perfection",
 		"description": "Become invulnerable for 3 seconds, then take double damage for 5 seconds.",
-		"cooldown": 25.0
+		"cooldown": 25.0,
+		"method": "activate_lust_for_perfection"
 	},
 	"greed_treasure_rain": {
 		"name": "Treasure Rain",
 		"description": "Rain golden projectiles from above. Each projectile deals 120% attack damage only when it collides, including with you.",
-		"cooldown": 30.0
+		"cooldown": 30.0,
+		"method": "activate_greed_treasure_rain"
 	},
 }
 
@@ -127,6 +124,15 @@ const SIN_PASSIVE_IDS = [
 	"lust_for_vengeance",
 	"greed_cursed_level"
 ]
+
+const SIN_PASSIVE_FLAGS = {
+	"sloth_slow_aura": "sloth_slow_aura_enabled",
+	"gluttony_heal_kill": "gluttony_heal_kill_enabled",
+	"envy_mirror_shot": "envy_mirror_shot_enabled",
+	"wrath_overheat": "wrath_overheat_enabled",
+	"lust_for_vengeance": "lust_for_vengeance_enabled",
+	"greed_cursed_level": "greed_cursed_level_enabled"
+}
 
 var active_abilities = {
 	"E": "",
@@ -437,16 +443,10 @@ func shoot(direction: Vector2) -> void:
 	var shot_damage = _get_current_shot_damage()
 	
 	for i in range(shot_count):
-		var bullet = pistol_bullet_scene.instantiate()
-			
 		# Calcula o deslocamento do ângulo dado que podemos ter multiplos tiros
 		var angle_offset = deg_to_rad((i - (shot_count - 1) / 2.0) * spread_angle)
 		var final_angle = base_angle + angle_offset
-		
-		bullet.global_position = global_position
-		bullet.direction = Vector2(cos(final_angle), sin(final_angle))
-		bullet.damage = shot_damage
-		get_tree().root.add_child(bullet)
+		_spawn_projectile(global_position, final_angle, shot_damage)
 
 		if envy_mirror_shot_enabled and randf() < 0.25:
 			_spawn_projectile(global_position, _get_mirrored_shot_angle(final_angle), shot_damage * 0.75, false, Color(0.25, 0.95, 1.0, 0.9))
@@ -660,7 +660,7 @@ func _get_contact_damage(enemy: Node) -> float:
 	return 20.0
 
 func is_active_ability_id(option_id: String) -> bool:
-	return option_id in ACTIVE_ABILITY_IDS
+	return ACTIVE_ABILITY_DATA.has(option_id)
 
 func learn_active_ability(option_id: String) -> bool:
 	if not is_active_ability_id(option_id):
@@ -732,19 +732,8 @@ func get_passive_effect_description(passive_id: String) -> String:
 	return str(data.get("description", passive_id))
 
 func _is_passive_enabled(passive_id: String) -> bool:
-	match passive_id:
-		"sloth_slow_aura":
-			return sloth_slow_aura_enabled
-		"gluttony_heal_kill":
-			return gluttony_heal_kill_enabled
-		"envy_mirror_shot":
-			return envy_mirror_shot_enabled
-		"wrath_overheat":
-			return wrath_overheat_enabled
-		"lust_for_vengeance":
-			return lust_for_vengeance_enabled
-		"greed_cursed_level":
-			return greed_cursed_level_enabled
+	if SIN_PASSIVE_FLAGS.has(passive_id):
+		return bool(get(SIN_PASSIVE_FLAGS[passive_id]))
 
 	return current_rare_option == passive_id
 
@@ -756,22 +745,15 @@ func use_active_ability(slot: String) -> void:
 	if ability_id == "" or get_active_slot_cooldown(slot) > 0.0:
 		return
 
-	match ability_id:
-		"sloth_field":
-			activate_sloth_field()
-		"gluttony_devour":
-			activate_gluttony_devour()
-		"envy_mirror_clone":
-			activate_envy_mirror_clone()
-		"wrath_burst":
-			activate_wrath_burst()
-		"lust_for_perfection":
-			activate_lust_for_perfection()
-		"greed_treasure_rain":
-			activate_greed_treasure_rain()
+	_activate_active_ability(ability_id)
 
 	active_ability_cooldown_remaining[slot] = get_active_ability_cooldown(ability_id)
 	emit_signal("stats_updated")
+
+func _activate_active_ability(ability_id: String) -> void:
+	var method_name = str(ACTIVE_ABILITY_DATA.get(ability_id, {}).get("method", ""))
+	if method_name != "" and has_method(method_name):
+		call(method_name)
 
 func _update_active_ability_cooldowns(delta: float) -> void:
 	for slot in active_ability_cooldown_remaining.keys():
@@ -1031,15 +1013,8 @@ func _add_circle_fill_to_node(parent: Node, radius: float, color: Color) -> Poly
 	return fill
 
 func _update_passive_status_vfx(delta: float) -> void:
-	if recoil_explosion_enabled:
-		_ensure_passive_ring_vfx("recoil_explosion", 28.0, Color(1.0, 0.55, 0.14, 0.36), 1.5)
-	else:
-		_remove_passive_status_vfx("recoil_explosion")
-
-	if offensive_dash_enabled:
-		_ensure_passive_ring_vfx("offensive_dash", 31.0, Color(0.38, 0.95, 1.0, 0.34), 1.5)
-	else:
-		_remove_passive_status_vfx("offensive_dash")
+	_set_passive_ring_vfx_enabled("recoil_explosion", recoil_explosion_enabled, 28.0, Color(1.0, 0.55, 0.14, 0.36), 1.5)
+	_set_passive_ring_vfx_enabled("offensive_dash", offensive_dash_enabled, 31.0, Color(0.38, 0.95, 1.0, 0.34), 1.5)
 
 	if max_dash_charges > 1:
 		var double_dash_vfx = _ensure_double_dash_vfx()
@@ -1048,10 +1023,13 @@ func _update_passive_status_vfx(delta: float) -> void:
 	else:
 		_remove_passive_status_vfx("double_dash")
 
-	if lust_for_vengeance_enabled and current_health >= max_health:
-		_ensure_passive_ring_vfx("vengeance", 34.0, Color(1.0, 0.24, 0.46, 0.34), 1.6)
+	_set_passive_ring_vfx_enabled("vengeance", lust_for_vengeance_enabled and current_health >= max_health, 34.0, Color(1.0, 0.24, 0.46, 0.34), 1.6)
+
+func _set_passive_ring_vfx_enabled(vfx_id: String, enabled: bool, radius: float, color: Color, width: float) -> void:
+	if enabled:
+		_ensure_passive_ring_vfx(vfx_id, radius, color, width)
 	else:
-		_remove_passive_status_vfx("vengeance")
+		_remove_passive_status_vfx(vfx_id)
 
 func _ensure_passive_ring_vfx(vfx_id: String, radius: float, color: Color, width: float) -> Node2D:
 	var existing_vfx = passive_status_vfx.get(vfx_id, null)
