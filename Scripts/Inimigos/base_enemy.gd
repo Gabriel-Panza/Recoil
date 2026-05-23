@@ -2,7 +2,7 @@ extends CharacterBody2D
 class_name BaseEnemy 
 
 @export var max_health: int = 100
-@export var speed: float = 125.0
+@export var speed: float = 135.0
 @export var damage: int = 20
 @export var xp_drop: int = 1
 
@@ -13,7 +13,7 @@ var current_health: int
 var player: Node2D
 var health_bar: ProgressBar
 var is_dead: bool = false
-@onready var aparencia = get_node_or_null("AnimatedAppearence") #alteração aqui
+@onready var aparencia = get_node_or_null("AnimatedAppearence")
 
 func _ready() -> void:
 	current_health = max_health

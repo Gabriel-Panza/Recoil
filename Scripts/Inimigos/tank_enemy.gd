@@ -10,7 +10,7 @@ func _ready() -> void:
 	aparencia = $AnimatedAppearence
 	
 	# Status de movimentação e ataque do colosso
-	speed = 55.0
+	speed = 90.0
 	damage = 35.0   
 
 func mover(_delta: float) -> void:
