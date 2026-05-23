@@ -14,8 +14,7 @@ var fade_rect: ColorRect
 var is_transitioning: bool = false
 
 # Indice 0 = visual inicial;
-# indice 1 = apos o primeiro boss; indice 2 = apos o segundo boss;
-# etc.
+# indice 1 = apos o primeiro boss; indice 2 = apos o segundo boss; etc.
 var enemy_arena_textures: Array[Texture2D] = [
 	preload("res://Sprites/icon.svg"), # Sloth
 	preload("res://Sprites/icon.svg"), # Gluttony
@@ -30,53 +29,53 @@ var enemy_arena_textures: Array[Texture2D] = [
 const MELEE_ENEMY = preload("res://Cenas/Inimigos/melee_enemy.tscn")
 const RANGED_ENEMY = preload("res://Cenas/Inimigos/ranged_enemy.tscn")
 const SPREAD_ENEMY = preload("res://Cenas/Inimigos/spread_enemy.tscn")
-const TANK_ENEMY = preload("res://Cenas/Inimigos/tank_enemy.tscn")       # ADICIONADO
-const AGILE_ENEMY = preload("res://Cenas/Inimigos/agile_enemy.tscn")     # ADICIONADO
+const TANK_ENEMY = preload("res://Cenas/Inimigos/tank_enemy.tscn")
+const AGILE_ENEMY = preload("res://Cenas/Inimigos/agile_enemy.tscn")
 const BOSS_ENEMY = preload("res://Cenas/Inimigos/boss.tscn")
 
-# Conjuntos de waves baseados no pecado (Agile zerado por enquanto)
+# Conjuntos de waves baseados no pecado, com introducao gradual de inimigos.
 var wave_sets = {
 	1: [  # Sloth
-		{"melee": 3, "ranged": 0, "spread": 0, "tank": 0, "agile": 0},
-		{"melee": 2, "ranged": 2, "spread": 0, "tank": 0, "agile": 0},
-		{"melee": 3, "ranged": 2, "spread": 2, "tank": 1, "agile": 0}, 
-		{"melee": 3, "ranged": 3, "spread": 3, "tank": 1, "agile": 1}
+		{"melee": 3, "ranged": 0, "agile": 0, "tank": 0, "spread": 0},
+		{"melee": 4, "ranged": 1, "agile": 0, "tank": 0, "spread": 0},
+		{"melee": 5, "ranged": 2, "agile": 0, "tank": 0, "spread": 0},
+		{"melee": 6, "ranged": 3, "agile": 0, "tank": 0, "spread": 0}
 	],
 	2: [  # Gluttony
-		{"melee": 4, "ranged": 1, "spread": 0, "tank": 1, "agile": 0},
-		{"melee": 5, "ranged": 3, "spread": 1, "tank": 1, "agile": 0},
-		{"melee": 6, "ranged": 5, "spread": 2, "tank": 2, "agile": 0},
-		{"melee": 7, "ranged": 7, "spread": 3, "tank": 2, "agile": 0}
+		{"melee": 4, "ranged": 1, "agile": 1, "tank": 0, "spread": 0},
+		{"melee": 5, "ranged": 2, "agile": 1, "tank": 0, "spread": 0},
+		{"melee": 6, "ranged": 3, "agile": 2, "tank": 0, "spread": 0},
+		{"melee": 7, "ranged": 4, "agile": 2, "tank": 0, "spread": 0}
 	],
 	3: [  # Envy
-		{"melee": 5, "ranged": 2, "spread": 1, "tank": 2, "agile": 0},
-		{"melee": 6, "ranged": 4, "spread": 2, "tank": 2, "agile": 0},
-		{"melee": 7, "ranged": 6, "spread": 3, "tank": 3, "agile": 0},
-		{"melee": 8, "ranged": 8, "spread": 4, "tank": 3, "agile": 0}
+		{"melee": 5, "ranged": 2, "agile": 1, "tank": 1, "spread": 0},
+		{"melee": 6, "ranged": 3, "agile": 1, "tank": 1, "spread": 0},
+		{"melee": 7, "ranged": 4, "agile": 2, "tank": 2, "spread": 0},
+		{"melee": 8, "ranged": 5, "agile": 2, "tank": 2, "spread": 0}
 	],
 	4: [  # Wrath
-		{"melee": 6, "ranged": 3, "spread": 2, "tank": 3, "agile": 0},
-		{"melee": 7, "ranged": 5, "spread": 3, "tank": 3, "agile": 0},
-		{"melee": 8, "ranged": 7, "spread": 4, "tank": 4, "agile": 0},
-		{"melee": 8, "ranged": 9, "spread": 5, "tank": 4, "agile": 0}
+		{"melee": 6, "ranged": 3, "agile": 1, "tank": 1, "spread": 1},
+		{"melee": 7, "ranged": 4, "agile": 2, "tank": 2, "spread": 1},
+		{"melee": 8, "ranged": 5, "agile": 2, "tank": 2, "spread": 2},
+		{"melee": 9, "ranged": 6, "agile": 3, "tank": 3, "spread": 2}
 	],
 	5: [  # Lust
-		{"melee": 7, "ranged": 4, "spread": 3, "tank": 4, "agile": 0},
-		{"melee": 8, "ranged": 6, "spread": 4, "tank": 4, "agile": 0},
-		{"melee": 8, "ranged": 8, "spread": 5, "tank": 5, "agile": 0},
-		{"melee": 8, "ranged": 10, "spread": 6, "tank": 5, "agile": 0}
+		{"melee": 8, "ranged": 4, "agile": 2, "tank": 2, "spread": 2},
+		{"melee": 8, "ranged": 5, "agile": 3, "tank": 3, "spread": 2},
+		{"melee": 9, "ranged": 6, "agile": 3, "tank": 3, "spread": 3},
+		{"melee": 9, "ranged": 7, "agile": 4, "tank": 4, "spread": 3}
 	],
 	6: [  # Greed
-		{"melee": 8, "ranged": 5, "spread": 4, "tank": 5, "agile": 0},
-		{"melee": 8, "ranged": 7, "spread": 5, "tank": 5, "agile": 0},
-		{"melee": 8, "ranged": 9, "spread": 6, "tank": 6, "agile": 0},
-		{"melee": 8, "ranged": 9, "spread": 7, "tank": 6, "agile": 0}
+		{"melee": 9, "ranged": 5, "agile": 3, "tank": 2, "spread": 3},
+		{"melee": 9, "ranged": 6, "agile": 4, "tank": 3, "spread": 3},
+		{"melee": 10, "ranged": 7, "agile": 4, "tank": 3, "spread": 4},
+		{"melee": 10, "ranged": 8, "agile": 5, "tank": 4, "spread": 4}
 	],
 	7: [  # Pride
-		{"melee": 9, "ranged": 6, "spread": 5, "tank": 6, "agile": 0},
-		{"melee": 9, "ranged": 8, "spread": 6, "tank": 6, "agile": 0},
-		{"melee": 9, "ranged": 10, "spread": 7, "tank": 7, "agile": 0},
-		{"melee": 10, "ranged": 10, "spread": 8, "tank": 8, "agile": 0}
+		{"melee": 10, "ranged": 7, "agile": 4, "tank": 3, "spread": 4},
+		{"melee": 10, "ranged": 8, "agile": 5, "tank": 4, "spread": 4},
+		{"melee": 10, "ranged": 8, "agile": 5, "tank": 4, "spread": 5},
+		{"melee": 10, "ranged": 9, "agile": 6, "tank": 5, "spread": 5}
 	]
 }
 

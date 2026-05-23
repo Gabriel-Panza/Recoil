@@ -226,7 +226,7 @@ animation = &"walk_down"
 shape = SubResource("CapsuleShape2D_7k6h6")
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=337466116]
-zoom = Vector2(1.5, 1.5)
+zoom = Vector2(2, 2)
 
 [node name="CanvasLayer" type="CanvasLayer" parent="Camera2D" unique_id=1327528987]
 

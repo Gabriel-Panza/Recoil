@@ -5,7 +5,7 @@ func _ready() -> void:
 	super()
 	
 	# Status massivos (Escala bem com o nível de Pecado)
-	max_health = 250.0 + ((Global.pecado - 1) * 120.0)
+	max_health = 200.0 + ((Global.pecado - 1) * 100.0)
 	current_health = max_health
 	aparencia = $AnimatedAppearence
 	

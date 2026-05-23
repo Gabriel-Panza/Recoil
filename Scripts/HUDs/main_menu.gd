@@ -1,5 +1,7 @@
 extends Control
 
+const MAX_VISIBLE_RANKING_RUNS: int = 5
+
 @onready var ranking_panel: Control = $RankingPanel
 @onready var ranking_list: VBoxContainer = $RankingPanel/ScrollContainer/RankingList
 
@@ -41,7 +43,7 @@ func _refresh_ranking() -> void:
 		_add_ranking_label("Nenhuma run registrada ainda.")
 		return
 
-	for i in range(runs.size()):
+	for i in range(min(runs.size(), MAX_VISIBLE_RANKING_RUNS)):
 		var run = runs[i]
 		var ranking_text = "%02d. %s - %s" % [
 			i + 1,

@@ -1,34 +1,30 @@
 extends BaseEnemy
 class_name AgileEnemy
 
-@export var orbit_distance: float = 180.0
+@export var orbit_distance: float = 150.0
 @export var orbit_speed: float = 200.0
-@export var dash_speed: float = 470.0
+@export var dash_speed: float = 475.0
 @export var time_to_dash: float = 3.5 
-@export var dash_duration: float = 0.5 
+@export var dash_duration: float = 0.75 
 
 var state_timer: float = 0.0
 var is_dashing: bool = false
 var dash_direction: Vector2 = Vector2.ZERO
 var orbit_direction: int = 1
 
-# >>> ALTERAÇÃO AQUI: Variável de respiro para ele não "tremer" ao bater na parede
 var bump_cooldown: float = 0.0
 
 func _ready() -> void:
 	super()
-	# Sorteia se ele vai rodear em sentido horário ou anti-horário
 	orbit_direction = 1 if randf() > 0.5 else -1
 	
-	# Status balanceados para um inimigo rápido (vida baixa)
-	max_health = 40 + ((Global.pecado - 1) * 15)
+	max_health = 40 + ((Global.pecado - 1) * 20)
 	current_health = max_health
 	speed = orbit_speed
 
 func mover(_delta: float) -> void:
 	var dir_to_player = global_position.direction_to(player.global_position)
 	
-	# >>> ALTERAÇÃO AQUI: Diminui o cooldown de batida a cada frame
 	if bump_cooldown > 0:
 		bump_cooldown -= _delta
 	

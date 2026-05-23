@@ -3,25 +3,31 @@ extends CharacterBody2D
 # --- Status melhoráveis via Level Ups ---
 @export var max_health: int = 1000
 @export var current_health: int = 1000
-@export var attack_damage: float = 40.0
+@export var attack_damage: float = 35.0
 @export var fire_rate: float = 1.0
+const STARTING_FIRE_RATE: float = 1.0
 const MIN_FIRE_RATE: float = 0.25
 var base_fire_rate: float = 1.0
 var attack_speed_bonus: float = 0.0
-@export var recoil_force: float = 480.0
-@export var friction: float = 725.0
+@export var recoil_force: float = 450.0
+@export var friction: float = 750.0
 var is_invulnerable: bool = false
+const MOVEMENT_FORCE_COMBO_LOCK_DURATION: float = 0.18
+const MOVEMENT_FORCE_CAP_BUFFER: float = 100.0
 
 # --- DASH ---
 @export var dash_speed: float = 600.0
 @export var dash_duration: float = 0.2
 @export var dash_cooldown: float = 5.0
+var base_dash_speed: float = 600.0
+var dash_speed_modifiers: Dictionary = {}
 const MAX_ABILITY_AREA_RADIUS: float = 180.0
 const DEVOUR_RADIUS: float = MAX_ABILITY_AREA_RADIUS
 const SLOW_AURA_RADIUS: float = MAX_ABILITY_AREA_RADIUS
 const SHOCKWAVE_RADIUS: float = MAX_ABILITY_AREA_RADIUS
 const SHOCKWAVE_DAMAGE_MULTIPLIER: float = 0.35
 const SHOCKWAVE_DASH_DAMAGE_MULTIPLIER: float = 0.75
+const WRATH_OVERHEAT_SHOT_INTERVAL: int = 4
 
 # --- TIRO ---
 @export var pistol_bullet_scene: PackedScene
@@ -41,22 +47,22 @@ const ACTIVE_ABILITY_DATA = {
 	"sloth_field": {
 		"name": "Sloth Field",
 		"description": "Create a 180px field for 5 seconds. Enemies inside drop to 35% speed, but your dash speed drops to 75% during the field.",
-		"cooldown": 15.0
+		"cooldown": 20.0
 	},
 	"gluttony_devour": {
 		"name": "Devour",
 		"description": "Consume up to two enemies within 180px. Green motes fly back and heal up to 12.5% max health when they arrive, but your dash speed is halved for 5 seconds.",
-		"cooldown": 20.0
+		"cooldown": 24.0
 	},
 	"envy_mirror_clone": {
 		"name": "Mirror Clone",
 		"description": "Summon a mirror clone that fires random risky shots with you for a short time. Clone bullets can hit anything, including you.",
-		"cooldown": 15.0
+		"cooldown": 20.0
 	},
 	"wrath_burst": {
 		"name": "Wrath Burst",
 		"description": "Fire 16 radial bullets for 110% attack damage each, then take 20 damage.",
-		"cooldown": 20.0
+		"cooldown": 24.0
 	},
 	"lust_for_perfection": {
 		"name": "Perfection",
@@ -66,9 +72,61 @@ const ACTIVE_ABILITY_DATA = {
 	"greed_treasure_rain": {
 		"name": "Treasure Rain",
 		"description": "Rain golden projectiles from above. Each projectile deals 120% attack damage only when it collides, including with you.",
-		"cooldown": 20.0
+		"cooldown": 30.0
 	},
 }
+
+const PASSIVE_STATUS_DATA = {
+	"Shield_Protection": {
+		"name": "One-hit Shield",
+		"description": "Blocks the next damage instance, then refreshes after 12 seconds."
+	},
+	"Recoil_Explosion": {
+		"name": "Recoil Explosion",
+		"description": "Every shot creates a 180px shockwave that deals 35% of your attack damage."
+	},
+	"Double_Dash": {
+		"name": "Double Dash",
+		"description": "Gain one extra dash charge before the dash cooldown starts."
+	},
+	"Offensive_Dash": {
+		"name": "Offensive Dash",
+		"description": "Dashing blocks damage and releases a 180px shockwave for 75% attack damage."
+	},
+	"sloth_slow_aura": {
+		"name": "Slow Aura",
+		"description": "Enemies within 180px move at 75% speed."
+	},
+	"gluttony_heal_kill": {
+		"name": "Blood Feast",
+		"description": "Killing an enemy releases green motes that heal 1% max health when they return."
+	},
+	"envy_mirror_shot": {
+		"name": "Mirror Shot",
+		"description": "Shots have a 25% chance to fire a mirrored bullet for 75% damage."
+	},
+	"wrath_overheat": {
+		"name": "Overheat",
+		"description": "Every 4th shot deals double damage."
+	},
+	"lust_for_vengeance": {
+		"name": "Vengeance",
+		"description": "At full HP, deal 75% more damage."
+	},
+	"greed_cursed_level": {
+		"name": "Cursed Level",
+		"description": "Gain 1 bonus level per wave. Enemies move 25% faster."
+	},
+}
+
+const SIN_PASSIVE_IDS = [
+	"sloth_slow_aura",
+	"gluttony_heal_kill",
+	"envy_mirror_shot",
+	"wrath_overheat",
+	"lust_for_vengeance",
+	"greed_cursed_level"
+]
 
 var active_abilities = {
 	"E": "",
@@ -83,7 +141,12 @@ var active_ability_cooldown_remaining = {
 var level_up_context: String = "normal"
 var level_up_boss_pecado: int = 0
 var current_rare_option: String = ""
+const SHIELD_COOLDOWN: float = 12.0
+const SHIELD_VISUAL_RADIUS: float = 24.0
+var shield_protection_enabled: bool = false
 var has_shield: bool = false
+var shield_cooldown_remaining: float = 0.0
+var shield_vfx: Node2D
 var recoil_explosion_enabled: bool = false
 var offensive_dash_enabled: bool = false
 var double_dash_charges: int = 0
@@ -100,6 +163,7 @@ var damage_taken_multiplier: float = 1.0
 var temporary_attack_multiplier: float = 1.0
 var sloth_aura_vfx: Node2D
 var envy_clone_vfx: Node2D
+var passive_status_vfx: Dictionary = {}
 
 # --- SISTEMA DE DANO CONTÍNUO ---
 var enemies_in_contact: Array = []
@@ -124,6 +188,7 @@ signal stats_updated()
 var can_shoot: bool = true
 var can_dash: bool = true
 var is_dashing: bool = false
+var movement_force_combo_lock_remaining: float = 0.0
 
 # --- TIMERS ---
 var shoot_timer: Timer
@@ -141,7 +206,10 @@ var game_win: Panel
 var type_animation = "walk_down"
 
 func _ready() -> void:
-	base_fire_rate = fire_rate
+	base_fire_rate = STARTING_FIRE_RATE
+	fire_rate = STARTING_FIRE_RATE
+	_recalculate_fire_rate()
+	base_dash_speed = dash_speed
 	aparencia = get_node_or_null("Aparencia")
 	pause_control = get_node_or_null(pause_control_path)
 	game_over = get_node_or_null(game_over_path)
@@ -173,14 +241,154 @@ func add_attack_speed_bonus(amount: float) -> void:
 func get_attack_speed_percent() -> float:
 	return (base_fire_rate / max(fire_rate, MIN_FIRE_RATE)) * 100.0
 
+func get_shot_cooldown() -> float:
+	return fire_rate
+
 func can_upgrade_attack_speed() -> bool:
 	return fire_rate > MIN_FIRE_RATE + 0.0001
 
 func _recalculate_fire_rate() -> void:
 	fire_rate = max(base_fire_rate / max(1.0 + attack_speed_bonus, 0.001), MIN_FIRE_RATE)
 
+func enable_shield_protection() -> void:
+	shield_protection_enabled = true
+	shield_cooldown_remaining = 0.0
+	has_shield = true
+	_ensure_shield_vfx()
+	emit_signal("stats_updated")
+
+func disable_shield_protection() -> void:
+	shield_protection_enabled = false
+	shield_cooldown_remaining = 0.0
+	has_shield = false
+	_destroy_shield_vfx(false)
+	emit_signal("stats_updated")
+
+func is_shield_protection_enabled() -> bool:
+	return shield_protection_enabled
+
+func is_shield_ready() -> bool:
+	return shield_protection_enabled and has_shield
+
+func get_shield_cooldown_remaining() -> float:
+	return shield_cooldown_remaining
+
+func _update_shield_protection(delta: float) -> void:
+	if not shield_protection_enabled:
+		_destroy_shield_vfx(false)
+		return
+
+	if has_shield:
+		_ensure_shield_vfx()
+		return
+
+	if shield_cooldown_remaining > 0.0:
+		shield_cooldown_remaining = max(shield_cooldown_remaining - delta, 0.0)
+		if shield_cooldown_remaining == 0.0:
+			has_shield = true
+			_ensure_shield_vfx()
+			emit_signal("stats_updated")
+
+func _break_shield() -> void:
+	has_shield = false
+	shield_cooldown_remaining = SHIELD_COOLDOWN if shield_protection_enabled else 0.0
+	_destroy_shield_vfx(true)
+	emit_signal("stats_updated")
+
+func _ensure_shield_vfx() -> void:
+	if not shield_protection_enabled or not has_shield:
+		return
+	if is_instance_valid(shield_vfx):
+		return
+
+	shield_vfx = Node2D.new()
+	shield_vfx.name = "OneHitShieldVFX"
+	shield_vfx.z_index = 35
+	add_child(shield_vfx)
+
+	var ring = Line2D.new()
+	ring.width = 2.0
+	ring.default_color = Color(0.35, 0.85, 1.0, 0.95)
+	ring.z_index = 35
+	_build_ring_points(ring, SHIELD_VISUAL_RADIUS)
+	shield_vfx.add_child(ring)
+
+	var pulse = create_tween().bind_node(shield_vfx)
+	pulse.set_loops()
+	pulse.tween_property(shield_vfx, "scale", Vector2(1.08, 1.08), 0.55).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	pulse.tween_property(shield_vfx, "scale", Vector2.ONE, 0.55).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+func _destroy_shield_vfx(with_particles: bool) -> void:
+	if with_particles:
+		_spawn_burst_particles(global_position, Color(0.35, 0.9, 1.0, 0.95), 34, 0.35, 150.0)
+
+	if not is_instance_valid(shield_vfx):
+		shield_vfx = null
+		return
+
+	var old_vfx = shield_vfx
+	shield_vfx = null
+	if not with_particles:
+		old_vfx.queue_free()
+		return
+
+	var tween = create_tween().bind_node(old_vfx)
+	tween.tween_property(old_vfx, "scale", Vector2(1.35, 1.35), 0.12).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tween.parallel().tween_property(old_vfx, "modulate:a", 0.0, 0.12)
+	tween.tween_callback(Callable(self, "_queue_free_if_valid").bind(old_vfx))
+
+func _update_movement_force_combo_lock(delta: float) -> void:
+	if movement_force_combo_lock_remaining > 0.0:
+		movement_force_combo_lock_remaining = max(movement_force_combo_lock_remaining - delta, 0.0)
+
+func _apply_recoil_impulse(direction: Vector2) -> void:
+	if direction == Vector2.ZERO:
+		return
+
+	var recoil_velocity = -direction.normalized() * recoil_force
+	if movement_force_combo_lock_remaining > 0.0:
+		velocity = recoil_velocity
+		movement_force_combo_lock_remaining = 0.0
+	else:
+		velocity += recoil_velocity
+
+	velocity = velocity.limit_length(_get_movement_force_speed_cap())
+
+func _apply_knockback(attacker_position: Vector2) -> void:
+	var knockback_direction = attacker_position.direction_to(global_position)
+	var knockback_force = 300.0
+	velocity = (knockback_direction * knockback_force).limit_length(_get_movement_force_speed_cap())
+	movement_force_combo_lock_remaining = MOVEMENT_FORCE_COMBO_LOCK_DURATION
+
+func _get_movement_force_speed_cap() -> float:
+	return max(dash_speed, recoil_force) + MOVEMENT_FORCE_CAP_BUFFER
+
+func _set_dash_speed_modifier(source: String, multiplier: float) -> void:
+	dash_speed_modifiers[source] = max(multiplier, 0.0)
+	_recalculate_dash_speed()
+
+func _clear_dash_speed_modifier(source: String) -> void:
+	if dash_speed_modifiers.has(source):
+		dash_speed_modifiers.erase(source)
+		_recalculate_dash_speed()
+
+func _recalculate_dash_speed() -> void:
+	var final_multiplier = 1.0
+	for multiplier in dash_speed_modifiers.values():
+		final_multiplier *= float(multiplier)
+
+	dash_speed = base_dash_speed * final_multiplier
+
+func _take_direct_damage(amount: float) -> void:
+	current_health -= int(round(amount))
+	emit_signal("hp_updated", current_health, max_health)
+	if current_health <= 0:
+		die()
+
 func _physics_process(delta: float) -> void:
 	_update_active_ability_cooldowns(delta)
+	_update_shield_protection(delta)
+	_update_movement_force_combo_lock(delta)
 
 	var mouse_pos = get_global_mouse_position()
 	var look_direction = global_position.direction_to(mouse_pos)
@@ -205,6 +413,8 @@ func _physics_process(delta: float) -> void:
 	if sloth_slow_aura_enabled:
 		_ensure_sloth_slow_aura_vfx()
 		_apply_sloth_slow_aura()
+
+	_update_passive_status_vfx(delta)
 
 	# Aplicar Atrito se não estiver no meio de um dash
 	if not is_dashing:
@@ -245,7 +455,7 @@ func shoot(direction: Vector2) -> void:
 			var clone_position = global_position + Vector2(48, 0)
 			_spawn_projectile(clone_position, _get_clone_random_shot_angle(clone_position), shot_damage * 0.75, true, Color(0.25, 0.95, 1.0, 0.9))
 
-	velocity += -direction * recoil_force
+	_apply_recoil_impulse(direction)
 	if recoil_explosion_enabled:
 		_trigger_recoil_explosion()
 
@@ -283,7 +493,7 @@ func _get_current_shot_damage() -> float:
 
 	if wrath_overheat_enabled:
 		wrath_shot_count += 1
-		if wrath_shot_count >= 3:
+		if wrath_shot_count >= WRATH_OVERHEAT_SHOT_INTERVAL:
 			wrath_shot_count = 0
 			damage *= 2.0
 			_spawn_burst_particles(global_position, Color(1.0, 0.18, 0.04, 0.85), 14, 0.18, 110.0)
@@ -334,10 +544,11 @@ func perform_dash(direction: Vector2, uses_double_dash_charge: bool = false) -> 
 	if uses_double_dash_charge:
 		_spawn_burst_particles(global_position, Color(0.35, 0.7, 1.0, 0.9), 22, 0.28, 160.0)
 	
-	velocity = direction * dash_speed
+	velocity = direction.normalized() * dash_speed
 	await get_tree().create_timer(dash_duration, false).timeout
 	
 	is_dashing = false
+	movement_force_combo_lock_remaining = MOVEMENT_FORCE_COMBO_LOCK_DURATION
 	if offensive_dash_enabled:
 		_trigger_offensive_dash_explosion()
 
@@ -360,15 +571,11 @@ func take_damage(amount: float, attacker_position: Vector2 = Vector2.ZERO) -> vo
 		return
 
 	if has_shield:
-		has_shield = false
-		_spawn_burst_particles(global_position, Color(0.35, 0.9, 1.0, 0.95), 34, 0.35, 150.0)
-		emit_signal("stats_updated")
+		_break_shield()
 		return
 
 	if attacker_position != Vector2.ZERO:
-		var knockback_direction = attacker_position.direction_to(global_position)
-		var knockback_force = 300.0 
-		velocity = knockback_direction * knockback_force
+		_apply_knockback(attacker_position)
 
 	current_health -= int(round(amount * damage_taken_multiplier))
 	emit_signal("hp_updated", current_health, max_health)
@@ -496,6 +703,50 @@ func get_active_ability_description(option_id: String) -> String:
 	var data = ACTIVE_ABILITY_DATA.get(option_id, {})
 	return str(data.get("description", option_id))
 
+func get_equipped_passive_summaries() -> Array:
+	var passive_ids: Array = []
+	if current_rare_option != "":
+		passive_ids.append(current_rare_option)
+
+	for passive_id in SIN_PASSIVE_IDS:
+		if _is_passive_enabled(passive_id):
+			passive_ids.append(passive_id)
+
+	var summaries: Array = []
+	for passive_id in passive_ids:
+		summaries.append({
+			"id": passive_id,
+			"name": get_passive_effect_name(passive_id),
+			"description": get_passive_effect_description(passive_id)
+		})
+
+	return summaries
+
+func get_passive_effect_name(passive_id: String) -> String:
+	var data = PASSIVE_STATUS_DATA.get(passive_id, {})
+	return str(data.get("name", passive_id))
+
+func get_passive_effect_description(passive_id: String) -> String:
+	var data = PASSIVE_STATUS_DATA.get(passive_id, {})
+	return str(data.get("description", passive_id))
+
+func _is_passive_enabled(passive_id: String) -> bool:
+	match passive_id:
+		"sloth_slow_aura":
+			return sloth_slow_aura_enabled
+		"gluttony_heal_kill":
+			return gluttony_heal_kill_enabled
+		"envy_mirror_shot":
+			return envy_mirror_shot_enabled
+		"wrath_overheat":
+			return wrath_overheat_enabled
+		"lust_for_vengeance":
+			return lust_for_vengeance_enabled
+		"greed_cursed_level":
+			return greed_cursed_level_enabled
+
+	return current_rare_option == passive_id
+
 func use_active_ability(slot: String) -> void:
 	if not active_abilities.has(slot):
 		return
@@ -548,12 +799,11 @@ func grant_bonus_level_up(context: String = "normal", boss_pecado: int = 0) -> v
 func activate_sloth_field() -> void:
 	var field_position = global_position
 	var field_radius = MAX_ABILITY_AREA_RADIUS
-	_spawn_field_vfx(field_position, field_radius, Color(0.55, 0.28, 1.0, 0.72), 5.0)
+	_spawn_field_vfx(field_position, field_radius, Color(0.68, 0.42, 1.0, 0.42), 5.0)
 
-	var old_dash_speed = dash_speed
 	var slowed_enemies: Array = []
 	var elapsed = 0.0
-	dash_speed *= 0.75
+	_set_dash_speed_modifier("sloth_field", 0.75)
 
 	while elapsed < 5.0:
 		for enemy in get_tree().get_nodes_in_group("Enemy"):
@@ -565,7 +815,7 @@ func activate_sloth_field() -> void:
 			var is_inside_field = enemy.global_position.distance_to(field_position) <= field_radius
 			if is_inside_field:
 				enemy.set_meta("sloth_field_active", true)
-				enemy.set("speed", base_speed * 0.3)
+				enemy.set("speed", base_speed * 0.35)
 				if enemy not in slowed_enemies:
 					slowed_enemies.append(enemy)
 			elif enemy in slowed_enemies:
@@ -576,7 +826,7 @@ func activate_sloth_field() -> void:
 		await get_tree().create_timer(0.1, false).timeout
 		elapsed += 0.1
 
-	dash_speed = old_dash_speed
+	_clear_dash_speed_modifier("sloth_field")
 	for enemy in slowed_enemies:
 		if is_instance_valid(enemy) and enemy.has_meta("base_speed"):
 			enemy.set("speed", enemy.get_meta("base_speed"))
@@ -588,18 +838,18 @@ func activate_gluttony_devour() -> void:
 	nearby_enemies.sort_custom(func(a, b): return global_position.distance_squared_to(a.global_position) < global_position.distance_squared_to(b.global_position))
 
 	var devoured_count = min(2, nearby_enemies.size())
+	var heal_per_enemy = (max_health * 0.125) / max(devoured_count, 1)
 	for i in range(devoured_count):
 		var enemy = nearby_enemies[i]
 		var enemy_position = enemy.global_position
 		_spawn_burst_particles(enemy_position, Color(0.2, 1.0, 0.45, 0.95), 30, 0.4, 130.0)
-		_spawn_heal_motes(enemy_position, (max_health * 0.1), 3)
+		_spawn_heal_motes(enemy_position, heal_per_enemy, 3)
 		if enemy.has_method("die"):
 			enemy.die()
 
-	var old_dash_speed = dash_speed
-	dash_speed *= 0.5
+	_set_dash_speed_modifier("gluttony_devour", 0.5)
 	await get_tree().create_timer(5.0, false).timeout
-	dash_speed = old_dash_speed
+	_clear_dash_speed_modifier("gluttony_devour")
 
 func activate_envy_mirror_clone() -> void:
 	envy_clone_active = true
@@ -611,20 +861,20 @@ func activate_envy_mirror_clone() -> void:
 
 func activate_wrath_burst() -> void:
 	_spawn_burst_particles(global_position, Color(1.0, 0.25, 0.05, 0.95), 48, 0.4, 230.0)
-	_spawn_ring_vfx(global_position, 150.0, Color(1.0, 0.18, 0.04, 0.75), 0.35)
+	_spawn_ring_vfx(global_position, 150.0, Color(1.0, 0.28, 0.08, 0.46), 0.35)
 	var burst_damage = attack_damage * 1.1
 	for i in range(16):
 		var angle = TAU * float(i) / 16.0
 		_spawn_projectile(global_position, angle, burst_damage, false, Color(1.0, 0.25, 0.05, 0.95))
-	take_damage(20)
+	_take_direct_damage(20)
 
 func activate_lust_for_perfection() -> void:
 	is_invulnerable = true
-	_spawn_attached_aura(110.0, Color(1.0, 0.72, 0.95, 0.65), 3.0)
+	_spawn_attached_aura(110.0, Color(1.0, 0.82, 0.98, 0.42), 3.0)
 	await get_tree().create_timer(3.0, false).timeout
 	is_invulnerable = false
 	damage_taken_multiplier = 2.0
-	_spawn_attached_aura(130.0, Color(1.0, 0.08, 0.28, 0.6), 5.0)
+	_spawn_attached_aura(130.0, Color(1.0, 0.16, 0.36, 0.38), 5.0)
 	await get_tree().create_timer(5.0, false).timeout
 	damage_taken_multiplier = 1.0
 
@@ -637,14 +887,14 @@ func activate_greed_treasure_rain() -> void:
 
 func _trigger_recoil_explosion() -> void:
 	_spawn_burst_particles(global_position, Color(1.0, 0.52, 0.12, 0.95), 34, 0.3, 210.0)
-	_spawn_ring_vfx(global_position, 80.0, Color(1.0, 0.45, 0.08, 0.72), 0.28)
+	_spawn_ring_vfx(global_position, 80.0, Color(1.0, 0.55, 0.12, 0.44), 0.28)
 	for enemy in get_tree().get_nodes_in_group("Enemy"):
 		if is_instance_valid(enemy) and enemy.has_method("take_damage") and enemy.global_position.distance_to(global_position) <= SHOCKWAVE_RADIUS:
 			enemy.take_damage(_get_shockwave_damage())
 
 func _trigger_offensive_dash_explosion() -> void:
 	_spawn_burst_particles(global_position, Color(0.25, 0.95, 1.0, 0.9), 36, 0.32, 190.0)
-	_spawn_ring_vfx(global_position, 120.0, Color(0.25, 0.95, 1.0, 0.68), 0.3)
+	_spawn_ring_vfx(global_position, 120.0, Color(0.42, 0.95, 1.0, 0.44), 0.3)
 	for enemy in get_tree().get_nodes_in_group("Enemy"):
 		if is_instance_valid(enemy) and enemy.has_method("take_damage") and enemy.global_position.distance_to(global_position) <= SHOCKWAVE_RADIUS:
 			enemy.take_damage(_get_shockwave_dash_damage())
@@ -665,7 +915,7 @@ func _apply_sloth_slow_aura() -> void:
 		_remember_enemy_base_speed(enemy)
 		var base_speed = enemy.get_meta("base_speed")
 		if enemy.global_position.distance_to(global_position) <= SLOW_AURA_RADIUS:
-			enemy.set("speed", base_speed * 0.7)
+			enemy.set("speed", base_speed * 0.75)
 		else:
 			enemy.set("speed", base_speed)
 
@@ -772,12 +1022,82 @@ func _add_circle_fill_to_node(parent: Node, radius: float, color: Color) -> Poly
 	radius = min(radius, MAX_ABILITY_AREA_RADIUS)
 	var fill = Polygon2D.new()
 	var fill_color = color
-	fill_color.a *= 0.18
+	fill_color.a *= 0.1
 	fill.color = fill_color
 	fill.polygon = _build_circle_points(radius, false)
 	fill.z_index = 23
 	parent.add_child(fill)
 	return fill
+
+func _update_passive_status_vfx(delta: float) -> void:
+	if recoil_explosion_enabled:
+		_ensure_passive_ring_vfx("recoil_explosion", 28.0, Color(1.0, 0.55, 0.14, 0.36), 1.5)
+	else:
+		_remove_passive_status_vfx("recoil_explosion")
+
+	if offensive_dash_enabled:
+		_ensure_passive_ring_vfx("offensive_dash", 31.0, Color(0.38, 0.95, 1.0, 0.34), 1.5)
+	else:
+		_remove_passive_status_vfx("offensive_dash")
+
+	if max_dash_charges > 1:
+		var double_dash_vfx = _ensure_double_dash_vfx()
+		if is_instance_valid(double_dash_vfx):
+			double_dash_vfx.rotation += delta * 1.7
+	else:
+		_remove_passive_status_vfx("double_dash")
+
+	if lust_for_vengeance_enabled and current_health >= max_health:
+		_ensure_passive_ring_vfx("vengeance", 34.0, Color(1.0, 0.24, 0.46, 0.34), 1.6)
+	else:
+		_remove_passive_status_vfx("vengeance")
+
+func _ensure_passive_ring_vfx(vfx_id: String, radius: float, color: Color, width: float) -> Node2D:
+	var existing_vfx = passive_status_vfx.get(vfx_id, null)
+	if is_instance_valid(existing_vfx):
+		return existing_vfx
+
+	var vfx = Node2D.new()
+	vfx.name = "%sPassiveVFX" % vfx_id.capitalize().replace("_", "")
+	vfx.z_index = 22
+	add_child(vfx)
+	_add_ring_to_node(vfx, radius, color, width)
+	passive_status_vfx[vfx_id] = vfx
+
+	var pulse = create_tween().bind_node(vfx)
+	pulse.set_loops()
+	pulse.tween_property(vfx, "scale", Vector2(1.08, 1.08), 0.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	pulse.tween_property(vfx, "scale", Vector2.ONE, 0.7).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+	return vfx
+
+func _ensure_double_dash_vfx() -> Node2D:
+	var existing_vfx = passive_status_vfx.get("double_dash", null)
+	if is_instance_valid(existing_vfx):
+		return existing_vfx
+
+	var vfx = Node2D.new()
+	vfx.name = "DoubleDashPassiveVFX"
+	vfx.z_index = 23
+	add_child(vfx)
+	_add_ring_to_node(vfx, 25.0, Color(0.36, 0.72, 1.0, 0.24), 1.2)
+
+	for i in range(2):
+		var dot = Polygon2D.new()
+		dot.polygon = _build_circle_points(3.6, false)
+		dot.color = Color(0.38, 0.78, 1.0, 0.82)
+		dot.position = Vector2(28.0, 0.0).rotated(PI * float(i))
+		dot.z_index = 26
+		vfx.add_child(dot)
+
+	passive_status_vfx["double_dash"] = vfx
+	return vfx
+
+func _remove_passive_status_vfx(vfx_id: String) -> void:
+	var vfx = passive_status_vfx.get(vfx_id, null)
+	if is_instance_valid(vfx):
+		vfx.queue_free()
+	passive_status_vfx.erase(vfx_id)
 
 func _build_ring_points(ring: Line2D, radius: float) -> void:
 	ring.points = _build_circle_points(radius, true)
@@ -856,7 +1176,7 @@ func _ensure_sloth_slow_aura_vfx() -> void:
 	sloth_aura_vfx.z_index = 20
 	add_child(sloth_aura_vfx)
 
-	_add_ring_to_node(sloth_aura_vfx, SLOW_AURA_RADIUS-45, Color(0.42, 0.18, 0.95, 0.38), 2.0)
+	_add_ring_to_node(sloth_aura_vfx, SLOW_AURA_RADIUS-45, Color(0.58, 0.36, 1.0, 0.26), 2.0)
 
 	var particles = CPUParticles2D.new()
 	particles.amount = 64
@@ -866,7 +1186,7 @@ func _ensure_sloth_slow_aura_vfx() -> void:
 	particles.gravity = Vector2.ZERO
 	particles.initial_velocity_min = 45.0
 	particles.initial_velocity_max = 120.0
-	particles.color = Color(0.55, 0.28, 1.0, 0.48)
+	particles.color = Color(0.68, 0.46, 1.0, 0.3)
 	particles.z_index = 20
 	sloth_aura_vfx.add_child(particles)
 	particles.emitting = true
@@ -881,7 +1201,7 @@ func _spawn_clone_vfx(duration: float) -> void:
 	envy_clone_vfx.z_index = 25
 	add_child(envy_clone_vfx)
 
-	_add_ring_to_node(envy_clone_vfx, 36.0, Color(0.25, 0.95, 1.0, 0.7), 2.0)
+	_add_ring_to_node(envy_clone_vfx, 36.0, Color(0.4, 0.95, 1.0, 0.44), 2.0)
 	var particles = CPUParticles2D.new()
 	particles.amount = 36
 	particles.lifetime = 0.7
@@ -890,7 +1210,7 @@ func _spawn_clone_vfx(duration: float) -> void:
 	particles.gravity = Vector2.ZERO
 	particles.initial_velocity_min = 25.0
 	particles.initial_velocity_max = 80.0
-	particles.color = Color(0.28, 0.92, 1.0, 0.82)
+	particles.color = Color(0.42, 0.95, 1.0, 0.52)
 	particles.z_index = 26
 	envy_clone_vfx.add_child(particles)
 	particles.emitting = true

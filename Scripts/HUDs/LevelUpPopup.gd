@@ -35,7 +35,7 @@ var boss_options = [
 	{ "id": "gluttony_devour", "name": "Devour", "text": "Devour", "description": "Consume up to two enemies within 180px. Green motes fly back and heal up to 12.5% max health when they arrive, but your dash speed is halved for 5 seconds.", "rarity": "active_sin" },
 	{ "id": "envy_mirror_shot", "name": "Mirror Shot", "text": "Mirror Shot", "description": "Gain a 25% chance to fire a second bullet mirrored across the shot's secondary axis for 75% damage.", "rarity": "passive_sin" },
 	{ "id": "envy_mirror_clone", "name": "Mirror Clone", "text": "Mirror Clone", "description": "Summon a mirror clone that fires random risky shots with you for a short time. Clone bullets can hit anything, including you.", "rarity": "active_sin" },
-	{ "id": "wrath_overheat", "name": "Overheat", "text": "Overheat", "description": "Every 3rd shot deals double damage.", "rarity": "passive_sin" },
+	{ "id": "wrath_overheat", "name": "Overheat", "text": "Overheat", "description": "Every 4th shot deals double damage.", "rarity": "passive_sin" },
 	{ "id": "wrath_burst", "name": "Wrath Burst", "text": "Wrath Burst", "description": "Fire 16 radial bullets for 110% attack damage each, then take 20 damage.", "rarity": "active_sin" },
 	{ "id": "lust_for_vengeance", "name": "Vengeance", "text": "Vengeance", "description": "Deal 75% more damage while at full HP, but lose the bonus when hit.", "rarity": "passive_sin" },
 	{ "id": "lust_for_perfection", "name": "Perfection", "text": "Perfection", "description": "Become invulnerable for 3 seconds, then take double damage for 5 seconds.", "rarity": "active_sin" },
