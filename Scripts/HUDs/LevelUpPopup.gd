@@ -11,14 +11,14 @@ var speedProjectile
 var passive_options = [
 	{ "id": "option_1", "text": "Recoil Force (+5%)", "description": "Increases the pushback force you receive after shooting, helping you move farther with each shot.", "rarity": "passive_common" },
 	{ "id": "option_2", "text": "Health (+5%)", "description": "Increases your maximum health and heals you slightly based on your current health.", "rarity": "passive_common" },
-	{ "id": "option_3", "text": "Attack (+10%)", "description": "Increases the damage dealt by your bullets and damage-based effects.", "rarity": "passive_common" },
+	{ "id": "option_3", "text": "Attack (+15%)", "description": "Increases the damage dealt by your bullets and damage-based effects.", "rarity": "passive_common" },
 	{ "id": "option_4", "text": "Atk-Speed (+5%)", "description": "+5% attack speed is additive from the original attack speed. Stops appearing at 0.25s shot cooldown.", "rarity": "passive_common" }
 ]
 
 var cursed_passive_options = [
 	{ "id": "glass_canon", "text": "Attack (+50%), Health (-25%)", "description": "Greatly increases damage, but lowers your maximum health. Strong if you can avoid hits.", "rarity": "passive_cursed" },
 	{ "id": "tanky", "text": "Health (+25%), Attack (-50%)", "description": "Greatly increases survivability, but lowers your damage output.", "rarity": "passive_cursed" },
-	{ "id": "deadly_slow", "text": "Recoil Force (-50%), Attack (+50%)", "description": "Greatly increases damage, but weakens your recoil movement by cutting pushback force.", "rarity": "passive_cursed" }
+	{ "id": "deadly_slow", "text": "Recoil Force (-50%), Attack (+100%)", "description": "Greatly increases damage, but weakens your recoil movement by cutting pushback force.", "rarity": "passive_cursed" }
 ]
 
 var rare_options = [
@@ -122,7 +122,7 @@ func _connect_buttons() -> void:
 
 func show_popup(context: String = "normal", boss_pecado: int = 0):
 	get_tree().paused = true
-	await get_tree().create_timer(0.25).timeout
+	await get_tree().create_timer(0.25, true).timeout
 
 	current_mode = "level_up"
 	pending_active_option = ""

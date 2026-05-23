@@ -81,7 +81,7 @@ func process_hit_queue():
 	hit_queue.clear()
 
 func _on_screen_exited():
-	await get_tree().create_timer(1).timeout
+	await get_tree().create_timer(1, false).timeout
 	queue_free()
 
 func _configure_projectile_vfx() -> void:
@@ -122,7 +122,7 @@ func _spawn_hit_particles(hit_position: Vector2) -> void:
 	vfx_parent.add_child(burst)
 	burst.emitting = true
 
-	var cleanup_timer = get_tree().create_timer(burst.lifetime + 0.2)
+	var cleanup_timer = get_tree().create_timer(burst.lifetime + 0.2, false)
 	cleanup_timer.timeout.connect(Callable(burst, "queue_free"))
 
 func _get_vfx_color() -> Color:

@@ -125,7 +125,7 @@ func _apply_effect(option):
 			player.max_health += player.max_health * 0.05
 			_on_hp_updated(player.current_health, player.max_health)
 		"option_3":
-			player.attack_damage += player.attack_damage * 0.1
+			player.attack_damage += player.attack_damage * 0.15
 		"option_4":
 			player.add_attack_speed_bonus(0.05)
 		"glass_canon":
@@ -140,7 +140,7 @@ func _apply_effect(option):
 			_on_hp_updated(player.current_health, player.max_health)
 		"deadly_slow":
 			player.recoil_force *= 0.5
-			player.attack_damage += player.attack_damage * 0.5
+			player.attack_damage *= 2.0
 		"sloth_slow_aura":
 			player.sloth_slow_aura_enabled = true
 		"gluttony_heal_kill":

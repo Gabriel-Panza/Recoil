@@ -21,8 +21,8 @@ var enemy_arena_textures: Array[Texture2D] = [
 	preload("res://Sprites/icon.svg"), # Gluttony
 	preload("res://Sprites/icon.svg"), # Envy
 	preload("res://Sprites/icon.svg"), # Wrath
-	preload("res://Sprites/icon.svg"), # Greed
 	preload("res://Sprites/icon.svg"), # Lust
+	preload("res://Sprites/icon.svg"), # Greed
 	preload("res://Sprites/icon.svg")  # Pride
 ]
 
@@ -85,15 +85,26 @@ var current_wave_index: int = 0
 var is_wave_active: bool = false
 var boss_phase: bool = false
 var enemies_left_to_spawn: int = 0
+var run_finished: bool = false
+var wave_finish_pending: bool = false
 
 func _ready() -> void:
 	randomize()
+	Global.pecado = 1
+	Global.start_run_timer()
 	Global.pecado_changed.connect(_on_pecado_changed)
 	current_arena = arena_nodes[0]
 	_setup_fade_overlay()
 	_update_enemy_arena_sprite()
 	set_waves_based_on_pecado()
 	start_next_wave()
+
+func finish_run() -> void:
+	if run_finished:
+		return
+
+	run_finished = true
+	Global.finish_current_run()
 
 func _setup_fade_overlay() -> void:
 	fade_layer = CanvasLayer.new()
@@ -137,7 +148,7 @@ func _set_player_xp_goal(enemy_count: int, context: String = "normal", boss_peca
 
 func _wait_for_level_up_selection() -> void:
 	while $Player.upando:
-		await get_tree().create_timer(0.1).timeout
+		await get_tree().create_timer(0.1, false).timeout
 
 func _update_enemy_arena_sprite() -> void:
 	var texture_index = clamp(Global.pecado - 1, 0, enemy_arena_textures.size() - 1)
@@ -156,6 +167,7 @@ func start_next_wave():
 		return
 
 	is_wave_active = true
+	wave_finish_pending = false
 	var wave_data = waves[current_wave_index]
 	var arena_type = "principal" if current_arena == arena_nodes[0] else "boss"
 	print("Wave {0} do pecado {1} ({2}) iniciada!".format([current_wave_index + 1, Global.pecado, arena_type]))
@@ -170,6 +182,7 @@ func spawn_wave(data: Dictionary):
 
 	if $Player.greed_cursed_level_enabled:
 		$Player.grant_bonus_level_up("normal")
+		await _wait_for_level_up_selection()
 
 	# Cria filas separadas
 	var melee_queue = []
@@ -203,13 +216,15 @@ func spawn_wave(data: Dictionary):
 		enemies_left_to_spawn -= 1
 		
 		# Espera 0.8 segundos entre cada inimigo
-		await get_tree().create_timer(2).timeout
+		await get_tree().create_timer(2, false).timeout
+
+	await _try_finish_wave()
 		
 func spawn_boss():
 	var centro_node = current_arena.get_node("Centro")
 	_set_player_xp_goal(1, "boss", Global.pecado)
 	await _transition_player_to(centro_node.global_position)
-	await get_tree().create_timer(1).timeout
+	await get_tree().create_timer(1, false).timeout
 
 	var boss = BOSS_ENEMY.instantiate()
 	_apply_enemy_spawn_modifiers(boss)
@@ -385,19 +400,28 @@ func _on_enemy_died() -> void:
 		return
 
 	await get_tree().process_frame
-	if not is_inside_tree():
+	await _try_finish_wave()
+
+func _try_finish_wave() -> void:
+	if not is_inside_tree() or not is_wave_active or wave_finish_pending:
 		return
 
-	# Checa se ainda existem inimigos vivos
-	if not get_tree().get_nodes_in_group("Enemy"):
-		is_wave_active = false
-		await get_tree().create_timer(0.5).timeout
-		if not is_inside_tree():
-			return
-		await _wait_for_level_up_selection()
-		if not is_inside_tree():
-			return
-		start_next_wave()
+	if enemies_left_to_spawn > 0:
+		return
+
+	if get_tree().get_nodes_in_group("Enemy"):
+		return
+
+	wave_finish_pending = true
+	is_wave_active = false
+	await get_tree().create_timer(0.5, false).timeout
+	if not is_inside_tree():
+		return
+	await _wait_for_level_up_selection()
+	if not is_inside_tree():
+		return
+	wave_finish_pending = false
+	start_next_wave()
 
 func _on_boss_died():
 	if not boss_phase:

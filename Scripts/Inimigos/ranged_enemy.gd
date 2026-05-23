@@ -25,10 +25,10 @@ func mover(_delta: float) -> void:
 	
 	if distance_to_player > attack_range:
 		var direction = global_position.direction_to(player.global_position)
-		velocity = direction * speed * _delta
+		velocity = direction * speed
 	elif distance_to_player < stop_distance:
-		var direction = global_position.direction_to(-player.global_position)
-		velocity = direction * speed * _delta
+		var direction = player.global_position.direction_to(global_position)
+		velocity = direction * speed
 	else:
 		velocity = Vector2.ZERO
 		

@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://xywhrxgsjyey"]
 
 [ext_resource type="PackedScene" uid="uid://bh7itd6kgley8" path="res://Cenas/HUDs/options_menu.tscn" id="1_sfpld"]
+[ext_resource type="Script" uid="uid://bre3maa3yjpb6" path="res://Scripts/HUDs/main_menu.gd" id="2_lhkw5"]
 
 [node name="MainMenu" type="Control" unique_id=694027376]
 process_mode = 3
@@ -10,6 +11,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+script = ExtResource("2_lhkw5")
 
 [node name="Fundo" type="TextureRect" parent="." unique_id=2279552]
 layout_mode = 1
@@ -20,7 +22,12 @@ offset_right = 6.30396
 offset_bottom = 9.888
 expand_mode = 1
 
-[node name="Titulo" type="MarginContainer" parent="." unique_id=1941741753]
+[node name="Menu" type="Control" parent="." unique_id=1971434833]
+anchors_preset = 0
+offset_right = 1152.0
+offset_bottom = 650.0
+
+[node name="Titulo" type="MarginContainer" parent="Menu" unique_id=1941741753]
 layout_mode = 0
 offset_left = 722.0
 offset_top = 99.0
@@ -28,42 +35,134 @@ offset_right = 762.0
 offset_bottom = 139.0
 scale = Vector2(0.62, 0.62)
 
-[node name="Titulo" type="Sprite2D" parent="Titulo" unique_id=1359029706]
+[node name="Titulo" type="Sprite2D" parent="Menu/Titulo" unique_id=1359029706]
 
-[node name="MarginContainer" type="MarginContainer" parent="." unique_id=144147291]
+[node name="MarginContainer" type="MarginContainer" parent="Menu" unique_id=144147291]
 layout_mode = 0
-offset_left = 634.0
-offset_top = 308.0
-offset_right = 826.0
-offset_bottom = 388.0
+offset_left = 469.0
+offset_top = 146.0
+offset_right = 661.0
+offset_bottom = 226.0
 
-[node name="TextureButton" type="TextureButton" parent="MarginContainer" unique_id=1806028155]
+[node name="TextureButton" type="Button" parent="Menu/MarginContainer" unique_id=1806028155]
 layout_mode = 2
+theme_override_colors/font_color = Color(0.882353, 0, 0, 1)
+theme_override_colors/font_pressed_color = Color(0.666667, 0, 0, 1)
+theme_override_colors/font_hover_color = Color(0.882353, 0, 0, 1)
+theme_override_colors/font_hover_pressed_color = Color(0.882353, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 24
+text = "Start Game"
 
-[node name="MarginContainer2" type="MarginContainer" parent="." unique_id=542111730]
+[node name="MarginContainer2" type="MarginContainer" parent="Menu" unique_id=542111730]
 layout_mode = 0
-offset_left = 634.0
-offset_top = 398.0
-offset_right = 846.0
-offset_bottom = 498.0
+offset_left = 460.0
+offset_top = 236.0
+offset_right = 672.0
+offset_bottom = 336.0
 
-[node name="TextureButton" type="TextureButton" parent="MarginContainer2" unique_id=766053521]
+[node name="TextureButton" type="Button" parent="Menu/MarginContainer2" unique_id=766053521]
 layout_mode = 2
+theme_override_colors/font_color = Color(0.882353, 0, 0, 1)
+theme_override_colors/font_pressed_color = Color(0.666667, 0, 0, 1)
+theme_override_colors/font_hover_color = Color(0.882353, 0, 0, 1)
+theme_override_colors/font_hover_pressed_color = Color(0.882353, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 24
+text = "Settings"
 
-[node name="MarginContainer3" type="MarginContainer" parent="." unique_id=1201822918]
+[node name="RankingButtonContainer" type="MarginContainer" parent="Menu" unique_id=1602987589]
 layout_mode = 0
-offset_left = 634.0
-offset_top = 488.0
-offset_right = 826.0
-offset_bottom = 568.0
+offset_left = 460.0
+offset_top = 347.0
+offset_right = 672.0
+offset_bottom = 427.0
 
-[node name="TextureButton" type="TextureButton" parent="MarginContainer3" unique_id=1723390624]
+[node name="RankingButton" type="Button" parent="Menu/RankingButtonContainer" unique_id=1597887845]
 layout_mode = 2
+theme_override_colors/font_color = Color(0.882353, 0, 0, 1)
+theme_override_colors/font_pressed_color = Color(0.666667, 0, 0, 1)
+theme_override_colors/font_hover_color = Color(0.882353, 0, 0, 1)
+theme_override_colors/font_hover_pressed_color = Color(0.882353, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 24
+text = "Ranking"
+
+[node name="MarginContainer3" type="MarginContainer" parent="Menu" unique_id=1201822918]
+layout_mode = 0
+offset_left = 469.0
+offset_top = 437.0
+offset_right = 661.0
+offset_bottom = 517.0
+
+[node name="TextureButton" type="Button" parent="Menu/MarginContainer3" unique_id=1723390624]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.882353, 0, 0, 1)
+theme_override_colors/font_pressed_color = Color(0.666667, 0, 0, 1)
+theme_override_colors/font_hover_color = Color(0.882353, 0, 0, 1)
+theme_override_colors/font_hover_pressed_color = Color(0.882353, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 24
+text = "Exit"
 
 [node name="OptionsMenu" parent="." unique_id=2044135887 instance=ExtResource("1_sfpld")]
 visible = false
 layout_mode = 1
 
+[node name="RankingPanel" type="Panel" parent="." unique_id=1662812340]
+visible = false
+z_index = 5
+layout_mode = 0
+offset_left = 164.0
+offset_top = 62.0
+offset_right = 964.0
+offset_bottom = 602.0
+
+[node name="Title" type="Label" parent="RankingPanel" unique_id=681946964]
+layout_mode = 0
+offset_left = 64.0
+offset_top = 36.0
+offset_right = 736.0
+offset_bottom = 86.0
+theme_override_colors/font_color = Color(0.882353, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 36
+text = "Ranking"
+horizontal_alignment = 1
+
+[node name="ScrollContainer" type="ScrollContainer" parent="RankingPanel" unique_id=1299538202]
+layout_mode = 0
+offset_left = 64.0
+offset_top = 112.0
+offset_right = 736.0
+offset_bottom = 430.0
+horizontal_scroll_mode = 0
+
+[node name="RankingList" type="VBoxContainer" parent="RankingPanel/ScrollContainer" unique_id=169696227]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="BackButton" type="Button" parent="RankingPanel" unique_id=1687057686]
+layout_mode = 0
+offset_left = 296.0
+offset_top = 460.0
+offset_right = 504.0
+offset_bottom = 512.0
+theme_override_colors/font_color = Color(0.882353, 0, 0, 1)
+theme_override_colors/font_pressed_color = Color(0.666667, 0, 0, 1)
+theme_override_colors/font_hover_color = Color(0.882353, 0, 0, 1)
+theme_override_colors/font_hover_pressed_color = Color(0.882353, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 24
+text = "Back"
+
 [node name="SFX_Button" type="AudioStreamPlayer2D" parent="." unique_id=1121777857]
 volume_db = 6.0
 autoplay = true
+
+[connection signal="pressed" from="Menu/MarginContainer/TextureButton" to="." method="_on_start_game_pressed"]
+[connection signal="pressed" from="Menu/MarginContainer2/TextureButton" to="." method="_on_options_button_pressed"]
+[connection signal="pressed" from="Menu/RankingButtonContainer/RankingButton" to="." method="_on_ranking_button_pressed"]
+[connection signal="pressed" from="Menu/MarginContainer3/TextureButton" to="." method="_on_button_2_pressed"]
+[connection signal="pressed" from="RankingPanel/BackButton" to="." method="_on_ranking_back_pressed"]

@@ -2,7 +2,7 @@ extends CharacterBody2D
 class_name BaseEnemy 
 
 @export var max_health: int = 100
-@export var speed: float = 7500.0 # 75 m/s * 100fps
+@export var speed: float = 125.0
 @export var damage: int = 20
 @export var xp_drop: int = 1
 
@@ -12,6 +12,7 @@ const ENEMY_BODY_COLLISION_SCALE: float = 0.7
 var current_health: int
 var player: Node2D
 var health_bar: ProgressBar
+var is_dead: bool = false
 @onready var aparencia = get_node_or_null("AnimatedAppearence") #alteração aqui
 
 func _ready() -> void:
@@ -27,7 +28,7 @@ func _physics_process(delta: float) -> void:
 
 func mover(_delta: float) -> void:
 	var direction = global_position.direction_to(player.global_position)
-	velocity = direction * speed * _delta
+	velocity = direction * speed
 	move_and_slide()
 
 func _setup_enemy_body_collision() -> void:
@@ -52,6 +53,9 @@ func _shrink_body_collision_shape() -> void:
 	collision.shape = shape
 
 func take_damage(amount: float) -> void:
+	if is_dead:
+		return
+
 	current_health -= int(round(amount))
 	_update_health_bar()
 	if current_health <= 0:
@@ -64,6 +68,14 @@ func take_damage(amount: float) -> void:
 	tween.tween_property(aparencia, "modulate", Color.WHITE, 0.1)
 
 func die() -> void:
+	if is_dead:
+		return
+
+	is_dead = true
+	current_health = 0
+	_update_health_bar()
+	set_physics_process(false)
+
 	if player and player.has_method("gain_xp"):
 		player.gain_xp(xp_drop)
 	if player and player.has_method("on_enemy_killed"):

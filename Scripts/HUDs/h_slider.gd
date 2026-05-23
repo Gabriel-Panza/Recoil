@@ -3,6 +3,7 @@ extends HSlider
 func _on_return_pressed() -> void:
 	$"../../SFX_Button".play()
 	$"..".visible = false
+	$"../../Menu".visible = true
 
 func _on_value_changed(value: float) -> void:
 	for musica in get_tree().get_nodes_in_group("Music"):

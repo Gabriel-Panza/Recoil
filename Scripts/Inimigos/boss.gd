@@ -13,7 +13,7 @@ enum PrideSubState { IDLE, PREPARE, ATTACK, SPECIAL }
 signal boss_defeated
 
 @export var max_health: int = 500
-@export var speed: float = 5000.0
+@export var speed: float = 85.0
 @export var damage: int = 50
 @export var xp_drop: int = 1
 
@@ -114,8 +114,14 @@ func handle_pride(delta: float):
 			pass
 	
 	# Movimento básico
+	_move_toward_player()
+
+func _move_toward_player() -> void:
+	if player == null:
+		return
+
 	var direction = global_position.direction_to(player.global_position)
-	velocity = direction * speed * delta
+	velocity = direction * speed
 	move_and_slide()
 
 func _setup_enemy_body_collision() -> void:
@@ -140,26 +146,32 @@ func _shrink_body_collision_shape() -> void:
 	collision.shape = shape
 
 func handle_greed(delta: float):
+	_move_toward_player()
 	# Implemente lógica específica para Greed
 	pass
 
 func handle_wrath(delta: float):
+	_move_toward_player()
 	# Implemente lógica específica para Wrath
 	pass
 
 func handle_envy(delta: float):
+	_move_toward_player()
 	# Implemente lógica específica para Envy
 	pass
 
 func handle_lust(delta: float):
+	_move_toward_player()
 	# Implemente lógica específica para Lust
 	pass
 
 func handle_gluttony(delta: float):
+	_move_toward_player()
 	# Implemente lógica específica para Gluttony
 	pass
 
 func handle_sloth(delta: float):
+	_move_toward_player()
 	# Implemente lógica específica para Sloth
 	pass
 
@@ -187,9 +199,10 @@ func die() -> void:
 	_update_health_bar()
 	set_physics_process(false)
 
-	if player and player.has_method("gain_xp"):
+	var should_grant_rewards = Global.pecado < 7
+	if should_grant_rewards and player and player.has_method("gain_xp"):
 		player.gain_xp(xp_drop)
-	if player and player.has_method("on_enemy_killed"):
+	if should_grant_rewards and player and player.has_method("on_enemy_killed"):
 		player.on_enemy_killed(self)
 	
 	Global.pecado += 1

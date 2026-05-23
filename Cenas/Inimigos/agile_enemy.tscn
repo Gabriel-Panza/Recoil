@@ -99,7 +99,7 @@ scale = Vector2(0.8508771, 0.99999994)
 sprite_frames = SubResource("SpriteFrames_wkwyb")
 autoplay = "default"
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1765430284 groups=["Enemy"]]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1765430284]
 shape = SubResource("CapsuleShape2D_w1xt7")
 debug_color = Color(0.7882353, 0, 0, 0.41960785)
 
@@ -107,7 +107,7 @@ debug_color = Color(0.7882353, 0, 0, 0.41960785)
 collision_layer = 4
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox" unique_id=36180555 groups=["Enemy"]]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox" unique_id=36180555]
 visibility_layer = 2
 shape = SubResource("CapsuleShape2D_erstm")
 debug_color = Color(0.7882353, 0, 0, 0.41960785)

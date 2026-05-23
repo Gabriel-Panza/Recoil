@@ -20,9 +20,10 @@ var active_skill_e_label_path: NodePath = "/root/GameScene/Player/Camera2D/Canva
 var active_skill_e_label: Label
 var active_skill_r_label_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer/ActiveSkillR"
 var active_skill_r_label: Label
-
-var speedEnemy
-var speedProjectile
+var game_over_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/PauseControl/GameOver"
+var game_over: Panel
+var game_win_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/PauseControl/GameWin"
+var game_win: Panel
 
 var canMove = true
 
@@ -37,12 +38,17 @@ func _ready() -> void:
 	recoil_label = get_node_or_null(recoil_label_path)
 	active_skill_e_label = get_node_or_null(active_skill_e_label_path)
 	active_skill_r_label = get_node_or_null(active_skill_r_label_path)
+	game_over = get_node_or_null(game_over_path)
+	game_win = get_node_or_null(game_win_path)
 
 	if player:
 		player.connect("stats_updated", Callable(self, "update_status_labels"))
 	
 func _process(delta):
 	update_status_labels()
+	if _is_end_screen_visible():
+		return
+
 	if Input.is_action_just_pressed("ui_cancel"):
 		if not pause_menu.is_visible():
 			_pause_game()
@@ -50,16 +56,47 @@ func _process(delta):
 			_unpause_game()
 
 func _pause_game():
+	if _is_end_screen_visible():
+		return
+
 	pause_menu.show()
 	$"../HBoxContainer".visible = true
 	update_status_labels()
 	get_tree().paused = true
 
 func _unpause_game():
+	if _is_end_screen_visible():
+		return
+
 	options_menu.hide()
 	pause_menu.hide()
 	$"../HBoxContainer".visible = false
 	get_tree().paused = false
+
+func _is_end_screen_visible() -> bool:
+	return (game_over and game_over.visible) or (game_win and game_win.visible)
+
+func _on_options_button_pressed() -> void:
+	options_menu.show()
+
+func _on_back_button_pressed() -> void:
+	options_menu.hide()
+
+func _on_h_slider_value_changed(value: float) -> void:
+	for musica in get_tree().get_nodes_in_group("Music"):
+		musica.set_volume_db(value)
+
+func _on_h_slider_2_value_changed(value: float) -> void:
+	for som in get_tree().get_nodes_in_group("SFX"):
+		som.set_volume_db(value)
+
+func _on_retry_button_pressed() -> void:
+	get_tree().paused = false
+	get_tree().reload_current_scene()
+
+func _on_menu_button_pressed() -> void:
+	get_tree().paused = false
+	get_tree().change_scene_to_file("res://Cenas/HUDs/MainMenu.tscn")
 
 func update_status_labels():
 	if player:
@@ -113,20 +150,3 @@ func _update_active_skill_slot_label(label: Label, slot: String) -> void:
 		label.text = "%s: %s" % [slot, skill_name]
 
 	label.tooltip_text = "%s\nCooldown: %.1fs" % [skill_description, cooldown]
-
-func freeze():
-	canMove = false
-	for obj in get_tree().get_nodes_in_group("Vivos"):
-		if obj in get_tree().get_nodes_in_group("Inimigo"):
-			speedEnemy = obj.speed
-		else:
-			speedProjectile = obj.speed
-		obj.speed = 0
-	
-func unfreeze():
-	canMove = true
-	for obj in get_tree().get_nodes_in_group("Vivos"):
-		if obj in get_tree().get_nodes_in_group("Inimigo"):
-			obj.speed = speedEnemy
-		else:
-			obj.speed = speedProjectile

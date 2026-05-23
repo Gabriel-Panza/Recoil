@@ -23,6 +23,7 @@ grow_vertical = 2
 script = ExtResource("1_2v82j")
 
 [node name="PauseMenu" type="Panel" parent="." unique_id=1057074581]
+process_mode = 3
 visible = false
 self_modulate = Color(1, 1, 1, 0)
 layout_mode = 0
@@ -61,6 +62,7 @@ layout_mode = 2
 alignment = 1
 
 [node name="ResumeButton" type="Button" parent="PauseMenu/HBoxContainer/VBoxContainer" unique_id=1803400147]
+process_mode = 3
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88235295, 0, 0, 1)
 theme_override_colors/font_pressed_color = Color(0.6666667, 0, 0, 1)
@@ -71,6 +73,7 @@ theme_override_font_sizes/font_size = 24
 text = "Resume"
 
 [node name="OptionsButton" type="Button" parent="PauseMenu/HBoxContainer/VBoxContainer" unique_id=544576977]
+process_mode = 3
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88235295, 0, 0, 1)
 theme_override_colors/font_pressed_color = Color(0.6666667, 0, 0, 1)
@@ -81,6 +84,7 @@ theme_override_font_sizes/font_size = 24
 text = "Options"
 
 [node name="MenuButton" type="Button" parent="PauseMenu/HBoxContainer/VBoxContainer" unique_id=1623046768]
+process_mode = 3
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88235295, 0, 0, 1)
 theme_override_colors/font_pressed_color = Color(0.6666667, 0, 0, 1)
@@ -91,6 +95,7 @@ theme_override_font_sizes/font_size = 24
 text = "Menu"
 
 [node name="OptionsMenu" type="Panel" parent="PauseMenu" unique_id=863603521]
+process_mode = 3
 visible = false
 layout_mode = 0
 offset_left = 12.407865
@@ -127,6 +132,7 @@ text = "Music Volume"
 horizontal_alignment = 1
 
 [node name="HSlider" type="HSlider" parent="PauseMenu/OptionsMenu/VBoxContainer" unique_id=455302353]
+process_mode = 3
 layout_mode = 2
 min_value = -80.0
 max_value = 24.0
@@ -141,12 +147,14 @@ text = "SFX Volume"
 horizontal_alignment = 1
 
 [node name="HSlider2" type="HSlider" parent="PauseMenu/OptionsMenu/VBoxContainer" unique_id=964801628]
+process_mode = 3
 layout_mode = 2
 min_value = -80.0
 max_value = 24.0
 value = -25.0
 
 [node name="BackButton" type="Button" parent="PauseMenu/OptionsMenu/VBoxContainer" unique_id=865418008]
+process_mode = 3
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88235295, 0, 0, 1)
 theme_override_colors/font_pressed_color = Color(0.6666667, 0, 0, 1)
@@ -157,6 +165,7 @@ theme_override_font_sizes/font_size = 12
 text = "Back"
 
 [node name="GameOver" type="Panel" parent="." unique_id=1800378235]
+process_mode = 3
 visible = false
 z_index = 2
 layout_mode = 0
@@ -186,6 +195,7 @@ offset_right = 1137.0
 offset_bottom = 488.0
 
 [node name="TextureButton" type="TextureButton" parent="GameOver/MarginContainer" unique_id=1740684253]
+process_mode = 3
 layout_mode = 2
 
 [node name="MarginContainer2" type="MarginContainer" parent="GameOver" unique_id=1416227711]
@@ -197,9 +207,11 @@ offset_right = 1137.0
 offset_bottom = 613.0
 
 [node name="TextureButton" type="TextureButton" parent="GameOver/MarginContainer2" unique_id=1669029871]
+process_mode = 3
 layout_mode = 2
 
 [node name="GameWin" type="Panel" parent="." unique_id=1801650191]
+process_mode = 3
 visible = false
 z_index = 2
 layout_mode = 0
@@ -228,6 +240,7 @@ offset_right = 1137.0
 offset_bottom = 492.0
 
 [node name="TextureButton" type="TextureButton" parent="GameWin/MarginContainer" unique_id=1200009221]
+process_mode = 3
 layout_mode = 2
 
 [node name="MarginContainer2" type="MarginContainer" parent="GameWin" unique_id=1704343652]
@@ -239,6 +252,7 @@ offset_right = 1137.0
 offset_bottom = 612.0
 
 [node name="TextureButton" type="TextureButton" parent="GameWin/MarginContainer2" unique_id=1547426593]
+process_mode = 3
 layout_mode = 2
 
 [node name="SFX" type="AudioStreamPlayer2D" parent="." unique_id=1612802006 groups=["SFX"]]

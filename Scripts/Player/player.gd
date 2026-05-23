@@ -335,7 +335,7 @@ func perform_dash(direction: Vector2, uses_double_dash_charge: bool = false) -> 
 		_spawn_burst_particles(global_position, Color(0.35, 0.7, 1.0, 0.9), 22, 0.28, 160.0)
 	
 	velocity = direction * dash_speed
-	await get_tree().create_timer(dash_duration).timeout
+	await get_tree().create_timer(dash_duration, false).timeout
 	
 	is_dashing = false
 	if offensive_dash_enabled:
@@ -365,7 +365,6 @@ func take_damage(amount: float, attacker_position: Vector2 = Vector2.ZERO) -> vo
 		emit_signal("stats_updated")
 		return
 
-	# >>> ALTERAÇÃO AQUI: APLICA O KNOCKBACK SE TOMAR DANO FÍSICO
 	if attacker_position != Vector2.ZERO:
 		var knockback_direction = attacker_position.direction_to(global_position)
 		var knockback_force = 300.0 
@@ -385,25 +384,32 @@ func take_damage(amount: float, attacker_position: Vector2 = Vector2.ZERO) -> vo
 	tween.tween_property(aparencia, "modulate", Color.RED, 0.1)
 	tween.tween_property(aparencia, "modulate", Color.WHITE, 0.1)
 	
-	await get_tree().create_timer(0.2).timeout
+	await get_tree().create_timer(0.2, false).timeout
 	is_invulnerable = false
 
 func die():
+	_finish_current_run()
 	# aparencia.play("death")
-	if pause_control:
-		pause_control.freeze()
 	for musica in get_tree().get_nodes_in_group("Music"):
 		musica.stop()
+	get_tree().paused = true
 	# $Lose.play()
-	await get_tree().create_timer(1.0).timeout
-	game_over.visible = true
+	await get_tree().create_timer(1.0, true).timeout
+	if game_over:
+		game_over.visible = true
 
 func win():
+	_finish_current_run()
 	for musica in get_tree().get_nodes_in_group("Music"):
 		musica.stop()
 	get_tree().paused = true
 	# $Win.play()
 	game_win.visible = true
+
+func _finish_current_run() -> void:
+	var game_scene = get_tree().current_scene
+	if game_scene and game_scene.has_method("finish_run"):
+		game_scene.finish_run()
 
 func _on_shoot_timer_timeout() -> void:
 	can_shoot = true
@@ -419,8 +425,7 @@ func _on_hitbox_area_entered(area: Area2D) -> void:
 			enemies_in_contact.append(parent)
 		
 		if contact_damage_timer.is_stopped():
-			# >>> ALTERAÇÃO AQUI: Manda a posição do inimigo pro dano
-			take_damage(20, parent.global_position)
+			take_damage(_get_contact_damage(parent), parent.global_position)
 			contact_damage_timer.start()
 
 func _on_hitbox_area_exited(area: Area2D) -> void:
@@ -435,11 +440,16 @@ func _on_contact_damage_timer_timeout() -> void:
 	enemies_in_contact = enemies_in_contact.filter(func(e): return is_instance_valid(e))
 	
 	if not enemies_in_contact.is_empty():
-		# >>> ALTERAÇÃO AQUI: Se ele ficar encostado, continua empurrando
 		var prime_enemy = enemies_in_contact[0]
-		take_damage(20, prime_enemy.global_position)
+		take_damage(_get_contact_damage(prime_enemy), prime_enemy.global_position)
 	else:
 		contact_damage_timer.stop()
+
+func _get_contact_damage(enemy: Node) -> float:
+	if enemy and enemy.get("damage") != null:
+		return float(enemy.get("damage"))
+
+	return 20.0
 
 func is_active_ability_id(option_id: String) -> bool:
 	return option_id in ACTIVE_ABILITY_IDS
@@ -522,7 +532,7 @@ func heal(amount: float) -> void:
 
 func on_enemy_killed(_enemy: Node) -> void:
 	if gluttony_heal_kill_enabled and is_instance_valid(_enemy):
-		_spawn_heal_motes(_enemy.global_position, max_health * 0.01, 4)
+		_spawn_heal_motes(_enemy.global_position, max_health * 0.01, 5)
 
 func grant_bonus_level_up(context: String = "normal", boss_pecado: int = 0) -> void:
 	if upando:
@@ -563,7 +573,7 @@ func activate_sloth_field() -> void:
 				enemy.remove_meta("sloth_field_active")
 				slowed_enemies.erase(enemy)
 
-		await get_tree().create_timer(0.1).timeout
+		await get_tree().create_timer(0.1, false).timeout
 		elapsed += 0.1
 
 	dash_speed = old_dash_speed
@@ -582,19 +592,19 @@ func activate_gluttony_devour() -> void:
 		var enemy = nearby_enemies[i]
 		var enemy_position = enemy.global_position
 		_spawn_burst_particles(enemy_position, Color(0.2, 1.0, 0.45, 0.95), 30, 0.4, 130.0)
-		_spawn_heal_motes(enemy_position, (max_health * 0.125) / max(devoured_count, 1), 7)
+		_spawn_heal_motes(enemy_position, (max_health * 0.1), 3)
 		if enemy.has_method("die"):
 			enemy.die()
 
 	var old_dash_speed = dash_speed
 	dash_speed *= 0.5
-	await get_tree().create_timer(5.0).timeout
+	await get_tree().create_timer(5.0, false).timeout
 	dash_speed = old_dash_speed
 
 func activate_envy_mirror_clone() -> void:
 	envy_clone_active = true
 	_spawn_clone_vfx(8.0)
-	await get_tree().create_timer(8.0).timeout
+	await get_tree().create_timer(8.0, false).timeout
 	envy_clone_active = false
 	if is_instance_valid(envy_clone_vfx):
 		envy_clone_vfx.queue_free()
@@ -611,11 +621,11 @@ func activate_wrath_burst() -> void:
 func activate_lust_for_perfection() -> void:
 	is_invulnerable = true
 	_spawn_attached_aura(110.0, Color(1.0, 0.72, 0.95, 0.65), 3.0)
-	await get_tree().create_timer(3.0).timeout
+	await get_tree().create_timer(3.0, false).timeout
 	is_invulnerable = false
 	damage_taken_multiplier = 2.0
 	_spawn_attached_aura(130.0, Color(1.0, 0.08, 0.28, 0.6), 5.0)
-	await get_tree().create_timer(5.0).timeout
+	await get_tree().create_timer(5.0, false).timeout
 	damage_taken_multiplier = 1.0
 
 func activate_greed_treasure_rain() -> void:
@@ -623,7 +633,7 @@ func activate_greed_treasure_rain() -> void:
 	for i in range(20):
 		var spawn_position = global_position + Vector2(randf_range(-420.0, 420.0), -360.0 - randf_range(0.0, 180.0))
 		_spawn_projectile(spawn_position, PI / 2.0, attack_damage * 1.2, true, Color(1.0, 0.78, 0.08, 0.95))
-		await get_tree().create_timer(0.06).timeout
+		await get_tree().create_timer(0.06, false).timeout
 
 func _trigger_recoil_explosion() -> void:
 	_spawn_burst_particles(global_position, Color(1.0, 0.52, 0.12, 0.95), 34, 0.3, 210.0)
@@ -685,7 +695,7 @@ func _spawn_burst_particles(spawn_position: Vector2, color: Color, amount: int =
 	_get_vfx_parent().add_child(particles)
 	particles.emitting = true
 
-	var cleanup_timer = get_tree().create_timer(lifetime + 0.25)
+	var cleanup_timer = get_tree().create_timer(lifetime + 0.25, false)
 	cleanup_timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(particles))
 
 func _spawn_field_vfx(center: Vector2, radius: float, color: Color, duration: float) -> void:
@@ -706,7 +716,7 @@ func _spawn_field_vfx(center: Vector2, radius: float, color: Color, duration: fl
 	particles.global_position = center
 	particles.emitting = true
 
-	var cleanup_timer = get_tree().create_timer(duration)
+	var cleanup_timer = get_tree().create_timer(duration, false)
 	cleanup_timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(particles))
 
 func _spawn_attached_aura(radius: float, color: Color, duration: float) -> void:
@@ -730,7 +740,7 @@ func _spawn_attached_aura(radius: float, color: Color, duration: float) -> void:
 	aura.add_child(particles)
 	particles.emitting = true
 
-	var cleanup_timer = get_tree().create_timer(duration)
+	var cleanup_timer = get_tree().create_timer(duration, false)
 	cleanup_timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(aura))
 
 func _spawn_ring_vfx(center: Vector2, radius: float, color: Color, duration: float) -> void:
@@ -885,7 +895,7 @@ func _spawn_clone_vfx(duration: float) -> void:
 	envy_clone_vfx.add_child(particles)
 	particles.emitting = true
 
-	var cleanup_timer = get_tree().create_timer(duration)
+	var cleanup_timer = get_tree().create_timer(duration, false)
 	cleanup_timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(envy_clone_vfx))
 
 func _queue_free_if_valid(node: Node) -> void:

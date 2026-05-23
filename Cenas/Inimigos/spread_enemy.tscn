@@ -99,7 +99,7 @@ sprite_frames = SubResource("SpriteFrames_dohpa")
 autoplay = "default"
 frame_progress = 0.9586402
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1853347804 groups=["Enemy"]]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1853347804]
 shape = SubResource("CapsuleShape2D_8x1xt")
 debug_color = Color(0.7882353, 0, 0, 0.41960785)
 
@@ -107,7 +107,7 @@ debug_color = Color(0.7882353, 0, 0, 0.41960785)
 collision_layer = 4
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox" unique_id=2094221337 groups=["Enemy"]]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox" unique_id=2094221337]
 visibility_layer = 2
 shape = SubResource("CapsuleShape2D_b0ffl")
 debug_color = Color(0.7882353, 0, 0, 0.41960785)

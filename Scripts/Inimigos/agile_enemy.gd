@@ -2,8 +2,8 @@ extends BaseEnemy
 class_name AgileEnemy
 
 @export var orbit_distance: float = 180.0
-@export var orbit_speed: float = 12000.0
-@export var dash_speed: float = 28000.0 
+@export var orbit_speed: float = 200.0
+@export var dash_speed: float = 470.0
 @export var time_to_dash: float = 3.5 
 @export var dash_duration: float = 0.5 
 
@@ -34,14 +34,14 @@ func mover(_delta: float) -> void:
 	
 	if is_dashing:
 		# Estado de Ataque (Dash)
-		velocity = dash_direction * dash_speed * _delta
+		velocity = dash_direction * dash_speed
 		state_timer -= _delta
 		
 		# Verifica impacto
 		if state_timer <= 0 or get_slide_collision_count() > 0:
 			is_dashing = false
 			state_timer = 0.0
-			velocity = -dash_direction * (dash_speed * 0.6) * _delta
+			velocity = -dash_direction * (dash_speed * 0.6)
 	else:
 		# Estado de Órbita (Rodeando)
 		state_timer += _delta
@@ -63,7 +63,7 @@ func mover(_delta: float) -> void:
 			distance_correction = -1.0 # Se aproximou, joga pra longe
 			
 		var move_dir = (tangent + (dir_to_player * distance_correction)).normalized()
-		velocity = move_dir * speed * _delta
+		velocity = move_dir * speed
 		
 		# Hora do bote!
 		if state_timer >= time_to_dash:
