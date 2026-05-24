@@ -50,12 +50,12 @@ const BOSS_INDICATOR_PADDING: float = 34.0
 
 const BOSS_CONFIG = {
 	1: { "max_health": 500, "speed": 0.0, "damage": 35, "state": BossState.SLOTH, "animation": "pecado1" },
-	2: { "max_health": 760, "speed": 70.0, "damage": 45, "state": BossState.GLUTTONY, "animation": "pecado2", "visual_scale": Vector2(2.15, 2.15) },
-	3: { "max_health": 700, "speed": 80.0, "damage": 40, "state": BossState.ENVY, "animation": "pecado3" },
-	4: { "max_health": 800, "speed": 92.0, "damage": 52, "state": BossState.WRATH, "animation": "pecado4" },
-	5: { "max_health": 950, "speed": 62.0, "damage": 42, "state": BossState.LUST, "animation": "pecado5" },
-	6: { "max_health": 1100, "speed": 76.0, "damage": 46, "state": BossState.GREED, "animation": "pecado6" },
-	7: { "max_health": 1250, "speed": 58.0, "damage": 50, "state": BossState.PRIDE, "animation": "pecado7" },
+	2: { "max_health": 600, "speed": 75.0, "damage": 45, "state": BossState.GLUTTONY, "animation": "pecado2", "visual_scale": Vector2(2.15, 2.15) },
+	3: { "max_health": 700, "speed": 82.5, "damage": 40, "state": BossState.ENVY, "animation": "pecado3" },
+	4: { "max_health": 800, "speed": 90.0, "damage": 50, "state": BossState.WRATH, "animation": "pecado4" },
+	5: { "max_health": 1000, "speed": 75.0, "damage": 40, "state": BossState.LUST, "animation": "pecado5" },
+	6: { "max_health": 1250, "speed": 71.25, "damage": 45, "state": BossState.GREED, "animation": "pecado6" },
+	7: { "max_health": 1500, "speed": 67.5, "damage": 50, "state": BossState.PRIDE, "animation": "pecado7" },
 }
 
 var current_health: int

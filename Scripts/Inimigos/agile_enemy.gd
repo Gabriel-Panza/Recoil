@@ -18,7 +18,7 @@ func _ready() -> void:
 	super()
 	orbit_direction = 1 if randf() > 0.5 else -1
 	
-	max_health = 40 + ((Global.pecado - 1) * 20)
+	max_health = 50 + ((Global.pecado - 1) * 25)
 	current_health = max_health
 	speed = orbit_speed
 

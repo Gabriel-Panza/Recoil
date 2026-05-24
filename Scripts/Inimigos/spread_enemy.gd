@@ -7,7 +7,7 @@ class_name SpreadEnemy
 func _ready() -> void:
 	super()
 
-	max_health = 75 + ((Global.pecado - 1) * 25)
+	max_health = 80 + ((Global.pecado - 1) * 20)
 	current_health = max_health
 
 func shoot() -> void:
