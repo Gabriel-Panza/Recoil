@@ -2,8 +2,8 @@ extends CharacterBody2D
 class_name BaseEnemy 
 
 @export var max_health: int = 100
-@export var speed: float = 135.0
-@export var damage: int = 20
+@export var speed: float = 130.0
+@export var damage: int = 15
 @export var xp_drop: int = 1
 
 const ENEMY_COLLISION_MASK: int = 4
@@ -76,11 +76,14 @@ func die() -> void:
 	_update_health_bar()
 	set_physics_process(false)
 
-	if player and player.has_method("gain_xp"):
+	if _should_grant_xp() and player and player.has_method("gain_xp"):
 		player.gain_xp(xp_drop)
 	if player and player.has_method("on_enemy_killed"):
 		player.on_enemy_killed(self)
 	queue_free()
+
+func _should_grant_xp() -> bool:
+	return xp_drop > 0 and not bool(get_meta("skip_xp", false))
 
 func _setup_health_bar() -> void:
 	if health_bar:

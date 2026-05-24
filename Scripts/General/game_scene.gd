@@ -38,44 +38,44 @@ var wave_sets = {
 	1: [  # Sloth
 		{"melee": 3, "ranged": 0, "agile": 0, "tank": 0, "spread": 0},
 		{"melee": 4, "ranged": 1, "agile": 0, "tank": 0, "spread": 0},
-		{"melee": 5, "ranged": 2, "agile": 0, "tank": 0, "spread": 0},
-		{"melee": 6, "ranged": 3, "agile": 0, "tank": 0, "spread": 0}
+		{"melee": 5, "ranged": 1, "agile": 0, "tank": 0, "spread": 0},
+		{"melee": 6, "ranged": 2, "agile": 0, "tank": 0, "spread": 0}
 	],
 	2: [  # Gluttony
-		{"melee": 4, "ranged": 1, "agile": 1, "tank": 0, "spread": 0},
-		{"melee": 5, "ranged": 2, "agile": 1, "tank": 0, "spread": 0},
-		{"melee": 6, "ranged": 3, "agile": 2, "tank": 0, "spread": 0},
-		{"melee": 7, "ranged": 4, "agile": 2, "tank": 0, "spread": 0}
+		{"melee": 3, "ranged": 1, "agile": 1, "tank": 0, "spread": 0},
+		{"melee": 4, "ranged": 2, "agile": 1, "tank": 0, "spread": 0},
+		{"melee": 5, "ranged": 2, "agile": 2, "tank": 0, "spread": 0},
+		{"melee": 6, "ranged": 3, "agile": 2, "tank": 0, "spread": 0}
 	],
 	3: [  # Envy
-		{"melee": 5, "ranged": 2, "agile": 1, "tank": 1, "spread": 0},
-		{"melee": 6, "ranged": 3, "agile": 1, "tank": 1, "spread": 0},
-		{"melee": 7, "ranged": 4, "agile": 2, "tank": 2, "spread": 0},
-		{"melee": 8, "ranged": 5, "agile": 2, "tank": 2, "spread": 0}
+		{"melee": 4, "ranged": 2, "agile": 1, "tank": 1, "spread": 0},
+		{"melee": 5, "ranged": 3, "agile": 1, "tank": 1, "spread": 0},
+		{"melee": 6, "ranged": 3, "agile": 2, "tank": 2, "spread": 0},
+		{"melee": 7, "ranged": 4, "agile": 2, "tank": 2, "spread": 0}
 	],
 	4: [  # Wrath
-		{"melee": 6, "ranged": 3, "agile": 1, "tank": 1, "spread": 1},
-		{"melee": 7, "ranged": 4, "agile": 2, "tank": 2, "spread": 1},
-		{"melee": 8, "ranged": 5, "agile": 2, "tank": 2, "spread": 2},
-		{"melee": 9, "ranged": 6, "agile": 3, "tank": 3, "spread": 2}
+		{"melee": 5, "ranged": 3, "agile": 1, "tank": 1, "spread": 1},
+		{"melee": 6, "ranged": 4, "agile": 2, "tank": 2, "spread": 1},
+		{"melee": 7, "ranged": 4, "agile": 2, "tank": 2, "spread": 2},
+		{"melee": 8, "ranged": 5, "agile": 3, "tank": 3, "spread": 2}
 	],
 	5: [  # Lust
-		{"melee": 8, "ranged": 4, "agile": 2, "tank": 2, "spread": 2},
-		{"melee": 8, "ranged": 5, "agile": 3, "tank": 3, "spread": 2},
-		{"melee": 9, "ranged": 6, "agile": 3, "tank": 3, "spread": 3},
-		{"melee": 9, "ranged": 7, "agile": 4, "tank": 4, "spread": 3}
+		{"melee": 6, "ranged": 4, "agile": 2, "tank": 2, "spread": 2},
+		{"melee": 6, "ranged": 5, "agile": 3, "tank": 3, "spread": 2},
+		{"melee": 7, "ranged": 5, "agile": 3, "tank": 3, "spread": 3},
+		{"melee": 8, "ranged": 6, "agile": 4, "tank": 4, "spread": 3}
 	],
 	6: [  # Greed
-		{"melee": 9, "ranged": 5, "agile": 3, "tank": 2, "spread": 3},
-		{"melee": 9, "ranged": 6, "agile": 4, "tank": 3, "spread": 3},
-		{"melee": 10, "ranged": 7, "agile": 4, "tank": 3, "spread": 4},
-		{"melee": 10, "ranged": 8, "agile": 5, "tank": 4, "spread": 4}
+		{"melee": 6, "ranged": 5, "agile": 3, "tank": 2, "spread": 3},
+		{"melee": 7, "ranged": 6, "agile": 4, "tank": 3, "spread": 3},
+		{"melee": 7, "ranged": 6, "agile": 4, "tank": 3, "spread": 4},
+		{"melee": 8, "ranged": 7, "agile": 5, "tank": 4, "spread": 4}
 	],
 	7: [  # Pride
-		{"melee": 10, "ranged": 7, "agile": 4, "tank": 3, "spread": 4},
-		{"melee": 10, "ranged": 8, "agile": 5, "tank": 4, "spread": 4},
-		{"melee": 10, "ranged": 8, "agile": 5, "tank": 4, "spread": 5},
-		{"melee": 10, "ranged": 9, "agile": 6, "tank": 5, "spread": 5}
+		{"melee": 7, "ranged": 6, "agile": 4, "tank": 3, "spread": 4},
+		{"melee": 7, "ranged": 6, "agile": 5, "tank": 4, "spread": 4},
+		{"melee": 8, "ranged": 7, "agile": 5, "tank": 4, "spread": 5},
+		{"melee": 8, "ranged": 7, "agile": 6, "tank": 5, "spread": 5}
 	]
 }
 

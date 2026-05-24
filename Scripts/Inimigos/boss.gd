@@ -30,20 +30,23 @@ const LUST_WALL_THICKNESS: float = 24.0
 const LUST_WALL_LENGTH: float = 260.0
 const LUST_BREAKABLE_WALL_HP: float = 110.0
 const SLOTH_SLOW_ZONE_RADIUS: float = 95.0
-const GLUTTONY_STRESS_DURATION: float = 7.0
+const GLUTTONY_STRESS_DURATION_PHASE_1: float = 7.5
+const GLUTTONY_STRESS_DURATION_PHASE_2: float = 10.0
 const ENVY_CLONE_MAX_HEALTH: float = 180.0
 const GREED_TREASURE_RADIUS: float = 16.0
 const MAX_BOSS_CIRCLE_VFX_RADIUS: float = 180.0
 const DEFAULT_BOSS_VISUAL_SCALE: Vector2 = Vector2(1.5, 1.5)
 
-const SLOTH_COLOR: Color = Color(0.68, 0.42, 1.0, 1.0)
-const GLUTTONY_COLOR: Color = Color(0.2, 1.0, 0.45, 1.0)
+const SLOTH_COLOR: Color = Color(0.25, 0.95, 1.0, 1.0)
+const GLUTTONY_COLOR: Color = Color(0.96, 0.92, 0.18, 1.0)
 const ENVY_COLOR: Color = Color(0.25, 0.95, 1.0, 1.0)
 const WRATH_COLOR: Color = Color(1.0, 0.25, 0.05, 1.0)
 const LUST_COLOR: Color = Color(1.0, 0.16, 0.36, 1.0)
 const GREED_COLOR: Color = Color(1.0, 0.78, 0.08, 1.0)
 const PRIDE_LIGHT_COLOR: Color = Color(1.0, 0.96, 0.62, 1.0)
 const PRIDE_FIRE_COLOR: Color = Color(1.0, 0.46, 0.14, 1.0)
+const BOSS_INDICATOR_LAYER: int = 75
+const BOSS_INDICATOR_PADDING: float = 34.0
 
 const BOSS_CONFIG = {
 	1: { "max_health": 500, "speed": 0.0, "damage": 35, "state": BossState.SLOTH, "animation": "pecado1" },
@@ -91,6 +94,8 @@ var greed_tax_timer: float = 0.0
 var greed_tax_meter: float = 0.0
 var greed_previous_player_position: Vector2 = Vector2.ZERO
 var greed_previous_can_shoot: bool = true
+var boss_indicator_layer: CanvasLayer
+var boss_indicator_node: Node2D
 
 func _ready() -> void:
 	player = get_tree().get_first_node_in_group("Player")
@@ -98,7 +103,9 @@ func _ready() -> void:
 	add_to_group("Enemy")
 	_setup_enemy_body_collision()
 	aparencia = $AparenciaAnimada
+	aparencia.scale *= 2.5
 	_configure_boss_for_current_sin()
+	_setup_boss_edge_indicator()
 	current_health = max_health
 	base_speed = speed
 	base_damage = damage
@@ -125,9 +132,14 @@ func _begin_intro() -> void:
 	current_sub_state = BossSubState.DECIDE
 
 func _physics_process(delta: float) -> void:
-	if is_dead or player == null:
+	if is_dead:
+		_set_boss_edge_indicator_visible(false)
+		return
+	if player == null:
+		_set_boss_edge_indicator_visible(false)
 		return
 
+	_update_boss_edge_indicator()
 	_update_phase()
 	_update_shared_mechanics(delta)
 	_refresh_damage_value()
@@ -197,7 +209,7 @@ func handle_gluttony(delta: float) -> void:
 	if not _can_start_action():
 		return
 
-	if randf() < 0.62:
+	if randf() < 0.65:
 		_start_gluttony_food_wave(2 if phase == 1 else 4)
 	else:
 		_start_gluttony_body_slam()
@@ -221,10 +233,10 @@ func handle_wrath(delta: float) -> void:
 	if phase == 1:
 		_start_wrath_bomb_volley(3, 4.0)
 	else:
-		_start_wrath_bomb_volley(5, 2.6)
+		_start_wrath_bomb_volley(5, 2.75)
 
 func handle_lust(delta: float) -> void:
-	_move_toward_player(delta, 0.72)
+	_move_toward_player(delta, 0.7)
 	if not lust_invulnerability_active:
 		lust_invulnerability_cooldown = max(lust_invulnerability_cooldown - delta, 0.0)
 		if lust_invulnerability_cooldown <= 0.0:
@@ -236,14 +248,14 @@ func handle_lust(delta: float) -> void:
 	_start_lust_wall_pattern()
 
 func handle_greed(delta: float) -> void:
-	_move_toward_player(delta, 0.86)
+	_move_toward_player(delta, 0.85)
 	if not _can_start_action():
 		return
 
 	var roll = randf()
 	if roll < 0.45:
 		_start_greed_treasure_drop(3 if phase == 1 else 5)
-	elif roll < 0.78:
+	elif roll < 0.75:
 		_start_greed_coin_rain()
 	else:
 		_start_greed_tax_mark()
@@ -262,13 +274,13 @@ func handle_pride(delta: float) -> void:
 		var roll = randf()
 		if roll < 0.45:
 			_start_pride_fire_orbs(false)
-		elif roll < 0.78:
+		elif roll < 0.75:
 			_start_pride_light_cross(false)
 		else:
 			_start_pride_judgement()
 	else:
 		var roll = randf()
-		if roll < 0.42:
+		if roll < 0.40:
 			_start_pride_fire_orbs(true)
 		elif roll < 0.75:
 			_start_pride_light_cross(true)
@@ -304,7 +316,7 @@ func _get_current_speed(speed_multiplier: float = 1.0) -> float:
 	if is_enraged:
 		final_multiplier *= ENRAGE_STAT_MULTIPLIER
 	if envy_boss_buff_remaining > 0.0:
-		final_multiplier *= 1.18
+		final_multiplier *= 1.2
 	return base_speed * final_multiplier
 
 func _can_start_action() -> bool:
@@ -344,8 +356,8 @@ func _shrink_body_collision_shape() -> void:
 func _start_sloth_summon(amount: int) -> void:
 	is_performing_action = true
 	current_sub_state = BossSubState.TELEGRAPH
-	_spawn_action_charge_vfx(global_position, 90.0, SLOTH_COLOR, 0.55, 30)
-	await get_tree().create_timer(0.55, false).timeout
+	_spawn_action_charge_vfx(global_position, 90.0, SLOTH_COLOR, 0.5, 30)
+	await get_tree().create_timer(0.5, false).timeout
 
 	current_sub_state = BossSubState.ATTACK
 	for i in range(amount):
@@ -353,10 +365,10 @@ func _start_sloth_summon(amount: int) -> void:
 		var enemy = scene.instantiate()
 		_get_vfx_parent().add_child(enemy)
 		enemy.global_position = _get_random_arena_position_near_player(160.0, 300.0)
-		boss_summons.append(enemy)
-		await get_tree().create_timer(0.18, false).timeout
+		_register_boss_summon(enemy)
+		await get_tree().create_timer(2.0, false).timeout
 
-	_finish_action(1.6 if phase == 1 else 1.1)
+	_finish_action(1.7 if phase == 1 else 1.2)
 
 func _start_sloth_slow_zones(amount: int) -> void:
 	is_performing_action = true
@@ -364,11 +376,11 @@ func _start_sloth_slow_zones(amount: int) -> void:
 	for i in range(amount):
 		var zone_position = _get_random_arena_position_near_player(80.0, 280.0)
 		_spawn_circle_telegraph(zone_position, SLOTH_SLOW_ZONE_RADIUS, _with_alpha(SLOTH_COLOR, 0.24), 0.55)
-		await get_tree().create_timer(0.12, false).timeout
+		await get_tree().create_timer(2.5, false).timeout
 		_create_sloth_slow_zone(zone_position)
 
 	_trim_node_array(active_slow_zones, 4 if phase == 1 else 7)
-	_finish_action(1.8 if phase == 1 else 1.2)
+	_finish_action(2.0 if phase == 1 else 1.5)
 
 func _create_sloth_slow_zone(zone_position: Vector2) -> void:
 	var zone = Area2D.new()
@@ -377,7 +389,7 @@ func _create_sloth_slow_zone(zone_position: Vector2) -> void:
 	zone.collision_layer = 0
 	zone.collision_mask = PLAYER_LAYER_MASK
 	zone.set_meta("radius", SLOTH_SLOW_ZONE_RADIUS)
-	zone.set_meta("lifetime", 999.0)
+	zone.set_meta("lifetime", 15.0)
 
 	_add_circle_collision(zone, SLOTH_SLOW_ZONE_RADIUS)
 	_add_circle_visual(zone, SLOTH_SLOW_ZONE_RADIUS, _with_alpha(SLOTH_COLOR, 0.12), 5)
@@ -387,7 +399,7 @@ func _create_sloth_slow_zone(zone_position: Vector2) -> void:
 	_get_vfx_parent().add_child(zone)
 	active_slow_zones.append(zone)
 
-func _update_sloth_slow_zones(_delta: float) -> void:
+func _update_sloth_slow_zones(delta: float) -> void:
 	if player == null:
 		return
 
@@ -396,13 +408,19 @@ func _update_sloth_slow_zones(_delta: float) -> void:
 		if not is_instance_valid(zone):
 			active_slow_zones.erase(zone)
 			continue
+		var lifetime = float(zone.get_meta("lifetime", 0.0)) - delta
+		zone.set_meta("lifetime", lifetime)
+		if lifetime <= 0.0:
+			active_slow_zones.erase(zone)
+			zone.queue_free()
+			continue
 		if player.global_position.distance_to(zone.global_position) <= float(zone.get_meta("radius", SLOTH_SLOW_ZONE_RADIUS)):
 			is_inside_any_zone = true
 
 	if is_inside_any_zone:
 		if player.has_method("_set_dash_speed_modifier"):
 			player.call("_set_dash_speed_modifier", "sloth_boss_zone", 0.62)
-		player.velocity *= 0.96
+		player.velocity *= 0.95
 	elif player.has_method("_clear_dash_speed_modifier"):
 		player.call("_clear_dash_speed_modifier", "sloth_boss_zone")
 
@@ -415,7 +433,7 @@ func _start_gluttony_food_wave(amount: int) -> void:
 	current_sub_state = BossSubState.ATTACK
 	for i in range(amount):
 		_spawn_gluttony_food()
-		await get_tree().create_timer(0.22, false).timeout
+		await get_tree().create_timer(2.0, false).timeout
 	_finish_action(2.0 if phase == 1 else 1.25)
 
 func _spawn_gluttony_food() -> void:
@@ -426,7 +444,7 @@ func _spawn_gluttony_food() -> void:
 	food.speed = 135.0 if phase == 1 else 165.0
 	food.max_health = 45 if phase == 1 else 60
 	food.current_health = food.max_health
-	food.damage = 8
+	food.damage = 10
 	food.modulate = _with_alpha(GLUTTONY_COLOR, 1.0)
 	food.set_meta("gluttony_food", true)
 	food.set_meta("gluttony_delivered", false)
@@ -435,14 +453,14 @@ func _spawn_gluttony_food() -> void:
 		food.call("_update_health_bar")
 	food.tree_exited.connect(Callable(self, "_on_gluttony_food_exited").bind(food))
 	gluttony_foods.append(food)
-	boss_summons.append(food)
+	_register_boss_summon(food)
 
 func _update_gluttony_foods(_delta: float) -> void:
 	for food in gluttony_foods.duplicate():
 		if not is_instance_valid(food):
 			gluttony_foods.erase(food)
 			continue
-		if food.global_position.distance_to(global_position) <= 44.0:
+		if food.global_position.distance_to(global_position) <= 40.0:
 			food.set_meta("gluttony_delivered", true)
 			gluttony_foods.erase(food)
 			var heal_amount = max_health * (0.09 if phase == 1 else 0.055)
@@ -457,7 +475,7 @@ func _on_gluttony_food_exited(food: Node) -> void:
 	if is_instance_valid(food) and bool(food.get_meta("gluttony_delivered", false)):
 		return
 
-	gluttony_stress_timers.append(GLUTTONY_STRESS_DURATION if phase == 1 else GLUTTONY_STRESS_DURATION + 2.0)
+	gluttony_stress_timers.append(GLUTTONY_STRESS_DURATION_PHASE_1 if phase == 1 else GLUTTONY_STRESS_DURATION_PHASE_2)
 	_spawn_burst_particles(global_position, _with_alpha(GLUTTONY_COLOR, 0.82), 18, 0.24, 120.0)
 
 func _update_gluttony_stress(delta: float) -> void:
@@ -469,8 +487,8 @@ func _update_gluttony_stress(delta: float) -> void:
 func _start_gluttony_body_slam() -> void:
 	is_performing_action = true
 	current_sub_state = BossSubState.TELEGRAPH
-	_spawn_circle_telegraph(player.global_position, 90.0, _with_alpha(GLUTTONY_COLOR, 0.24), 0.65)
-	await get_tree().create_timer(0.65, false).timeout
+	_spawn_circle_telegraph(player.global_position, 90.0, _with_alpha(GLUTTONY_COLOR, 0.24), 0.75)
+	await get_tree().create_timer(0.75, false).timeout
 
 	current_sub_state = BossSubState.ATTACK
 	var slam_position = player.global_position
@@ -479,15 +497,15 @@ func _start_gluttony_body_slam() -> void:
 	_spawn_burst_particles(global_position, _with_alpha(GLUTTONY_COLOR, 0.88), 34, 0.3, 160.0)
 	if player.global_position.distance_to(global_position) <= 115.0:
 		player.take_damage(float(damage) * 1.25, global_position)
-	_finish_action(1.6 if phase == 1 else 1.1)
+	_finish_action(1.75 if phase == 1 else 1.25)
 
 func _start_envy_clone() -> void:
 	is_performing_action = true
 	current_sub_state = BossSubState.TELEGRAPH
-	_spawn_action_charge_vfx(global_position, 70.0, ENVY_COLOR, 0.45, 28)
-	await get_tree().create_timer(0.45, false).timeout
+	_spawn_action_charge_vfx(global_position, 70.0, ENVY_COLOR, 0.5, 28)
+	await get_tree().create_timer(0.5, false).timeout
 	_create_envy_clone()
-	_finish_action(1.2)
+	_finish_action(1.25)
 
 func _create_envy_clone() -> void:
 	if is_instance_valid(envy_clone):
@@ -519,7 +537,7 @@ func _update_envy_clone(delta: float) -> void:
 	envy_clone.global_position = envy_clone.global_position.lerp(_clamp_to_current_arena(mirror_target, 28.0), 0.07)
 	envy_clone_fire_cooldown = max(envy_clone_fire_cooldown - delta, 0.0)
 	if envy_clone_fire_cooldown <= 0.0:
-		envy_clone_fire_cooldown = 0.78 if phase == 1 else 0.52
+		envy_clone_fire_cooldown = 1.0 if phase == 1 else 0.75
 		var direction = envy_clone.global_position.direction_to(player.global_position)
 		if randf() < 0.65:
 			direction = Vector2(direction.x, -direction.y).normalized()
@@ -531,12 +549,12 @@ func _start_envy_boss_shot() -> void:
 	current_sub_state = BossSubState.ATTACK
 	for i in range(3):
 		var direction = global_position.direction_to(player.global_position).rotated(deg_to_rad((i - 1) * 14.0))
-		_spawn_line_telegraph(global_position, global_position + direction * 180.0, ENVY_COLOR, 0.16, 2.0)
-	await get_tree().create_timer(0.16, false).timeout
+		_spawn_line_telegraph(global_position, global_position + direction * 180.0, ENVY_COLOR, 0.25, 2.0)
+	await get_tree().create_timer(0.25, false).timeout
 	for i in range(3):
 		var direction = global_position.direction_to(player.global_position).rotated(deg_to_rad((i - 1) * 14.0))
 		_spawn_enemy_projectile(global_position, direction, float(damage) * 0.75, _with_alpha(ENVY_COLOR, 0.9), 460.0)
-	_finish_action(1.2)
+	_finish_action(1.25)
 
 func _update_envy_buff(delta: float) -> void:
 	if envy_boss_buff_remaining > 0.0:
@@ -545,8 +563,8 @@ func _update_envy_buff(delta: float) -> void:
 func _start_wrath_bomb_volley(amount: int, fuse_time: float) -> void:
 	is_performing_action = true
 	current_sub_state = BossSubState.TELEGRAPH
-	_spawn_action_charge_vfx(global_position, 80.0, WRATH_COLOR, 0.42, 34)
-	await get_tree().create_timer(0.42, false).timeout
+	_spawn_action_charge_vfx(global_position, 80.0, WRATH_COLOR, 0.75, 34)
+	await get_tree().create_timer(0.75, false).timeout
 
 	current_sub_state = BossSubState.ATTACK
 	for i in range(amount):
@@ -554,9 +572,9 @@ func _start_wrath_bomb_volley(amount: int, fuse_time: float) -> void:
 		var bomb_position = global_position + Vector2(randf_range(-18.0, 18.0), randf_range(-18.0, 18.0))
 		_spawn_line_telegraph(bomb_position, target, WRATH_COLOR, 0.18, 2.0)
 		_create_wrath_bomb(bomb_position, target, fuse_time)
-		await get_tree().create_timer(0.22 if phase == 1 else 0.14, false).timeout
+		await get_tree().create_timer(1.75 if phase == 1 else 1.35, false).timeout
 
-	_finish_action(1.35 if phase == 1 else 0.85)
+	_finish_action(1.25 if phase == 1 else 0.85)
 
 func _create_wrath_bomb(from_position: Vector2, target_position: Vector2, fuse_time: float) -> void:
 	var bomb = Area2D.new()
@@ -634,18 +652,18 @@ func _start_lust_wall_pattern() -> void:
 	is_performing_action = true
 	current_sub_state = BossSubState.TELEGRAPH
 	var wall_count = 3 if phase == 1 else 5
-	var wall_lifetime = 7.5 if phase == 1 else 9.0
+	var wall_lifetime = 5.5 if phase == 1 else 8.0
 	for i in range(wall_count):
 		var horizontal = (i % 2 == 0)
 		var size = Vector2(LUST_WALL_LENGTH, LUST_WALL_THICKNESS) if horizontal else Vector2(LUST_WALL_THICKNESS, LUST_WALL_LENGTH)
 		var position = _get_lust_wall_position(i, wall_count)
 		var breakable = randf() < (0.52 if phase == 1 else 0.42)
 		_spawn_rect_telegraph(position, size, 0.0, _with_alpha(LUST_COLOR, 0.24), 0.65)
-		await get_tree().create_timer(0.16, false).timeout
+		await get_tree().create_timer(0.25, false).timeout
 		_create_lust_wall(position, size, breakable, wall_lifetime)
 
 	await get_tree().create_timer(0.55, false).timeout
-	_finish_action(2.2 if phase == 1 else 1.35)
+	_finish_action(2.0 if phase == 1 else 1.35)
 
 func _get_lust_wall_position(index: int, wall_count: int) -> Vector2:
 	var center = _get_arena_center()
@@ -726,10 +744,10 @@ func _start_lust_invulnerability() -> void:
 	is_invulnerable = true
 	_spawn_attached_aura(92.0, _with_alpha(LUST_COLOR, 0.34), 1.8)
 	_spawn_burst_particles(global_position, _with_alpha(LUST_COLOR, 0.7), 28, 0.32, 125.0)
-	await get_tree().create_timer(1.8 if phase == 1 else 1.35, false).timeout
+	await get_tree().create_timer(1.75 if phase == 1 else 1.35, false).timeout
 	is_invulnerable = false
 	lust_invulnerability_active = false
-	lust_invulnerability_cooldown = 6.5 if phase == 1 else 4.2
+	lust_invulnerability_cooldown = 6.5 if phase == 1 else 4.25
 
 func _start_greed_treasure_drop(amount: int) -> void:
 	is_performing_action = true
@@ -737,7 +755,7 @@ func _start_greed_treasure_drop(amount: int) -> void:
 	for i in range(amount):
 		var pos = _get_random_arena_position_near_player(80.0, 300.0)
 		_spawn_circle_telegraph(pos, GREED_TREASURE_RADIUS + 14.0, _with_alpha(GREED_COLOR, 0.24), 0.45)
-		await get_tree().create_timer(0.1, false).timeout
+		await get_tree().create_timer(1.1, false).timeout
 		_create_greed_treasure(pos)
 	_finish_action(1.35 if phase == 1 else 0.9)
 
@@ -747,7 +765,7 @@ func _create_greed_treasure(treasure_position: Vector2) -> void:
 	treasure.global_position = treasure_position
 	treasure.collision_layer = 0
 	treasure.collision_mask = PLAYER_LAYER_MASK
-	treasure.set_meta("lifetime", 7.0)
+	treasure.set_meta("lifetime", 6.6)
 
 	_add_circle_collision(treasure, GREED_TREASURE_RADIUS)
 	_add_circle_visual(treasure, GREED_TREASURE_RADIUS, _with_alpha(GREED_COLOR, 0.88), 14)
@@ -812,16 +830,16 @@ func _start_greed_coin_rain() -> void:
 	projectile_count = min(projectile_count, 26)
 	for i in range(projectile_count):
 		var spawn_position = _get_arena_center() + Vector2(randf_range(-360.0, 360.0), -340.0 - randf_range(0.0, 120.0))
-		_spawn_falling_warning(Vector2(spawn_position.x, _get_arena_rect().position.y + 8.0), GREED_COLOR, 0.18)
-		await get_tree().create_timer(0.06, false).timeout
+		_spawn_falling_warning(Vector2(spawn_position.x, _get_arena_rect().position.y + 8.0), GREED_COLOR, 0.25)
+		await get_tree().create_timer(0.25, false).timeout
 		_spawn_enemy_projectile(spawn_position, Vector2.DOWN, float(damage) * 0.72, _with_alpha(GREED_COLOR, 0.95), 520.0)
-		await get_tree().create_timer(0.06 if phase == 2 else 0.09, false).timeout
-	_finish_action(1.2 if phase == 1 else 0.75)
+		await get_tree().create_timer(0.3 if phase == 2 else 0.5, false).timeout
+	_finish_action(1.25 if phase == 1 else 0.75)
 
 func _start_greed_tax_mark() -> void:
 	is_performing_action = true
 	greed_tax_active = true
-	greed_tax_timer = 5.0 if phase == 1 else 4.0
+	greed_tax_timer = 5.0 if phase == 1 else 3.5
 	greed_tax_meter = 0.0
 	greed_previous_player_position = player.global_position
 	greed_previous_can_shoot = player.can_shoot
@@ -853,7 +871,7 @@ func _start_pride_fire_orbs(overlap: bool) -> void:
 		var projectile_count = 10 if phase == 1 else 16
 		_spawn_action_charge_vfx(global_position, 64.0, PRIDE_FIRE_COLOR, 0.16, 14)
 		_spawn_radial_projectiles(projectile_count, float(damage) * 0.55, _with_alpha(PRIDE_FIRE_COLOR, 0.92), 390.0, float(wave) * 0.18)
-		await get_tree().create_timer(0.45, false).timeout
+		await get_tree().create_timer(2.0, false).timeout
 	if overlap:
 		_spawn_pride_light_beams(true)
 	_finish_action(1.5 if phase == 1 else 1.0)
@@ -862,9 +880,9 @@ func _start_pride_light_cross(overlap: bool) -> void:
 	is_performing_action = true
 	_spawn_pride_light_beams(overlap)
 	if overlap:
-		await get_tree().create_timer(0.32, false).timeout
+		await get_tree().create_timer(0.55, false).timeout
 		_spawn_radial_projectiles(10, float(damage) * 0.45, _with_alpha(PRIDE_FIRE_COLOR, 0.9), 360.0)
-	_finish_action(1.4 if phase == 1 else 0.9)
+	_finish_action(1.5 if phase == 1 else 0.9)
 
 func _spawn_radial_projectiles(projectile_count: int, projectile_damage: float, color: Color, projectile_speed: float, angle_offset: float = 0.0) -> void:
 	for i in range(projectile_count):
@@ -880,13 +898,13 @@ func _spawn_pride_light_beams(include_diagonals: bool) -> void:
 		rotations.append(PI / 4.0)
 		rotations.append(-PI / 4.0)
 	for rotation_angle in rotations:
-		_spawn_rect_telegraph(center, beam_size, rotation_angle, _with_alpha(PRIDE_LIGHT_COLOR, 0.24), 0.65)
-	_create_pride_beams_after_delay(center, beam_size, rotations, 0.65)
+		_spawn_rect_telegraph(center, beam_size, rotation_angle, _with_alpha(PRIDE_LIGHT_COLOR, 0.24), 0.75)
+	_create_pride_beams_after_delay(center, beam_size, rotations, 0.75)
 
 func _create_pride_beams_after_delay(center: Vector2, beam_size: Vector2, rotations: Array, delay: float) -> void:
 	await get_tree().create_timer(delay, false).timeout
 	for rotation_angle in rotations:
-		_create_damaging_area(center, beam_size, rotation_angle, float(damage) * 0.8, _with_alpha(PRIDE_LIGHT_COLOR, 0.35), 0.4)
+		_create_damaging_area(center, beam_size, rotation_angle, float(damage) * 0.8, _with_alpha(PRIDE_LIGHT_COLOR, 0.35), 0.5)
 
 func _start_pride_judgement() -> void:
 	is_performing_action = true
@@ -899,10 +917,10 @@ func _start_pride_judgement() -> void:
 	var wave_count = 3 if phase == 1 else 5
 	for wave in range(wave_count):
 		_spawn_pride_judgement_wave(wave)
-		await get_tree().create_timer(0.68 if phase == 1 else 0.48, false).timeout
+		await get_tree().create_timer(2.5 if phase == 1 else 2.0, false).timeout
 
 	is_invulnerable = false
-	_finish_action(2.0 if phase == 1 else 1.3)
+	_finish_action(2.0 if phase == 1 else 1.35)
 
 func _spawn_pride_judgement_wave(wave_index: int) -> void:
 	var arena_rect = _get_arena_rect()
@@ -925,8 +943,8 @@ func _spawn_pride_judgement_wave(wave_index: int) -> void:
 			_spawn_pride_judgement_beam(pos, size)
 
 func _spawn_pride_judgement_beam(beam_position: Vector2, beam_size: Vector2) -> void:
-	_spawn_rect_telegraph(beam_position, beam_size, 0.0, _with_alpha(PRIDE_LIGHT_COLOR, 0.23), 0.42)
-	_create_damaging_area_after_delay(beam_position, beam_size, 0.0, float(damage) * 0.72, _with_alpha(PRIDE_LIGHT_COLOR, 0.38), 0.42, 0.3)
+	_spawn_rect_telegraph(beam_position, beam_size, 0.0, _with_alpha(PRIDE_LIGHT_COLOR, 0.23), 0.75)
+	_create_damaging_area_after_delay(beam_position, beam_size, 0.0, float(damage) * 0.72, _with_alpha(PRIDE_LIGHT_COLOR, 0.38), 0.75, 0.5)
 
 func _on_projectile_hit_special_area(area: Area2D, projectile: Area2D) -> void:
 	if not is_instance_valid(area):
@@ -940,7 +958,7 @@ func _on_projectile_hit_special_area(area: Area2D, projectile: Area2D) -> void:
 				push_direction = projectile.global_position.direction_to(area.global_position)
 			area.set_meta("velocity", push_direction * WRATH_BOMB_PUSH_SPEED)
 			area.set_meta("pushed", true)
-			area.set_meta("fuse", min(float(area.get_meta("fuse", 1.0)), 1.6 if phase == 1 else 0.95))
+			area.set_meta("fuse", min(float(area.get_meta("fuse", 1.0)), 1.75 if phase == 1 else 1.0))
 			_spawn_burst_particles(area.global_position, _with_alpha(WRATH_COLOR, 0.82), 8, 0.14, 70.0)
 			projectile.queue_free()
 		"lust_wall":
@@ -980,7 +998,7 @@ func _damage_envy_clone(amount: float, hit_position: Vector2) -> void:
 		_spawn_burst_particles(envy_clone.global_position, _with_alpha(ENVY_COLOR, 0.9), 26, 0.28, 140.0)
 		envy_clone.queue_free()
 		envy_clone = null
-		envy_boss_buff_remaining = 6.0 if phase == 1 else 8.0
+		envy_boss_buff_remaining = 6.0 if phase == 1 else 9.0
 
 func take_damage(amount: float) -> void:
 	if is_dead:
@@ -1043,6 +1061,7 @@ func die() -> void:
 	current_health = 0
 	_update_health_bar()
 	set_physics_process(false)
+	_set_boss_edge_indicator_visible(false)
 	_cleanup_boss_objects()
 
 	var should_grant_rewards = Global.pecado < 7
@@ -1066,6 +1085,107 @@ func _cleanup_boss_objects() -> void:
 		envy_clone = null
 	if player and player.has_method("_clear_dash_speed_modifier"):
 		player.call("_clear_dash_speed_modifier", "sloth_boss_zone")
+
+func _register_boss_summon(enemy: Node) -> void:
+	if enemy == null:
+		return
+	enemy.set_meta("boss_summon", true)
+	enemy.set_meta("skip_xp", true)
+	if enemy.get("xp_drop") != null:
+		enemy.set("xp_drop", 0)
+	boss_summons.append(enemy)
+
+func _setup_boss_edge_indicator() -> void:
+	if boss_indicator_layer != null:
+		return
+
+	boss_indicator_layer = CanvasLayer.new()
+	boss_indicator_layer.name = "BossEdgeIndicatorLayer"
+	boss_indicator_layer.layer = BOSS_INDICATOR_LAYER
+	add_child(boss_indicator_layer)
+
+	boss_indicator_node = Node2D.new()
+	boss_indicator_node.name = "BossEdgeIndicator"
+	boss_indicator_node.visible = false
+	boss_indicator_layer.add_child(boss_indicator_node)
+
+	var arrow_points = PackedVector2Array([
+		Vector2(16.0, 0.0),
+		Vector2(-10.0, -9.0),
+		Vector2(-5.0, 0.0),
+		Vector2(-10.0, 9.0)
+	])
+
+	var shadow = Polygon2D.new()
+	shadow.name = "Shadow"
+	shadow.position = Vector2(1.5, 1.5)
+	shadow.polygon = arrow_points
+	shadow.color = Color(0.0, 0.0, 0.0, 0.58)
+	boss_indicator_node.add_child(shadow)
+
+	var arrow = Polygon2D.new()
+	arrow.name = "Arrow"
+	arrow.polygon = arrow_points
+	arrow.color = _with_alpha(_get_boss_color(), 0.95)
+	boss_indicator_node.add_child(arrow)
+
+	var outline = Line2D.new()
+	outline.name = "Outline"
+	outline.width = 1.2
+	outline.default_color = Color(0.0, 0.0, 0.0, 0.82)
+	outline.points = PackedVector2Array([
+		Vector2(16.0, 0.0),
+		Vector2(-10.0, -9.0),
+		Vector2(-5.0, 0.0),
+		Vector2(-10.0, 9.0),
+		Vector2(16.0, 0.0)
+	])
+	boss_indicator_node.add_child(outline)
+
+func _update_boss_edge_indicator() -> void:
+	if boss_indicator_node == null:
+		return
+
+	var viewport = get_viewport()
+	if viewport == null or viewport.get_camera_2d() == null:
+		_set_boss_edge_indicator_visible(false)
+		return
+
+	var viewport_size = viewport.get_visible_rect().size
+	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		_set_boss_edge_indicator_visible(false)
+		return
+
+	var screen_position = viewport.get_canvas_transform() * global_position
+	var visible_rect = Rect2(
+		Vector2(BOSS_INDICATOR_PADDING, BOSS_INDICATOR_PADDING),
+		viewport_size - Vector2(BOSS_INDICATOR_PADDING * 2.0, BOSS_INDICATOR_PADDING * 2.0)
+	)
+	if visible_rect.has_point(screen_position):
+		_set_boss_edge_indicator_visible(false)
+		return
+
+	var screen_center = viewport_size * 0.5
+	var direction = screen_position - screen_center
+	if direction.length_squared() <= 0.01:
+		_set_boss_edge_indicator_visible(false)
+		return
+
+	direction = direction.normalized()
+	var half_extents = screen_center - Vector2(BOSS_INDICATOR_PADDING, BOSS_INDICATOR_PADDING)
+	var edge_distance = 1000000.0
+	if abs(direction.x) > 0.001:
+		edge_distance = min(edge_distance, half_extents.x / abs(direction.x))
+	if abs(direction.y) > 0.001:
+		edge_distance = min(edge_distance, half_extents.y / abs(direction.y))
+
+	boss_indicator_node.position = screen_center + direction * edge_distance
+	boss_indicator_node.rotation = direction.angle()
+	_set_boss_edge_indicator_visible(true)
+
+func _set_boss_edge_indicator_visible(is_visible: bool) -> void:
+	if boss_indicator_node != null:
+		boss_indicator_node.visible = is_visible
 
 func _finish_action(cooldown: float) -> void:
 	current_sub_state = BossSubState.RECOVERY

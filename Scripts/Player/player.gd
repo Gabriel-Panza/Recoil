@@ -782,7 +782,7 @@ func grant_bonus_level_up(context: String = "normal", boss_pecado: int = 0) -> v
 func activate_sloth_field() -> void:
 	var field_position = global_position
 	var field_radius = MAX_ABILITY_AREA_RADIUS
-	_spawn_field_vfx(field_position, field_radius, Color(0.68, 0.42, 1.0, 0.42), 5.0)
+	_spawn_field_vfx(field_position, field_radius, Color(0.25, 0.95, 1.0, 0.42), 5.0)
 
 	var slowed_enemies: Array = []
 	var elapsed = 0.0
@@ -1155,7 +1155,7 @@ func _ensure_sloth_slow_aura_vfx() -> void:
 	sloth_aura_vfx.z_index = 20
 	add_child(sloth_aura_vfx)
 
-	_add_ring_to_node(sloth_aura_vfx, SLOW_AURA_RADIUS-45, Color(0.58, 0.36, 1.0, 0.26), 2.0)
+	_add_ring_to_node(sloth_aura_vfx, SLOW_AURA_RADIUS-45, Color(0.25, 0.95, 1.0, 0.26), 2.0)
 
 	var particles = CPUParticles2D.new()
 	particles.amount = 64
@@ -1165,7 +1165,7 @@ func _ensure_sloth_slow_aura_vfx() -> void:
 	particles.gravity = Vector2.ZERO
 	particles.initial_velocity_min = 45.0
 	particles.initial_velocity_max = 120.0
-	particles.color = Color(0.68, 0.46, 1.0, 0.3)
+	particles.color = Color(0.25, 0.95, 1.0, 0.3)
 	particles.z_index = 20
 	sloth_aura_vfx.add_child(particles)
 	particles.emitting = true
