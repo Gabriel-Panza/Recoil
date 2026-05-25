@@ -26,11 +26,25 @@ script = ExtResource("1_2v82j")
 process_mode = 3
 visible = false
 self_modulate = Color(1, 1, 1, 0)
+z_index = 1
 layout_mode = 0
 offset_left = 5.0
 offset_top = 52.0
 offset_right = 656.19995
 offset_bottom = 450.4001
+
+[node name="ColorRect" type="ColorRect" parent="PauseMenu" unique_id=623131519]
+self_modulate = Color(0, 0, 0, 0.39215687)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -227.0
+offset_top = -116.0
+offset_right = 277.80005
+offset_bottom = 133.59991
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="NinePatchRect" type="NinePatchRect" parent="PauseMenu" unique_id=1777051219]
 layout_mode = 0
@@ -167,7 +181,7 @@ text = "Back"
 [node name="GameOver" type="Panel" parent="." unique_id=1800378235]
 process_mode = 3
 visible = false
-z_index = 2
+z_index = 1
 layout_mode = 0
 offset_left = -226.0
 offset_top = -62.0
@@ -241,7 +255,7 @@ vertical_alignment = 1
 [node name="GameWin" type="Panel" parent="." unique_id=1801650191]
 process_mode = 3
 visible = false
-z_index = 2
+z_index = 1
 layout_mode = 0
 offset_left = -226.0
 offset_top = -62.0

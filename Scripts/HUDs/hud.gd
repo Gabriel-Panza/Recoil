@@ -12,8 +12,9 @@ var level_up_popup
 var active_skill_e_label: Label
 var active_skill_r_label: Label
 var passive_status_label: Label
-var skill_status_background: ColorRect
+var skill_status_background: NinePatchRect
 const RARE_OPTION_IDS = ["Shield_Protection", "Recoil_Explosion", "Double_Dash", "Offensive_Dash"]
+const SKILL_STATUS_BACKGROUND_TEXTURE = preload("res://Sprites/Menu/panel.png")
 
 func _ready() -> void:
 	player = get_node_or_null(player_path)
@@ -53,18 +54,27 @@ func _setup_active_skill_hud_labels() -> void:
 		active_skill_r_label = _create_active_skill_hud_label("ActiveSkillHudR", Vector2(16.0, 104.0))
 
 func _setup_skill_status_background() -> void:
-	skill_status_background = get_node_or_null("SkillStatusBackground")
-	if skill_status_background != null:
-		return
+	var existing_background = get_node_or_null("SkillStatusBackground")
+	if existing_background is NinePatchRect:
+		skill_status_background = existing_background
+	else:
+		if existing_background != null:
+			remove_child(existing_background)
+			existing_background.queue_free()
+		skill_status_background = NinePatchRect.new()
+		add_child(skill_status_background)
 
-	skill_status_background = ColorRect.new()
 	skill_status_background.name = "SkillStatusBackground"
 	skill_status_background.position = Vector2(10.0, 80.0)
-	skill_status_background.size = Vector2(240.0, 72.0)
-	skill_status_background.color = Color(0.0, 0.0, 0.0, 0.45)
-	skill_status_background.z_index = 1
+	skill_status_background.size = Vector2(200.0, 72.0)
+	skill_status_background.texture = SKILL_STATUS_BACKGROUND_TEXTURE
+	skill_status_background.patch_margin_left = 10
+	skill_status_background.patch_margin_top = 10
+	skill_status_background.patch_margin_right = 10
+	skill_status_background.patch_margin_bottom = 10
+	skill_status_background.z_index = 0
 	skill_status_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(skill_status_background)
+	move_child(skill_status_background, 0)
 
 func _setup_passive_status_label() -> void:
 	passive_status_label = get_node_or_null("PassiveStatusHud")
@@ -73,9 +83,9 @@ func _setup_passive_status_label() -> void:
 
 	passive_status_label = Label.new()
 	passive_status_label.name = "PassiveStatusHud"
-	passive_status_label.position = Vector2(16.0, 126.0)
-	passive_status_label.size = Vector2(224.0, 72.0)
-	passive_status_label.z_index = 2
+	passive_status_label.position = Vector2(20.0, 130.0)
+	passive_status_label.size = Vector2(180.0, 72.0)
+	passive_status_label.z_index = 0
 	passive_status_label.mouse_filter = Control.MOUSE_FILTER_STOP
 	passive_status_label.add_theme_color_override("font_color", Color(1.0, 0.58, 0.16, 1.0))
 	passive_status_label.add_theme_constant_override("outline_size", 3)
@@ -87,9 +97,9 @@ func _setup_passive_status_label() -> void:
 func _create_active_skill_hud_label(label_name: String, label_position: Vector2) -> Label:
 	var label = Label.new()
 	label.name = label_name
-	label.position = label_position
-	label.size = Vector2(224.0, 18.0)
-	label.z_index = 2
+	label.position = label_position + Vector2(4.0, 4.0)
+	label.size = Vector2(180.0, 18.0)
+	label.z_index = 0
 	label.mouse_filter = Control.MOUSE_FILTER_STOP
 	label.add_theme_color_override("font_color", Color(1.0, 1.0, 0.35, 1.0))
 	label.add_theme_constant_override("outline_size", 3)
@@ -143,7 +153,7 @@ func _update_skill_status_background(line_count: int) -> void:
 
 	var height = max(72.0, 30.0 + float(line_count) * 18.0)
 	skill_status_background.size = Vector2(200.0, height)
-	passive_status_label.size = Vector2(196.0, max(44.0, height - 44.0))
+	passive_status_label.size = Vector2(180.0, max(44.0, height - 48.0))
 
 func _update_active_skill_hud_label(label: Label, slot: String) -> void:
 	if label == null:

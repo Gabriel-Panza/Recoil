@@ -8,6 +8,7 @@ const FADE_DURATION: float = 0.4
 const ENEMY_ARENA_PLAYER_POSITION: Vector2 = Vector2(770, 414)
 const SPAWN_WALL_PADDING: float = 8.0
 const SPAWN_PLAYER_MIN_DISTANCE: float = 100.0
+const CAMERA_LIMIT_MARGIN: int = 50
 
 var fade_layer: CanvasLayer
 var fade_rect: ColorRect
@@ -96,6 +97,7 @@ func _ready() -> void:
 	_setup_fade_overlay()
 	_update_enemy_arena_sprite()
 	set_waves_based_on_pecado()
+	_update_camera_limits()
 	start_next_wave()
 
 func finish_run() -> void:
@@ -137,6 +139,7 @@ func _transition_player_to(target_position: Vector2) -> void:
 	is_transitioning = true
 	await _fade_to(1.0)
 	$Player.global_position = target_position
+	_update_camera_limits()
 	await get_tree().process_frame
 	await _fade_to(0.0)
 	is_transitioning = false
@@ -153,6 +156,35 @@ func _update_enemy_arena_sprite() -> void:
 	var texture_index = clamp(Global.pecado - 1, 0, enemy_arena_textures.size() - 1)
 	$Arenas/ArenaEnemy.texture = enemy_arena_textures[texture_index]
 
+func _update_camera_limits() -> void:
+	var camera = get_viewport().get_camera_2d()
+	if camera == null:
+		camera = $Player.get_node_or_null("Camera2D")
+	if camera == null:
+		return
+
+	var arena_rect = _get_current_arena_bounds()
+	if arena_rect.size == Vector2.ZERO:
+		return
+
+	camera.limit_left = int(floor(arena_rect.position.x)) - (CAMERA_LIMIT_MARGIN*2)
+	camera.limit_top = int(floor(arena_rect.position.y)) - (CAMERA_LIMIT_MARGIN*2)
+	camera.limit_right = int(ceil(arena_rect.end.x)) + CAMERA_LIMIT_MARGIN
+	camera.limit_bottom = int(ceil(arena_rect.end.y)) + CAMERA_LIMIT_MARGIN
+	camera.reset_smoothing()
+
+func _get_current_arena_bounds() -> Rect2:
+	var collision_polygon = _get_current_arena_collision_polygon()
+	if collision_polygon == null or collision_polygon.polygon.is_empty():
+		return Rect2(current_arena.global_position, Vector2.ZERO)
+
+	var first_point = collision_polygon.to_global(collision_polygon.polygon[0])
+	var arena_rect = Rect2(first_point, Vector2.ZERO)
+	for point in collision_polygon.polygon:
+		arena_rect = arena_rect.expand(collision_polygon.to_global(point))
+
+	return arena_rect
+
 func set_waves_based_on_pecado():
 	waves = wave_sets.get(Global.pecado, wave_sets[1])
 
@@ -161,6 +193,7 @@ func start_next_wave():
 		if current_arena == arena_nodes[0]:
 			print("4 waves concluidas na arena principal! Indo para arena do pecado {0}.".format([Global.pecado]))
 			current_arena = arena_nodes[Global.pecado] if Global.pecado <= arena_nodes.size() - 1 else arena_nodes[1]
+			_update_camera_limits()
 			boss_phase = true
 			spawn_boss()
 		return
@@ -436,6 +469,7 @@ func _on_boss_died():
 	current_arena = arena_nodes[0]
 	set_waves_based_on_pecado()
 	_update_enemy_arena_sprite()
+	_update_camera_limits()
 	await _wait_for_level_up_selection()
 	await _transition_player_to(ENEMY_ARENA_PLAYER_POSITION)
 	start_next_wave()

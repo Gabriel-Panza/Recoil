@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://72d6vlngrfmv"]
 
 [ext_resource type="Script" uid="uid://dvd6e6gm54ydp" path="res://Scripts/HUDs/LevelUpPopup.gd" id="1_n24re"]
+[ext_resource type="Texture2D" uid="uid://cyj0hvnu4w84x" path="res://Sprites/Menu/panel.png" id="2_3a4il"]
 
 [node name="LevelUpPopup" type="Panel" unique_id=775706461]
 process_mode = 3
@@ -17,14 +18,20 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_n24re")
 
-[node name="ColorRect" type="ColorRect" parent="." unique_id=301886337]
-custom_minimum_size = Vector2(720, 300)
-layout_mode = 0
+[node name="NinePatchRect" type="NinePatchRect" parent="." unique_id=650878325]
+layout_mode = 1
+anchors_preset = -1
 offset_left = -43.0
 offset_top = -60.0
 offset_right = 699.0
 offset_bottom = 240.0
-color = Color(0.19607843, 0.19607843, 0.19607843, 1)
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("2_3a4il")
+patch_margin_left = 10
+patch_margin_top = 10
+patch_margin_right = 10
+patch_margin_bottom = 10
 
 [node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=298487115]
 layout_mode = 0

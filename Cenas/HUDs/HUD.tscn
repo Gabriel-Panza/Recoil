@@ -28,9 +28,9 @@ visible = false
 anchors_preset = -1
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 903.0
+offset_left = 923.0
 offset_top = 178.0
-offset_right = 1162.0
+offset_right = 1140.0
 offset_bottom = 468.0
 grow_horizontal = 2
 grow_vertical = 2
@@ -123,8 +123,18 @@ theme_override_font_sizes/font_size = 16
 text = "R: -"
 horizontal_alignment = 2
 
+[node name="ProgressBar" type="TextureProgressBar" parent="." unique_id=1518424678]
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 1143.0
+offset_bottom = 42.0
+tooltip_text = "Level progress. Each enemy defeated fills one step for the current wave."
+mouse_filter = 0
+nine_patch_stretch = true
+texture_under = ExtResource("3_irtw3")
+texture_progress = ExtResource("4_curni")
+
 [node name="Label" type="Label" parent="." unique_id=1256540352]
-z_index = 1
 offset_left = 522.0
 offset_top = 18.0
 offset_right = 633.0
@@ -136,17 +146,6 @@ theme_override_fonts/font = ExtResource("3_7w3ya")
 theme_override_font_sizes/font_size = 15
 text = "Level 1"
 horizontal_alignment = 1
-
-[node name="ProgressBar" type="TextureProgressBar" parent="." unique_id=1518424678]
-offset_left = 12.0
-offset_top = 12.0
-offset_right = 1143.0
-offset_bottom = 42.0
-tooltip_text = "Level progress. Each enemy defeated fills one step for the current wave."
-mouse_filter = 0
-nine_patch_stretch = true
-texture_under = ExtResource("3_irtw3")
-texture_progress = ExtResource("4_curni")
 
 [node name="ProgressBar2" type="TextureProgressBar" parent="." unique_id=2042334151]
 offset_left = 12.0
