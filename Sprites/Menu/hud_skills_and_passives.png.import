@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cpux1i36nghb0"
-path="res://.godot/imported/ranged_spritesheet.png-abd8bc33cd725e04ced3a1fd91c71dfc.ctex"
+uid="uid://yxf06tgg7uwr"
+path="res://.godot/imported/hud_skills_and_passives.png-c8fa34a2d4877a579c937347a3ff966c.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Sprites/ranged_spritesheet.png"
-dest_files=["res://.godot/imported/ranged_spritesheet.png-abd8bc33cd725e04ced3a1fd91c71dfc.ctex"]
+source_file="res://Sprites/Menu/hud_skills_and_passives.png"
+dest_files=["res://.godot/imported/hud_skills_and_passives.png-c8fa34a2d4877a579c937347a3ff966c.ctex"]
 
 [params]
 

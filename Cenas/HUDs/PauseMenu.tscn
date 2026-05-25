@@ -1,7 +1,13 @@
 [gd_scene format=3 uid="uid://cxkyc58pgy43i"]
 
 [ext_resource type="Script" uid="uid://2eucq1m8b8ff" path="res://Scripts/HUDs/pauseMenu.gd" id="1_2v82j"]
-[ext_resource type="Texture2D" uid="uid://cyj0hvnu4w84x" path="res://Sprites/Menu/panel.png" id="2_1ms7m"]
+[ext_resource type="Texture2D" uid="uid://43pcsbfy3ud" path="res://Sprites/Menu/panel_pause_hud.png" id="2_1ms7m"]
+[ext_resource type="Texture2D" uid="uid://bfs2k4foa1cw1" path="res://Sprites/Menu/Resume_button_normal.png" id="3_2wh2a"]
+[ext_resource type="Texture2D" uid="uid://w4e12phxarht" path="res://Sprites/Menu/Resume_button_hover_and_pressed.png" id="4_0shwp"]
+[ext_resource type="Texture2D" uid="uid://m3ijv4m8qf10" path="res://Sprites/Menu/Options_button_normal.png" id="5_4fhyd"]
+[ext_resource type="Texture2D" uid="uid://btl8uyigkckg5" path="res://Sprites/Menu/Options_button_hover_and_pressed.png" id="6_1hxj4"]
+[ext_resource type="Texture2D" uid="uid://ddfcchso01t4b" path="res://Sprites/Menu/MainMenu_button_normal.png" id="7_ia7cw"]
+[ext_resource type="Texture2D" uid="uid://dyj4iam26vuw6" path="res://Sprites/Menu/MainMenu_button_hover_and_pressed.png" id="8_5o6tc"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_428n7"]
 bg_color = Color(0.2, 0.239216, 0.270588, 1)
@@ -46,67 +52,65 @@ offset_bottom = 133.59991
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="NinePatchRect" type="NinePatchRect" parent="PauseMenu" unique_id=1777051219]
+[node name="NinePatchRect" type="TextureRect" parent="PauseMenu" unique_id=1777051219]
 layout_mode = 0
-offset_left = 100.0
-offset_top = 10.0
-offset_right = 551.0
-offset_bottom = 388.4
+offset_left = 132.0
+offset_top = 42.0
+offset_right = 519.0
+offset_bottom = 357.0
 texture = ExtResource("2_1ms7m")
-region_rect = Rect2(1, 1, 94, 94)
-patch_margin_left = 10
-patch_margin_top = 10
-patch_margin_right = 10
-patch_margin_bottom = 10
-axis_stretch_horizontal = 2
-axis_stretch_vertical = 2
+expand_mode = 1
 
 [node name="HBoxContainer" type="HBoxContainer" parent="PauseMenu" unique_id=147565823]
 layout_mode = 0
-offset_left = 19.558302
-offset_top = 18.000011
-offset_right = 371.55792
-offset_bottom = 258.9998
+offset_left = 24.000013
+offset_top = 46.00001
+offset_right = 375.99963
+offset_bottom = 286.9998
 scale = Vector2(1.729994, 1.516022)
 theme_override_constants/separation = 90
 alignment = 1
 
 [node name="VBoxContainer" type="VBoxContainer" parent="PauseMenu/HBoxContainer" unique_id=176837905]
 layout_mode = 2
+theme_override_constants/separation = 6
 alignment = 1
 
-[node name="ResumeButton" type="Button" parent="PauseMenu/HBoxContainer/VBoxContainer" unique_id=1803400147]
+[node name="ResumeButton" type="TextureButton" parent="PauseMenu/HBoxContainer/VBoxContainer" unique_id=1803400147]
 process_mode = 3
+custom_minimum_size = Vector2(146, 40)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.88235295, 0, 0, 1)
-theme_override_colors/font_pressed_color = Color(0.6666667, 0, 0, 1)
-theme_override_colors/font_hover_color = Color(0.88235295, 0, 0, 1)
-theme_override_colors/font_hover_pressed_color = Color(0.88235295, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 24
-text = "Resume"
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture_normal = ExtResource("3_2wh2a")
+texture_pressed = ExtResource("4_0shwp")
+texture_hover = ExtResource("4_0shwp")
+ignore_texture_size = true
+stretch_mode = 0
 
-[node name="OptionsButton" type="Button" parent="PauseMenu/HBoxContainer/VBoxContainer" unique_id=544576977]
+[node name="OptionsButton" type="TextureButton" parent="PauseMenu/HBoxContainer/VBoxContainer" unique_id=544576977]
 process_mode = 3
+custom_minimum_size = Vector2(146, 40)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.88235295, 0, 0, 1)
-theme_override_colors/font_pressed_color = Color(0.6666667, 0, 0, 1)
-theme_override_colors/font_hover_color = Color(0.88235295, 0, 0, 1)
-theme_override_colors/font_hover_pressed_color = Color(0.88235295, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 24
-text = "Options"
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture_normal = ExtResource("5_4fhyd")
+texture_pressed = ExtResource("6_1hxj4")
+texture_hover = ExtResource("6_1hxj4")
+ignore_texture_size = true
+stretch_mode = 0
 
-[node name="MenuButton" type="Button" parent="PauseMenu/HBoxContainer/VBoxContainer" unique_id=1623046768]
+[node name="MenuButton" type="TextureButton" parent="PauseMenu/HBoxContainer/VBoxContainer" unique_id=1623046768]
 process_mode = 3
+custom_minimum_size = Vector2(146, 40)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.88235295, 0, 0, 1)
-theme_override_colors/font_pressed_color = Color(0.6666667, 0, 0, 1)
-theme_override_colors/font_hover_color = Color(0.88235295, 0, 0, 1)
-theme_override_colors/font_hover_pressed_color = Color(0.88235295, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 24
-text = "Menu"
+size_flags_horizontal = 4
+size_flags_vertical = 4
+texture_normal = ExtResource("7_ia7cw")
+texture_pressed = ExtResource("8_5o6tc")
+texture_hover = ExtResource("8_5o6tc")
+ignore_texture_size = true
+stretch_mode = 0
 
 [node name="OptionsMenu" type="Panel" parent="PauseMenu" unique_id=863603521]
 process_mode = 3

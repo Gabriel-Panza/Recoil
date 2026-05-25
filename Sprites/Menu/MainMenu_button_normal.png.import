@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cpux1i36nghb0"
-path="res://.godot/imported/ranged_spritesheet.png-abd8bc33cd725e04ced3a1fd91c71dfc.ctex"
+uid="uid://ddfcchso01t4b"
+path="res://.godot/imported/MainMenu_button_normal.png-1493ff5ecfc888d5ac6575e6c39b813f.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Sprites/ranged_spritesheet.png"
-dest_files=["res://.godot/imported/ranged_spritesheet.png-abd8bc33cd725e04ced3a1fd91c71dfc.ctex"]
+source_file="res://Sprites/Menu/MainMenu_button_normal.png"
+dest_files=["res://.godot/imported/MainMenu_button_normal.png-1493ff5ecfc888d5ac6575e6c39b813f.ctex"]
 
 [params]
 

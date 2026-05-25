@@ -25,13 +25,14 @@ script = ExtResource("1_esuf2")
 
 [node name="HBoxContainer" type="HBoxContainer" parent="." unique_id=1070815487]
 visible = false
+z_index = 2
 anchors_preset = -1
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 923.0
-offset_top = 178.0
+offset_top = 193.0
 offset_right = 1140.0
-offset_bottom = 468.0
+offset_bottom = 441.0
 grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 3

@@ -12,9 +12,18 @@ var level_up_popup
 var active_skill_e_label: Label
 var active_skill_r_label: Label
 var passive_status_label: Label
-var skill_status_background: NinePatchRect
+var skill_status_top_background: TextureRect
+var skill_status_list_background: TextureRect
 const RARE_OPTION_IDS = ["Shield_Protection", "Recoil_Explosion", "Double_Dash", "Offensive_Dash"]
-const SKILL_STATUS_BACKGROUND_TEXTURE = preload("res://Sprites/Menu/panel.png")
+const SKILL_STATUS_TOP_TEXTURE = preload("res://Sprites/Menu/hud_skills_and_passives.png")
+const SKILL_STATUS_LIST_TEXTURE = preload("res://Sprites/Menu/hud_list_of_passives.png")
+const SKILL_STATUS_POSITION = Vector2(10.0, 80.0)
+const SKILL_STATUS_SCALE = 3.0
+const SKILL_STATUS_TOP_SIZE = Vector2(69.0, 35.0) * SKILL_STATUS_SCALE
+const SKILL_STATUS_LIST_WIDTH = 69.0 * SKILL_STATUS_SCALE
+const SKILL_STATUS_LIST_MIN_HEIGHT = 10.0 * SKILL_STATUS_SCALE
+const SKILL_STATUS_LIST_VERTICAL_PADDING = 18.0
+const SKILL_STATUS_PASSIVE_LINE_HEIGHT = 24.0
 
 func _ready() -> void:
 	player = get_node_or_null(player_path)
@@ -47,34 +56,48 @@ func _process(_delta: float) -> void:
 func _setup_active_skill_hud_labels() -> void:
 	active_skill_e_label = get_node_or_null("ActiveSkillHudE")
 	if active_skill_e_label == null:
-		active_skill_e_label = _create_active_skill_hud_label("ActiveSkillHudE", Vector2(16.0, 86.0))
+		active_skill_e_label = _create_active_skill_hud_label("ActiveSkillHudE", SKILL_STATUS_POSITION + Vector2(46.0, 11.0))
 
 	active_skill_r_label = get_node_or_null("ActiveSkillHudR")
 	if active_skill_r_label == null:
-		active_skill_r_label = _create_active_skill_hud_label("ActiveSkillHudR", Vector2(16.0, 104.0))
+		active_skill_r_label = _create_active_skill_hud_label("ActiveSkillHudR", SKILL_STATUS_POSITION + Vector2(46.0, 44.0))
 
 func _setup_skill_status_background() -> void:
 	var existing_background = get_node_or_null("SkillStatusBackground")
-	if existing_background is NinePatchRect:
-		skill_status_background = existing_background
-	else:
-		if existing_background != null:
-			remove_child(existing_background)
-			existing_background.queue_free()
-		skill_status_background = NinePatchRect.new()
-		add_child(skill_status_background)
+	if existing_background != null:
+		remove_child(existing_background)
+		existing_background.queue_free()
 
-	skill_status_background.name = "SkillStatusBackground"
-	skill_status_background.position = Vector2(10.0, 80.0)
-	skill_status_background.size = Vector2(200.0, 72.0)
-	skill_status_background.texture = SKILL_STATUS_BACKGROUND_TEXTURE
-	skill_status_background.patch_margin_left = 10
-	skill_status_background.patch_margin_top = 10
-	skill_status_background.patch_margin_right = 10
-	skill_status_background.patch_margin_bottom = 10
-	skill_status_background.z_index = 0
-	skill_status_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	move_child(skill_status_background, 0)
+	skill_status_top_background = _get_or_create_skill_status_texture_rect("SkillStatusTopBackground")
+	skill_status_top_background.position = SKILL_STATUS_POSITION
+	skill_status_top_background.size = SKILL_STATUS_TOP_SIZE
+	skill_status_top_background.texture = SKILL_STATUS_TOP_TEXTURE
+	skill_status_top_background.stretch_mode = TextureRect.STRETCH_SCALE
+
+	skill_status_list_background = _get_or_create_skill_status_texture_rect("SkillStatusListBackground")
+	skill_status_list_background.position = SKILL_STATUS_POSITION + Vector2(0.0, SKILL_STATUS_TOP_SIZE.y)
+	skill_status_list_background.size = Vector2(SKILL_STATUS_LIST_WIDTH, SKILL_STATUS_LIST_MIN_HEIGHT)
+	skill_status_list_background.texture = SKILL_STATUS_LIST_TEXTURE
+	skill_status_list_background.stretch_mode = TextureRect.STRETCH_SCALE
+
+	move_child(skill_status_top_background, 0)
+	move_child(skill_status_list_background, 1)
+
+func _get_or_create_skill_status_texture_rect(node_name: String) -> TextureRect:
+	var existing_node = get_node_or_null(node_name)
+	if existing_node is TextureRect:
+		return existing_node as TextureRect
+
+	if existing_node != null:
+		remove_child(existing_node)
+		existing_node.queue_free()
+
+	var texture_rect = TextureRect.new()
+	texture_rect.name = node_name
+	texture_rect.z_index = 0
+	texture_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(texture_rect)
+	return texture_rect
 
 func _setup_passive_status_label() -> void:
 	passive_status_label = get_node_or_null("PassiveStatusHud")
@@ -83,28 +106,28 @@ func _setup_passive_status_label() -> void:
 
 	passive_status_label = Label.new()
 	passive_status_label.name = "PassiveStatusHud"
-	passive_status_label.position = Vector2(20.0, 130.0)
-	passive_status_label.size = Vector2(180.0, 72.0)
+	passive_status_label.position = SKILL_STATUS_POSITION + Vector2(10.0, SKILL_STATUS_TOP_SIZE.y + 5.0)
+	passive_status_label.size = Vector2(SKILL_STATUS_LIST_WIDTH - 20.0, SKILL_STATUS_LIST_MIN_HEIGHT)
 	passive_status_label.z_index = 0
 	passive_status_label.mouse_filter = Control.MOUSE_FILTER_STOP
 	passive_status_label.add_theme_color_override("font_color", Color(1.0, 0.58, 0.16, 1.0))
 	passive_status_label.add_theme_constant_override("outline_size", 3)
 	passive_status_label.add_theme_font_size_override("font_size", 13)
-	passive_status_label.text = "Passives:\n- None"
+	passive_status_label.text = "- None"
 	passive_status_label.tooltip_text = "No passive skills equipped"
 	add_child(passive_status_label)
 
 func _create_active_skill_hud_label(label_name: String, label_position: Vector2) -> Label:
 	var label = Label.new()
 	label.name = label_name
-	label.position = label_position + Vector2(4.0, 4.0)
-	label.size = Vector2(180.0, 18.0)
+	label.position = label_position
+	label.size = Vector2(SKILL_STATUS_LIST_WIDTH - 56.0, 20.0)
 	label.z_index = 0
 	label.mouse_filter = Control.MOUSE_FILTER_STOP
 	label.add_theme_color_override("font_color", Color(1.0, 1.0, 0.35, 1.0))
 	label.add_theme_constant_override("outline_size", 3)
 	label.add_theme_font_size_override("font_size", 14)
-	label.text = "%s - None" % ("E" if label_name.ends_with("E") else "R")
+	label.text = "None"
 	add_child(label)
 	return label
 
@@ -128,9 +151,9 @@ func _update_passive_status_label() -> void:
 		summaries = player.get_equipped_passive_summaries()
 
 	if summaries.is_empty():
-		passive_status_label.text = "Passives:\n- None"
+		passive_status_label.text = "- None"
 		passive_status_label.tooltip_text = "No passive skills equipped"
-		_update_skill_status_background(4)
+		_update_skill_status_background(1)
 		return
 
 	var passive_lines := PackedStringArray()
@@ -143,17 +166,18 @@ func _update_passive_status_label() -> void:
 			str(summary.get("description", ""))
 		])
 
-	passive_status_label.text = "Passives:\n%s" % "\n".join(passive_lines)
+	passive_status_label.text = "\n".join(passive_lines)
 	passive_status_label.tooltip_text = "\n".join(tooltip_lines)
-	_update_skill_status_background(3 + passive_lines.size())
+	_update_skill_status_background(passive_lines.size())
 
 func _update_skill_status_background(line_count: int) -> void:
-	if skill_status_background == null or passive_status_label == null:
+	if skill_status_list_background == null or passive_status_label == null:
 		return
 
-	var height = max(72.0, 30.0 + float(line_count) * 18.0)
-	skill_status_background.size = Vector2(200.0, height)
-	passive_status_label.size = Vector2(180.0, max(44.0, height - 48.0))
+	var safe_line_count = max(line_count, 1)
+	var list_height = max(SKILL_STATUS_LIST_MIN_HEIGHT, SKILL_STATUS_LIST_VERTICAL_PADDING + float(safe_line_count) * SKILL_STATUS_PASSIVE_LINE_HEIGHT)
+	skill_status_list_background.size = Vector2(SKILL_STATUS_LIST_WIDTH, list_height)
+	passive_status_label.size = Vector2(SKILL_STATUS_LIST_WIDTH - 20.0, max(20.0, list_height - 10.0))
 
 func _update_active_skill_hud_label(label: Label, slot: String) -> void:
 	if label == null:
@@ -162,16 +186,16 @@ func _update_active_skill_hud_label(label: Label, slot: String) -> void:
 	var slots = player.get_active_ability_slots() if player.has_method("get_active_ability_slots") else {}
 	var ability_id = str(slots.get(slot, ""))
 	if ability_id == "":
-		label.text = "%s - None" % slot
+		label.text = "None"
 		label.tooltip_text = "No active skill equipped"
 		return
 
 	var ability_name = player.get_active_ability_name(ability_id) if player.has_method("get_active_ability_name") else ability_id
 	var cooldown = player.get_active_slot_cooldown(slot) if player.has_method("get_active_slot_cooldown") else 0.0
 	if cooldown > 0.0:
-		label.text = "%s - %s (%.1fs)" % [slot, ability_name, cooldown]
+		label.text = "%s (%.1fs)" % [ability_name, cooldown]
 	else:
-		label.text = "%s - %s" % [slot, ability_name]
+		label.text = ability_name
 
 	label.tooltip_text = player.get_active_ability_description(ability_id) if player.has_method("get_active_ability_description") else ability_name
 
