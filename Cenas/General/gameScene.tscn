@@ -18,7 +18,6 @@ texture = ExtResource("2_devmc")
 [node name="ArenaEnemy" type="Sprite2D" parent="Arenas" unique_id=1853213105]
 position = Vector2(640, 320)
 scale = Vector2(10, 5)
-texture = ExtResource("2_devmc")
 
 [node name="StaticBody2D" type="StaticBody2D" parent="Arenas/ArenaEnemy" unique_id=1749266307]
 collision_mask = 0
@@ -30,7 +29,6 @@ polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63
 [node name="Pecado1" type="Sprite2D" parent="Arenas" unique_id=90380552]
 position = Vector2(2133, -1030)
 scale = Vector2(10, 5)
-texture = ExtResource("2_devmc")
 
 [node name="StaticBody2D" type="StaticBody2D" parent="Arenas/Pecado1" unique_id=1155165009]
 collision_mask = 0
@@ -44,7 +42,6 @@ polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63
 [node name="Pecado2" type="Sprite2D" parent="Arenas" unique_id=1381154649]
 position = Vector2(4415, -1030)
 scale = Vector2(10, 5)
-texture = ExtResource("2_devmc")
 
 [node name="StaticBody2D" type="StaticBody2D" parent="Arenas/Pecado2" unique_id=910169492]
 collision_mask = 0
@@ -58,7 +55,6 @@ polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63
 [node name="Pecado3" type="Sprite2D" parent="Arenas" unique_id=1664075302]
 position = Vector2(6678, -1030)
 scale = Vector2(10, 5)
-texture = ExtResource("2_devmc")
 
 [node name="StaticBody2D" type="StaticBody2D" parent="Arenas/Pecado3" unique_id=1716634973]
 collision_mask = 0
@@ -72,7 +68,6 @@ polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63
 [node name="Pecado4" type="Sprite2D" parent="Arenas" unique_id=1789608018]
 position = Vector2(2133, 1634)
 scale = Vector2(10, 5)
-texture = ExtResource("2_devmc")
 
 [node name="StaticBody2D" type="StaticBody2D" parent="Arenas/Pecado4" unique_id=1885269317]
 collision_mask = 0
@@ -86,7 +81,6 @@ polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63
 [node name="Pecado5" type="Sprite2D" parent="Arenas" unique_id=643689195]
 position = Vector2(4415, 1634)
 scale = Vector2(10, 5)
-texture = ExtResource("2_devmc")
 
 [node name="StaticBody2D" type="StaticBody2D" parent="Arenas/Pecado5" unique_id=800296856]
 collision_mask = 0
@@ -100,7 +94,6 @@ polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63
 [node name="Pecado6" type="Sprite2D" parent="Arenas" unique_id=11392063]
 position = Vector2(6678, 1634)
 scale = Vector2(10, 5)
-texture = ExtResource("2_devmc")
 
 [node name="StaticBody2D" type="StaticBody2D" parent="Arenas/Pecado6" unique_id=1957166289]
 collision_mask = 0
@@ -114,7 +107,6 @@ polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63
 [node name="Pecado7" type="Sprite2D" parent="Arenas" unique_id=1273363467]
 position = Vector2(8490, 320)
 scale = Vector2(10, 5)
-texture = ExtResource("2_devmc")
 
 [node name="StaticBody2D" type="StaticBody2D" parent="Arenas/Pecado7" unique_id=439330336]
 collision_mask = 0

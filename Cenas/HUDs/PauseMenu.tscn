@@ -8,6 +8,7 @@
 [ext_resource type="Texture2D" uid="uid://btl8uyigkckg5" path="res://Sprites/Menu/Options_button_hover_and_pressed.png" id="6_1hxj4"]
 [ext_resource type="Texture2D" uid="uid://ddfcchso01t4b" path="res://Sprites/Menu/MainMenu_button_normal.png" id="7_ia7cw"]
 [ext_resource type="Texture2D" uid="uid://dyj4iam26vuw6" path="res://Sprites/Menu/MainMenu_button_hover_and_pressed.png" id="8_5o6tc"]
+[ext_resource type="Texture2D" uid="uid://0y0wpxjhectw" path="res://Sprites/Menu/panel_options_hud.png" id="9_81ba2"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_428n7"]
 bg_color = Color(0.2, 0.239216, 0.270588, 1)
@@ -123,31 +124,24 @@ offset_bottom = 55.0
 scale = Vector2(6.705764, 9.96)
 theme_override_styles/panel = SubResource("StyleBoxFlat_428n7")
 
+[node name="NinePatchRect" type="TextureRect" parent="PauseMenu/OptionsMenu" unique_id=1442000262]
+layout_mode = 0
+offset_left = -8.947527
+offset_top = 2.309238
+offset_right = 49.052475
+offset_bottom = 34.30924
+texture = ExtResource("9_81ba2")
+expand_mode = 1
+
 [node name="VBoxContainer" type="VBoxContainer" parent="PauseMenu/OptionsMenu" unique_id=1473757581]
 layout_mode = 0
-offset_left = 4.86108
-offset_top = -0.6024091
-offset_right = 86.8611
-offset_bottom = 156.39778
+offset_left = 4.9211345
+offset_top = 2.710844
+offset_right = 86.92115
+offset_bottom = 159.71103
 scale = Vector2(0.373394, 0.23979)
 theme_override_constants/separation = 7
 alignment = 1
-
-[node name="Label" type="Label" parent="PauseMenu/OptionsMenu/VBoxContainer" unique_id=1513330921]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.88235295, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 16
-text = "Options"
-horizontal_alignment = 1
-
-[node name="Label2" type="Label" parent="PauseMenu/OptionsMenu/VBoxContainer" unique_id=934112610]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.88235295, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 10
-text = "Music Volume"
-horizontal_alignment = 1
 
 [node name="HSlider" type="HSlider" parent="PauseMenu/OptionsMenu/VBoxContainer" unique_id=455302353]
 process_mode = 3
@@ -155,14 +149,6 @@ layout_mode = 2
 min_value = -80.0
 max_value = 24.0
 value = -25.0
-
-[node name="Label3" type="Label" parent="PauseMenu/OptionsMenu/VBoxContainer" unique_id=1481919812]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.88235295, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 10
-text = "SFX Volume"
-horizontal_alignment = 1
 
 [node name="HSlider2" type="HSlider" parent="PauseMenu/OptionsMenu/VBoxContainer" unique_id=964801628]
 process_mode = 3

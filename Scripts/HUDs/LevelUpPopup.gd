@@ -24,16 +24,16 @@ var cursed_passive_options = [
 var rare_options = [
 	{ "id": "Shield_Protection", "text": "Gain a one-hit shield", "description": "Grants a shield that blocks the next damage instance. Only one rare passive can be active at a time.", "rarity": "passive_rare" },
 	{ "id": "Recoil_Explosion", "text": "Your recoil creates a small shockwave", "description": "Every shot creates a 180px shockwave that deals 35% of your attack damage. Only one rare passive can be active at a time.", "rarity": "passive_rare" },
-	{ "id": "Double_Dash", "text": "You have two charges of dash", "description": "Gives you an extra dash charge before the dash cooldown starts. Only one rare passive can be active at a time.", "rarity": "passive_rare" },
+	{ "id": "Double_Dash", "text": "You have two charges of dash", "description": "Gives you two dash charges. Each spent charge recharges one at a time. Only one rare passive can be active at a time.", "rarity": "passive_rare" },
 	{ "id": "Offensive_Dash", "text": "Offensive Dash", "description": "Dashing blocks damage and releases a 180px shockwave at the end of the dash, dealing 75% of your attack damage. Only one rare passive can be active at a time.", "rarity": "passive_rare" }
 ]
 
 var boss_options = [
-	{ "id": "sloth_slow_aura", "name": "Slow Aura", "text": "Slow Aura", "description": "Enemies within 180px move at 75% speed.", "rarity": "passive_sin" },
-	{ "id": "sloth_field", "name": "Sloth Field", "text": "Sloth Field", "description": "Create a 180px field for 5 seconds. Enemies inside drop to 35% speed, but your dash speed drops to 75% during the field.", "rarity": "active_sin" },
+	{ "id": "sloth_slow_aura", "name": "Slow Aura", "text": "Slow Aura", "description": "Enemies within 180px move at 70% speed.", "rarity": "passive_sin" },
+	{ "id": "sloth_field", "name": "Sloth Field", "text": "Sloth Field", "description": "Create a 180px field near you for 5 seconds. Enemies inside drop to 35% speed, but your dash speed drops to 75% during the field.", "rarity": "active_sin" },
 	{ "id": "gluttony_heal_kill", "name": "Blood Feast", "text": "Blood Feast", "description": "Killing an enemy releases green motes that heal 1% max health when they return.", "rarity": "passive_sin" },
 	{ "id": "gluttony_devour", "name": "Devour", "text": "Devour", "description": "Consume up to two enemies within 180px. Green motes fly back and heal up to 12.5% max health when they arrive, but your dash speed is halved for 5 seconds.", "rarity": "active_sin" },
-	{ "id": "envy_mirror_shot", "name": "Mirror Shot", "text": "Mirror Shot", "description": "Gain a 25% chance to fire a second bullet mirrored across the shot's secondary axis for 75% damage.", "rarity": "passive_sin" },
+	{ "id": "envy_mirror_shot", "name": "Mirror Shot", "text": "Mirror Shot", "description": "Every shot fires a mirrored bullet for 50% damage.", "rarity": "passive_sin" },
 	{ "id": "envy_mirror_clone", "name": "Mirror Clone", "text": "Mirror Clone", "description": "Summon a mirror clone that fires random risky shots with you for a short time. Clone bullets can hit anything, including you.", "rarity": "active_sin" },
 	{ "id": "wrath_overheat", "name": "Overheat", "text": "Overheat", "description": "Every 4th shot deals double damage.", "rarity": "passive_sin" },
 	{ "id": "wrath_burst", "name": "Wrath Burst", "text": "Wrath Burst", "description": "Fire 16 radial bullets for 110% attack damage each, then take 20 damage.", "rarity": "active_sin" },

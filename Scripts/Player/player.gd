@@ -28,6 +28,7 @@ const SHOCKWAVE_RADIUS: float = MAX_ABILITY_AREA_RADIUS
 const SHOCKWAVE_DAMAGE_MULTIPLIER: float = 0.35
 const SHOCKWAVE_DASH_DAMAGE_MULTIPLIER: float = 0.75
 const WRATH_OVERHEAT_SHOT_INTERVAL: int = 4
+const MIRROR_SHOT_DAMAGE_MULTIPLIER: float = 0.5
 
 # --- TIRO ---
 @export var pistol_bullet_scene: PackedScene
@@ -84,7 +85,7 @@ const PASSIVE_STATUS_DATA = {
 	},
 	"Double_Dash": {
 		"name": "Double Dash",
-		"description": "Gain one extra dash charge before the dash cooldown starts."
+		"description": "Gain two dash charges. Each spent charge recharges one at a time."
 	},
 	"Offensive_Dash": {
 		"name": "Offensive Dash",
@@ -100,7 +101,7 @@ const PASSIVE_STATUS_DATA = {
 	},
 	"envy_mirror_shot": {
 		"name": "Mirror Shot",
-		"description": "Shots have a 25% chance to fire a mirrored bullet for 75% damage."
+		"description": "Every shot fires a mirrored bullet for 50% damage."
 	},
 	"wrath_overheat": {
 		"name": "Overheat",
@@ -155,8 +156,8 @@ var shield_cooldown_remaining: float = 0.0
 var shield_vfx: Node2D
 var recoil_explosion_enabled: bool = false
 var offensive_dash_enabled: bool = false
-var double_dash_charges: int = 0
 var max_dash_charges: int = 1
+var double_dash_charges: int = 1
 var sloth_slow_aura_enabled: bool = false
 var gluttony_heal_kill_enabled: bool = false
 var envy_mirror_shot_enabled: bool = false
@@ -402,9 +403,8 @@ func _physics_process(delta: float) -> void:
 	
 	if pause_control.canMove:
 		# Dash na direção do mouse
-		if Input.is_action_just_pressed("dash") and (can_dash or double_dash_charges > 0) and not is_dashing:
-			var uses_extra_dash_charge = max_dash_charges > 1 and double_dash_charges > 0
-			perform_dash(look_direction, uses_extra_dash_charge)
+		if Input.is_action_just_pressed("dash") and _can_perform_dash():
+			perform_dash(look_direction)
 
 		# Atirar / Movimentação por Recuo
 		if Input.is_action_just_pressed("shoot") and can_shoot and not is_dashing:
@@ -448,8 +448,8 @@ func shoot(direction: Vector2) -> void:
 		var final_angle = base_angle + angle_offset
 		_spawn_projectile(global_position, final_angle, shot_damage)
 
-		if envy_mirror_shot_enabled and randf() < 0.25:
-			_spawn_projectile(global_position, _get_mirrored_shot_angle(final_angle), shot_damage * 0.75, false, Color(0.25, 0.95, 1.0, 0.9))
+		if envy_mirror_shot_enabled:
+			_spawn_mirror_shot(global_position, final_angle, shot_damage)
 
 		if envy_clone_active:
 			var clone_position = global_position + Vector2(48, 0)
@@ -509,6 +509,9 @@ func _get_mirrored_shot_angle(source_angle: float) -> float:
 
 	return source_direction.normalized().angle()
 
+func _spawn_mirror_shot(spawn_position: Vector2, source_angle: float, shot_damage: float) -> void:
+	_spawn_projectile(spawn_position, _get_mirrored_shot_angle(source_angle), shot_damage * MIRROR_SHOT_DAMAGE_MULTIPLIER, false, Color(0.25, 0.95, 1.0, 0.9))
+
 func _get_clone_random_shot_angle(clone_position: Vector2) -> float:
 	var direction_to_player = clone_position.direction_to(global_position)
 	var angle_to_player = direction_to_player.angle()
@@ -538,10 +541,15 @@ func _spawn_projectile(spawn_position: Vector2, angle: float, projectile_damage:
 	get_tree().root.add_child(bullet)
 	return bullet
 
-func perform_dash(direction: Vector2, uses_double_dash_charge: bool = false) -> void:
-	can_dash = false
+func _can_perform_dash() -> bool:
+	return can_dash and double_dash_charges > 0 and not is_dashing
+
+func perform_dash(direction: Vector2) -> void:
+	if not _consume_dash_charge():
+		return
+
 	is_dashing = true
-	if uses_double_dash_charge:
+	if max_dash_charges > 1:
 		_spawn_burst_particles(global_position, Color(0.35, 0.7, 1.0, 0.9), 22, 0.28, 160.0)
 	
 	velocity = direction.normalized() * dash_speed
@@ -552,15 +560,41 @@ func perform_dash(direction: Vector2, uses_double_dash_charge: bool = false) -> 
 	if offensive_dash_enabled:
 		_trigger_offensive_dash_explosion()
 
-	if uses_double_dash_charge:
-		double_dash_charges = max(double_dash_charges - 1, 0)
-		if double_dash_charges > 0:
-			can_dash = true
-		else:
-			dash_cd_timer.start(dash_cooldown)
-	else:
-		double_dash_charges = max(max_dash_charges - 1, 0)
+	can_dash = double_dash_charges > 0
+
+func enable_double_dash() -> void:
+	max_dash_charges = 2
+	_refill_dash_charges()
+	emit_signal("stats_updated")
+
+func disable_double_dash() -> void:
+	max_dash_charges = 1
+	double_dash_charges = min(double_dash_charges, max_dash_charges)
+	can_dash = double_dash_charges > 0
+	if double_dash_charges >= max_dash_charges and not dash_cd_timer.is_stopped():
+		dash_cd_timer.stop()
+	elif double_dash_charges < max_dash_charges and dash_cd_timer.is_stopped():
 		dash_cd_timer.start(dash_cooldown)
+	emit_signal("stats_updated")
+
+func _refill_dash_charges() -> void:
+	double_dash_charges = max_dash_charges
+	can_dash = true
+	if not dash_cd_timer.is_stopped():
+		dash_cd_timer.stop()
+
+func _consume_dash_charge() -> bool:
+	if double_dash_charges <= 0:
+		can_dash = false
+		return false
+
+	double_dash_charges -= 1
+	can_dash = double_dash_charges > 0
+	if double_dash_charges < max_dash_charges and dash_cd_timer.is_stopped():
+		dash_cd_timer.start(dash_cooldown)
+
+	emit_signal("stats_updated")
+	return true
 
 func take_damage(amount: float, attacker_position: Vector2 = Vector2.ZERO) -> void:
 	if is_invulnerable: 
@@ -623,8 +657,14 @@ func _on_shoot_timer_timeout() -> void:
 	can_shoot = true
 
 func _on_dash_cd_timer_timeout() -> void:
-	can_dash = true
-	double_dash_charges = max(max_dash_charges - 1, 0)
+	if double_dash_charges < max_dash_charges:
+		double_dash_charges += 1
+
+	can_dash = double_dash_charges > 0
+	if double_dash_charges < max_dash_charges:
+		dash_cd_timer.start(dash_cooldown)
+
+	emit_signal("stats_updated")
 
 func _on_hitbox_area_entered(area: Area2D) -> void:
 	var parent = area.get_parent()
@@ -898,7 +938,7 @@ func _apply_sloth_slow_aura() -> void:
 		_remember_enemy_base_speed(enemy)
 		var base_speed = enemy.get_meta("base_speed")
 		if enemy.global_position.distance_to(global_position) <= SLOW_AURA_RADIUS:
-			enemy.set("speed", base_speed * 0.75)
+			enemy.set("speed", base_speed * 0.7)
 		else:
 			enemy.set("speed", base_speed)
 
@@ -1019,6 +1059,7 @@ func _update_passive_status_vfx(delta: float) -> void:
 	if max_dash_charges > 1:
 		var double_dash_vfx = _ensure_double_dash_vfx()
 		if is_instance_valid(double_dash_vfx):
+			_update_double_dash_vfx(double_dash_vfx)
 			double_dash_vfx.rotation += delta * 1.7
 	else:
 		_remove_passive_status_vfx("double_dash")
@@ -1063,6 +1104,7 @@ func _ensure_double_dash_vfx() -> Node2D:
 
 	for i in range(2):
 		var dot = Polygon2D.new()
+		dot.name = "DashChargeDot%d" % i
 		dot.polygon = _build_circle_points(3.6, false)
 		dot.color = Color(0.38, 0.78, 1.0, 0.82)
 		dot.position = Vector2(28.0, 0.0).rotated(PI * float(i))
@@ -1070,7 +1112,15 @@ func _ensure_double_dash_vfx() -> Node2D:
 		vfx.add_child(dot)
 
 	passive_status_vfx["double_dash"] = vfx
+	_update_double_dash_vfx(vfx)
 	return vfx
+
+func _update_double_dash_vfx(vfx: Node2D) -> void:
+	var visible_charges = clamp(double_dash_charges, 0, max_dash_charges)
+	for i in range(2):
+		var dot = vfx.get_node_or_null("DashChargeDot%d" % i)
+		if dot is CanvasItem:
+			dot.visible = i < visible_charges
 
 func _remove_passive_status_vfx(vfx_id: String) -> void:
 	var vfx = passive_status_vfx.get(vfx_id, null)

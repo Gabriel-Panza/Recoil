@@ -17,7 +17,7 @@ var skill_status_list_background: TextureRect
 const RARE_OPTION_IDS = ["Shield_Protection", "Recoil_Explosion", "Double_Dash", "Offensive_Dash"]
 const SKILL_STATUS_TOP_TEXTURE = preload("res://Sprites/Menu/hud_skills_and_passives.png")
 const SKILL_STATUS_LIST_TEXTURE = preload("res://Sprites/Menu/hud_list_of_passives.png")
-const SKILL_STATUS_POSITION = Vector2(10.0, 80.0)
+const SKILL_STATUS_POSITION = Vector2(10.0, 86.0)
 const SKILL_STATUS_SCALE = 3.0
 const SKILL_STATUS_TOP_SIZE = Vector2(69.0, 35.0) * SKILL_STATUS_SCALE
 const SKILL_STATUS_LIST_WIDTH = 69.0 * SKILL_STATUS_SCALE
@@ -56,11 +56,11 @@ func _process(_delta: float) -> void:
 func _setup_active_skill_hud_labels() -> void:
 	active_skill_e_label = get_node_or_null("ActiveSkillHudE")
 	if active_skill_e_label == null:
-		active_skill_e_label = _create_active_skill_hud_label("ActiveSkillHudE", SKILL_STATUS_POSITION + Vector2(46.0, 11.0))
+		active_skill_e_label = _create_active_skill_hud_label("ActiveSkillHudE", SKILL_STATUS_POSITION + Vector2(46.0, 14.0))
 
 	active_skill_r_label = get_node_or_null("ActiveSkillHudR")
 	if active_skill_r_label == null:
-		active_skill_r_label = _create_active_skill_hud_label("ActiveSkillHudR", SKILL_STATUS_POSITION + Vector2(46.0, 44.0))
+		active_skill_r_label = _create_active_skill_hud_label("ActiveSkillHudR", SKILL_STATUS_POSITION + Vector2(46.0, 48.0))
 
 func _setup_skill_status_background() -> void:
 	var existing_background = get_node_or_null("SkillStatusBackground")
@@ -287,8 +287,11 @@ func _apply_rare_effect(option: String) -> void:
 		"Recoil_Explosion":
 			player.recoil_explosion_enabled = true
 		"Double_Dash":
-			player.max_dash_charges = 2
-			player.double_dash_charges = max(player.double_dash_charges, 1)
+			if player.has_method("enable_double_dash"):
+				player.enable_double_dash()
+			else:
+				player.max_dash_charges = 2
+				player.double_dash_charges = player.max_dash_charges
 		"Offensive_Dash":
 			player.offensive_dash_enabled = true
 
@@ -302,8 +305,11 @@ func _remove_rare_effect(option: String) -> void:
 		"Recoil_Explosion":
 			player.recoil_explosion_enabled = false
 		"Double_Dash":
-			player.max_dash_charges = 1
-			player.double_dash_charges = 0
+			if player.has_method("disable_double_dash"):
+				player.disable_double_dash()
+			else:
+				player.max_dash_charges = 1
+				player.double_dash_charges = min(player.double_dash_charges, player.max_dash_charges)
 		"Offensive_Dash":
 			player.offensive_dash_enabled = false
 

@@ -9,22 +9,29 @@ const ENEMY_ARENA_PLAYER_POSITION: Vector2 = Vector2(770, 414)
 const SPAWN_WALL_PADDING: float = 8.0
 const SPAWN_PLAYER_MIN_DISTANCE: float = 100.0
 const CAMERA_LIMIT_MARGIN: int = 50
+const ARENA_TILESET_TEXTURE = preload("res://Sprites/tileset_hell.png")
+const ARENA_TILE_SIZE: Vector2i = Vector2i(48, 48)
+const ARENA_TILESET_MARGIN: Vector2i = Vector2i(5, 8)
+const ARENA_GRID_SIZE: Vector2i = Vector2i(40, 25)
+const ARENA_TILE_VISUAL_SCALE: float = 0.64
+const ARENA_TILE_SOURCE_ID: int = 0
+const ARENA_PURPLE_TILE: Vector2i = Vector2i(0, 0)
+const ARENA_RED_TILE: Vector2i = Vector2i(6, 0)
+const ARENA_LAVA_TILE: Vector2i = Vector2i(12, 0)
+const ARENA_LAVA_PATCHES = [
+	Vector2i(7, 1), Vector2i(7, 2), Vector2i(8, 1),
+	Vector2i(20, 2), Vector2i(20, 3),
+	Vector2i(5, 8), Vector2i(6, 8),
+	Vector2i(18, 13), Vector2i(19, 13), Vector2i(20, 13), Vector2i(20, 12), Vector2i(20, 14), Vector2i(21, 14), Vector2i(22, 14), Vector2i(22, 15),
+	Vector2i(31, 6), Vector2i(32, 6), Vector2i(32, 7),
+	Vector2i(33, 19), Vector2i(34, 19), Vector2i(35, 19), Vector2i(34, 20)
+]
 
 var fade_layer: CanvasLayer
 var fade_rect: ColorRect
 var is_transitioning: bool = false
 
-# Indice 0 = visual inicial;
-# indice 1 = apos o primeiro boss; indice 2 = apos o segundo boss; etc.
-var enemy_arena_textures: Array[Texture2D] = [
-	preload("res://Sprites/icon.svg"), # Sloth
-	preload("res://Sprites/icon.svg"), # Gluttony
-	preload("res://Sprites/icon.svg"), # Envy
-	preload("res://Sprites/icon.svg"), # Wrath
-	preload("res://Sprites/icon.svg"), # Lust
-	preload("res://Sprites/icon.svg"), # Greed
-	preload("res://Sprites/icon.svg")  # Pride
-]
+var arena_tile_set: TileSet
 
 # Preload dos inimigos
 const MELEE_ENEMY = preload("res://Cenas/Inimigos/melee_enemy.tscn")
@@ -93,6 +100,7 @@ func _ready() -> void:
 	Global.pecado = 1
 	Global.start_run_timer()
 	Global.pecado_changed.connect(_on_pecado_changed)
+	_setup_arena_tile_visuals()
 	current_arena = arena_nodes[0]
 	_setup_fade_overlay()
 	_update_enemy_arena_sprite()
@@ -152,9 +160,102 @@ func _wait_for_level_up_selection() -> void:
 	while $Player.upando:
 		await get_tree().create_timer(0.1, false).timeout
 
+func _setup_arena_tile_visuals() -> void:
+	arena_tile_set = _create_arena_tile_set()
+
+	for arena in arena_nodes:
+		_prepare_arena_node_for_tile_visual(arena)
+		_add_arena_tile_layer(arena)
+		_add_arena_tile_border(arena)
+		_resize_arena_collision(arena)
+
+func _create_arena_tile_set() -> TileSet:
+	var tile_set = TileSet.new()
+	tile_set.tile_size = ARENA_TILE_SIZE
+
+	var atlas_source = TileSetAtlasSource.new()
+	atlas_source.texture = ARENA_TILESET_TEXTURE
+	atlas_source.texture_region_size = ARENA_TILE_SIZE
+	atlas_source.margins = ARENA_TILESET_MARGIN
+
+	for atlas_coords in [ARENA_PURPLE_TILE, ARENA_RED_TILE, ARENA_LAVA_TILE]:
+		atlas_source.create_tile(atlas_coords)
+
+	tile_set.add_source(atlas_source, ARENA_TILE_SOURCE_ID)
+	return tile_set
+
+func _prepare_arena_node_for_tile_visual(arena: Node2D) -> void:
+	arena.scale = Vector2.ONE
+	if arena is Sprite2D:
+		(arena as Sprite2D).texture = null
+
+func _add_arena_tile_layer(arena: Node2D) -> void:
+	var existing_layer = arena.get_node_or_null("ArenaTileLayer")
+	if existing_layer != null:
+		arena.remove_child(existing_layer)
+		existing_layer.queue_free()
+
+	var tile_layer = TileMapLayer.new()
+	tile_layer.name = "ArenaTileLayer"
+	tile_layer.tile_set = arena_tile_set
+	tile_layer.position = -_get_arena_unscaled_pixel_size() * 0.5 * ARENA_TILE_VISUAL_SCALE
+	tile_layer.scale = Vector2.ONE * ARENA_TILE_VISUAL_SCALE
+	tile_layer.z_index = 0
+	arena.add_child(tile_layer)
+
+	for y in range(ARENA_GRID_SIZE.y):
+		for x in range(ARENA_GRID_SIZE.x):
+			var atlas_coords = ARENA_RED_TILE if (x + y) % 2 == 0 else ARENA_PURPLE_TILE
+			tile_layer.set_cell(Vector2i(x, y), ARENA_TILE_SOURCE_ID, atlas_coords)
+
+	for lava_coords in ARENA_LAVA_PATCHES:
+		if _is_tile_inside_arena_grid(lava_coords):
+			tile_layer.set_cell(lava_coords, ARENA_TILE_SOURCE_ID, ARENA_LAVA_TILE)
+
+func _add_arena_tile_border(arena: Node2D) -> void:
+	var border = arena.get_node_or_null("ArenaTileBorder") as Line2D
+	if border == null:
+		border = Line2D.new()
+		border.name = "ArenaTileBorder"
+		border.z_index = 1
+		border.width = 6.0
+		border.default_color = Color(0.08, 0.04, 0.05, 1.0)
+		border.joint_mode = Line2D.LINE_JOINT_SHARP
+		arena.add_child(border)
+
+	var half_size = _get_arena_pixel_size() * 0.5
+	border.points = PackedVector2Array([
+		Vector2(-half_size.x, -half_size.y),
+		Vector2(half_size.x, -half_size.y),
+		Vector2(half_size.x, half_size.y),
+		Vector2(-half_size.x, half_size.y),
+		Vector2(-half_size.x, -half_size.y)
+	])
+
+func _resize_arena_collision(arena: Node2D) -> void:
+	var collision_polygon = arena.get_node_or_null("StaticBody2D/CollisionPolygon2D")
+	if collision_polygon == null:
+		return
+
+	var half_size = _get_arena_pixel_size() * 0.5
+	collision_polygon.polygon = PackedVector2Array([
+		Vector2(-half_size.x, -half_size.y),
+		Vector2(half_size.x, -half_size.y),
+		Vector2(half_size.x, half_size.y),
+		Vector2(-half_size.x, half_size.y)
+	])
+
+func _get_arena_pixel_size() -> Vector2:
+	return _get_arena_unscaled_pixel_size() * ARENA_TILE_VISUAL_SCALE
+
+func _get_arena_unscaled_pixel_size() -> Vector2:
+	return Vector2(ARENA_GRID_SIZE.x * ARENA_TILE_SIZE.x, ARENA_GRID_SIZE.y * ARENA_TILE_SIZE.y)
+
+func _is_tile_inside_arena_grid(tile_coords: Vector2i) -> bool:
+	return tile_coords.x >= 0 and tile_coords.y >= 0 and tile_coords.x < ARENA_GRID_SIZE.x and tile_coords.y < ARENA_GRID_SIZE.y
+
 func _update_enemy_arena_sprite() -> void:
-	var texture_index = clamp(Global.pecado - 1, 0, enemy_arena_textures.size() - 1)
-	$Arenas/ArenaEnemy.texture = enemy_arena_textures[texture_index]
+	pass
 
 func _update_camera_limits() -> void:
 	var camera = get_viewport().get_camera_2d()
