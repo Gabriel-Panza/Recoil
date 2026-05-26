@@ -14,6 +14,9 @@ var pecado = 1:
 var run_start_msec: int = -1
 var current_run_saved: bool = false
 
+var somSFX = 0
+var somVolume = 0
+
 func _ready() -> void:
 	_reset_ranking_if_executable_changed()
 

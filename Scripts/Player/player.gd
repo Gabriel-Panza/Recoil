@@ -4,15 +4,18 @@ extends CharacterBody2D
 @export var max_health: int = 1000
 @export var current_health: int = 1000
 @export var attack_damage: float = 40.0
-@export var fire_rate: float = 1.0
-const STARTING_FIRE_RATE: float = 1.0
+@export var fire_rate: float = 1.1
+const STARTING_FIRE_RATE: float = 1.1
 const MIN_FIRE_RATE: float = 0.25
-var base_fire_rate: float = 1.0
+var base_fire_rate: float = 1.1
 var attack_speed_bonus: float = 0.0
-@export var recoil_force: float = 450.0
-@export var friction: float = 750.0
+@export var recoil_force: float = 460.0
+const MAX_RECOIL_FORCE: float = 800.0
+var base_recoil_force: float = 460.0
+var recoil_force_bonus: float = 0.0
+@export var friction: float = 760.0
 var is_invulnerable: bool = false
-const MOVEMENT_FORCE_COMBO_LOCK_DURATION: float = 0.18
+const MOVEMENT_FORCE_COMBO_LOCK_DURATION: float = 0.2
 const MOVEMENT_FORCE_CAP_BUFFER: float = 100.0
 
 # --- DASH ---
@@ -29,11 +32,15 @@ const SHOCKWAVE_DAMAGE_MULTIPLIER: float = 0.35
 const SHOCKWAVE_DASH_DAMAGE_MULTIPLIER: float = 0.75
 const WRATH_OVERHEAT_SHOT_INTERVAL: int = 4
 const MIRROR_SHOT_DAMAGE_MULTIPLIER: float = 0.5
+const MAX_PROJECTILE_SIZE_MULTIPLIER: float = 2.0
+const MAX_HEAL_AFTER_WAVE_BONUS: float = 0.15
 
 # --- TIRO ---
 @export var pistol_bullet_scene: PackedScene
 var shot_count = 1
 var spread_angle = 15.0 
+var projectile_size_bonus: float = 0.0
+var heal_after_wave_bonus: float = 0.0
 
 const ACTIVE_ABILITY_DATA = {
 	"sloth_field": {
@@ -216,6 +223,8 @@ func _ready() -> void:
 	base_fire_rate = STARTING_FIRE_RATE
 	fire_rate = STARTING_FIRE_RATE
 	_recalculate_fire_rate()
+	base_recoil_force = recoil_force
+	_recalculate_recoil_force()
 	base_dash_speed = dash_speed
 	aparencia = get_node_or_null("Aparencia")
 	pause_control = get_node_or_null(pause_control_path)
@@ -251,11 +260,73 @@ func get_attack_speed_percent() -> float:
 func get_shot_cooldown() -> float:
 	return fire_rate
 
+func get_base_shot_cooldown() -> float:
+	return base_fire_rate
+
 func can_upgrade_attack_speed() -> bool:
 	return fire_rate > MIN_FIRE_RATE + 0.0001
 
 func _recalculate_fire_rate() -> void:
 	fire_rate = max(base_fire_rate / max(1.0 + attack_speed_bonus, 0.001), MIN_FIRE_RATE)
+
+func add_recoil_force_bonus(amount: float) -> void:
+	if not can_upgrade_recoil_force():
+		return
+
+	recoil_force_bonus += amount
+	_recalculate_recoil_force()
+
+func can_upgrade_recoil_force() -> bool:
+	return recoil_force < MAX_RECOIL_FORCE - 0.0001
+
+func get_max_recoil_force() -> float:
+	return MAX_RECOIL_FORCE
+
+func multiply_base_recoil_force(multiplier: float) -> void:
+	base_recoil_force *= max(multiplier, 0.0)
+	_recalculate_recoil_force()
+
+func _recalculate_recoil_force() -> void:
+	recoil_force = min(base_recoil_force * max(1.0 + recoil_force_bonus, 0.0), MAX_RECOIL_FORCE)
+
+func add_projectile_size_bonus(amount: float) -> void:
+	if not can_upgrade_projectile_size():
+		return
+
+	projectile_size_bonus = min(projectile_size_bonus + amount, MAX_PROJECTILE_SIZE_MULTIPLIER - 1.0)
+
+func can_upgrade_projectile_size() -> bool:
+	return get_projectile_size_multiplier() < MAX_PROJECTILE_SIZE_MULTIPLIER - 0.0001
+
+func get_projectile_size_multiplier() -> float:
+	return min(1.0 + projectile_size_bonus, MAX_PROJECTILE_SIZE_MULTIPLIER)
+
+func get_projectile_size_percent() -> float:
+	return get_projectile_size_multiplier() * 100.0
+
+func add_heal_after_wave_bonus(amount: float) -> void:
+	if not can_upgrade_heal_after_wave():
+		return
+
+	heal_after_wave_bonus = min(heal_after_wave_bonus + amount, MAX_HEAL_AFTER_WAVE_BONUS)
+	emit_signal("stats_updated")
+
+func can_upgrade_heal_after_wave() -> bool:
+	return heal_after_wave_bonus < MAX_HEAL_AFTER_WAVE_BONUS - 0.0001
+
+func get_heal_after_wave_percent() -> float:
+	return heal_after_wave_bonus * 100.0
+
+func get_max_heal_after_wave_percent() -> float:
+	return MAX_HEAL_AFTER_WAVE_BONUS * 100.0
+
+func apply_heal_after_wave() -> void:
+	if heal_after_wave_bonus <= 0.0 or current_health >= max_health:
+		return
+
+	var heal_amount = max_health * heal_after_wave_bonus
+	heal(heal_amount)
+	_spawn_burst_particles(global_position, Color(0.25, 1.0, 0.45, 0.9), 18, 0.24, 90.0)
 
 func enable_shield_protection() -> void:
 	shield_protection_enabled = true
@@ -363,7 +434,7 @@ func _apply_recoil_impulse(direction: Vector2) -> void:
 
 func _apply_knockback(attacker_position: Vector2) -> void:
 	var knockback_direction = attacker_position.direction_to(global_position)
-	var knockback_force = 300.0
+	var knockback_force = 275.0
 	velocity = (knockback_direction * knockback_force).limit_length(_get_movement_force_speed_cap())
 	movement_force_combo_lock_remaining = MOVEMENT_FORCE_COMBO_LOCK_DURATION
 
@@ -534,6 +605,8 @@ func _spawn_projectile(spawn_position: Vector2, angle: float, projectile_damage:
 	bullet.global_position = spawn_position
 	bullet.direction = Vector2(cos(angle), sin(angle))
 	bullet.damage = projectile_damage
+	if not can_hit_player:
+		bullet.scale *= get_projectile_size_multiplier()
 	if projectile_vfx_color.a > 0.0:
 		bullet.set_meta("vfx_color", projectile_vfx_color)
 	if can_hit_player:

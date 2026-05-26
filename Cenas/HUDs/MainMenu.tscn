@@ -1,7 +1,11 @@
 [gd_scene format=3 uid="uid://xywhrxgsjyey"]
 
-[ext_resource type="PackedScene" uid="uid://bh7itd6kgley8" path="res://Cenas/HUDs/options_menu.tscn" id="1_sfpld"]
 [ext_resource type="Script" uid="uid://bre3maa3yjpb6" path="res://Scripts/HUDs/main_menu.gd" id="2_lhkw5"]
+[ext_resource type="Script" uid="uid://cbu5wg2uwwswg" path="res://Scripts/HUDs/h_slider.gd" id="3_7yn15"]
+[ext_resource type="Texture2D" uid="uid://0y0wpxjhectw" path="res://Sprites/Menu/panel_options_hud.png" id="3_nlrbi"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_7yn15"]
+bg_color = Color(0.2, 0.239216, 0.270588, 1)
 
 [node name="MainMenu" type="Control" unique_id=694027376]
 process_mode = 3
@@ -105,9 +109,61 @@ theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 24
 text = "Exit"
 
-[node name="OptionsMenu" parent="." unique_id=2044135887 instance=ExtResource("1_sfpld")]
+[node name="OptionsMenu" type="Panel" parent="." unique_id=204691688]
+process_mode = 3
 visible = false
-layout_mode = 1
+layout_mode = 0
+offset_left = 284.0
+offset_top = 110.0
+offset_right = 340.0
+offset_bottom = 139.0
+scale = Vector2(10, 14.852)
+theme_override_styles/panel = SubResource("StyleBoxFlat_7yn15")
+
+[node name="NinePatchRect" type="TextureRect" parent="OptionsMenu" unique_id=984052573]
+layout_mode = 0
+offset_left = -1.6403804
+offset_top = -1.1044184
+offset_right = 58.596497
+offset_bottom = 30.895582
+texture = ExtResource("3_nlrbi")
+expand_mode = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="OptionsMenu" unique_id=1989776312]
+layout_mode = 0
+offset_left = 14.465
+offset_top = 10.407
+offset_right = 96.465
+offset_bottom = 81.407
+scale = Vector2(0.373394, 0.23979)
+theme_override_constants/separation = 7
+alignment = 1
+
+[node name="HSlider" type="HSlider" parent="OptionsMenu/VBoxContainer" unique_id=1886003437]
+process_mode = 3
+layout_mode = 2
+min_value = -80.0
+max_value = 24.0
+value = -25.0
+script = ExtResource("3_7yn15")
+
+[node name="HSlider2" type="HSlider" parent="OptionsMenu/VBoxContainer" unique_id=248614171]
+process_mode = 3
+layout_mode = 2
+min_value = -80.0
+max_value = 24.0
+value = -25.0
+
+[node name="BackButton" type="Button" parent="OptionsMenu/VBoxContainer" unique_id=276301316]
+process_mode = 3
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88235295, 0, 0, 1)
+theme_override_colors/font_pressed_color = Color(0.6666667, 0, 0, 1)
+theme_override_colors/font_hover_color = Color(0.88235295, 0, 0, 1)
+theme_override_colors/font_hover_pressed_color = Color(0.88235295, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 12
+text = "Back"
 
 [node name="RankingPanel" type="Panel" parent="." unique_id=1662812340]
 visible = false
@@ -165,4 +221,7 @@ autoplay = true
 [connection signal="pressed" from="Menu/MarginContainer2/TextureButton" to="." method="_on_options_button_pressed"]
 [connection signal="pressed" from="Menu/RankingButtonContainer/RankingButton" to="." method="_on_ranking_button_pressed"]
 [connection signal="pressed" from="Menu/MarginContainer3/TextureButton" to="." method="_on_button_2_pressed"]
+[connection signal="value_changed" from="OptionsMenu/VBoxContainer/HSlider" to="OptionsMenu/VBoxContainer/HSlider" method="_on_value_changed"]
+[connection signal="value_changed" from="OptionsMenu/VBoxContainer/HSlider2" to="OptionsMenu/VBoxContainer/HSlider" method="_on_h_slider_2_value_changed"]
+[connection signal="pressed" from="OptionsMenu/VBoxContainer/BackButton" to="." method="_on_back_button_pressed"]
 [connection signal="pressed" from="RankingPanel/BackButton" to="." method="_on_ranking_back_pressed"]

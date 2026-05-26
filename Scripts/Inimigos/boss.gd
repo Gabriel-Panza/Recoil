@@ -38,24 +38,24 @@ const MAX_BOSS_CIRCLE_VFX_RADIUS: float = 180.0
 const DEFAULT_BOSS_VISUAL_SCALE: Vector2 = Vector2(1.5, 1.5)
 
 const SLOTH_COLOR: Color = Color(0.25, 0.95, 1.0, 1.0)
-const GLUTTONY_COLOR: Color = Color(0.96, 0.92, 0.18, 1.0)
+const GLUTTONY_COLOR: Color = Color(0.961, 0.89, 0.263, 1.0)
 const ENVY_COLOR: Color = Color(0.25, 0.95, 1.0, 1.0)
-const WRATH_COLOR: Color = Color(1.0, 0.25, 0.05, 1.0)
-const LUST_COLOR: Color = Color(1.0, 0.16, 0.36, 1.0)
-const GREED_COLOR: Color = Color(1.0, 0.78, 0.08, 1.0)
-const PRIDE_LIGHT_COLOR: Color = Color(1.0, 0.96, 0.62, 1.0)
+const WRATH_COLOR: Color = Color(1.0, 0.333, 0.051, 1.0)
+const LUST_COLOR: Color = Color(1.0, 0.09, 0.451, 1.0)
+const GREED_COLOR: Color = Color(1.0, 0.78, 0.0, 1.0)
+const PRIDE_LIGHT_COLOR: Color = Color(1.0, 0.961, 0.765, 1.0)
 const PRIDE_FIRE_COLOR: Color = Color(1.0, 0.46, 0.14, 1.0)
 const BOSS_INDICATOR_LAYER: int = 75
-const BOSS_INDICATOR_PADDING: float = 34.0
+const BOSS_INDICATOR_PADDING: float = 35.0
 
 const BOSS_CONFIG = {
-	1: { "max_health": 500, "speed": 0.0, "damage": 35, "state": BossState.SLOTH, "animation": "pecado1" },
-	2: { "max_health": 600, "speed": 75.0, "damage": 45, "state": BossState.GLUTTONY, "animation": "pecado2", "visual_scale": Vector2(2.15, 2.15) },
-	3: { "max_health": 700, "speed": 82.5, "damage": 40, "state": BossState.ENVY, "animation": "pecado3" },
-	4: { "max_health": 800, "speed": 90.0, "damage": 50, "state": BossState.WRATH, "animation": "pecado4" },
-	5: { "max_health": 1000, "speed": 75.0, "damage": 40, "state": BossState.LUST, "animation": "pecado5" },
-	6: { "max_health": 1250, "speed": 71.25, "damage": 45, "state": BossState.GREED, "animation": "pecado6" },
-	7: { "max_health": 1500, "speed": 67.5, "damage": 50, "state": BossState.PRIDE, "animation": "pecado7" },
+	1: { "max_health": 600, "speed": 0.0, "damage": 35, "state": BossState.SLOTH, "animation": "pecado1" },
+	2: { "max_health": 750, "speed": 80.0, "damage": 45, "state": BossState.GLUTTONY, "animation": "pecado2", "visual_scale": Vector2(2.15, 2.15) },
+	3: { "max_health": 825, "speed": 90.0, "damage": 40, "state": BossState.ENVY, "animation": "pecado3" },
+	4: { "max_health": 875, "speed": 90.0, "damage": 50, "state": BossState.WRATH, "animation": "pecado4" },
+	5: { "max_health": 1000, "speed": 80.0, "damage": 40, "state": BossState.LUST, "animation": "pecado5" },
+	6: { "max_health": 1250, "speed": 82.5, "damage": 45, "state": BossState.GREED, "animation": "pecado6" },
+	7: { "max_health": 1500, "speed": 75.0, "damage": 50, "state": BossState.PRIDE, "animation": "pecado7" },
 }
 
 var current_health: int
@@ -366,7 +366,7 @@ func _start_sloth_summon(amount: int) -> void:
 		_get_vfx_parent().add_child(enemy)
 		enemy.global_position = _get_random_arena_position_near_player(160.0, 300.0)
 		_register_boss_summon(enemy)
-		await get_tree().create_timer(2.0, false).timeout
+		await get_tree().create_timer(1.75, false).timeout
 
 	_finish_action(1.7 if phase == 1 else 1.2)
 
@@ -433,8 +433,8 @@ func _start_gluttony_food_wave(amount: int) -> void:
 	current_sub_state = BossSubState.ATTACK
 	for i in range(amount):
 		_spawn_gluttony_food()
-		await get_tree().create_timer(2.0, false).timeout
-	_finish_action(2.0 if phase == 1 else 1.25)
+		await get_tree().create_timer(1.75, false).timeout
+	_finish_action(1.75 if phase == 1 else 1.25)
 
 func _spawn_gluttony_food() -> void:
 	var food = MELEE_ENEMY_SCENE.instantiate()

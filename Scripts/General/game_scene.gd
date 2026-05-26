@@ -45,15 +45,15 @@ const BOSS_ENEMY = preload("res://Cenas/Inimigos/boss.tscn")
 var wave_sets = {
 	1: [  # Sloth
 		{"melee": 3, "ranged": 0, "agile": 0, "tank": 0, "spread": 0},
-		{"melee": 4, "ranged": 1, "agile": 0, "tank": 0, "spread": 0},
-		{"melee": 5, "ranged": 1, "agile": 0, "tank": 0, "spread": 0},
-		{"melee": 6, "ranged": 2, "agile": 0, "tank": 0, "spread": 0}
+		{"melee": 3, "ranged": 1, "agile": 0, "tank": 0, "spread": 0},
+		{"melee": 4, "ranged": 2, "agile": 0, "tank": 0, "spread": 0},
+		{"melee": 5, "ranged": 3, "agile": 0, "tank": 0, "spread": 0}
 	],
 	2: [  # Gluttony
-		{"melee": 3, "ranged": 1, "agile": 1, "tank": 0, "spread": 0},
-		{"melee": 4, "ranged": 2, "agile": 1, "tank": 0, "spread": 0},
-		{"melee": 5, "ranged": 2, "agile": 2, "tank": 0, "spread": 0},
-		{"melee": 6, "ranged": 3, "agile": 2, "tank": 0, "spread": 0}
+		{"melee": 3, "ranged": 1, "agile": 0, "tank": 1, "spread": 0},
+		{"melee": 4, "ranged": 2, "agile": 0, "tank": 1, "spread": 0},
+		{"melee": 5, "ranged": 3, "agile": 0, "tank": 2, "spread": 0},
+		{"melee": 6, "ranged": 3, "agile": 0, "tank": 2, "spread": 0}
 	],
 	3: [  # Envy
 		{"melee": 4, "ranged": 2, "agile": 1, "tank": 1, "spread": 0},
@@ -62,28 +62,28 @@ var wave_sets = {
 		{"melee": 7, "ranged": 4, "agile": 2, "tank": 2, "spread": 0}
 	],
 	4: [  # Wrath
-		{"melee": 5, "ranged": 3, "agile": 1, "tank": 1, "spread": 1},
-		{"melee": 6, "ranged": 4, "agile": 2, "tank": 2, "spread": 1},
-		{"melee": 7, "ranged": 4, "agile": 2, "tank": 2, "spread": 2},
-		{"melee": 8, "ranged": 5, "agile": 3, "tank": 3, "spread": 2}
+		{"melee": 4, "ranged": 3, "agile": 1, "tank": 1, "spread": 1},
+		{"melee": 5, "ranged": 3, "agile": 2, "tank": 2, "spread": 1},
+		{"melee": 6, "ranged": 4, "agile": 2, "tank": 2, "spread": 2},
+		{"melee": 7, "ranged": 4, "agile": 3, "tank": 3, "spread": 2}
 	],
 	5: [  # Lust
+		{"melee": 5, "ranged": 3, "agile": 2, "tank": 1, "spread": 1},
 		{"melee": 6, "ranged": 4, "agile": 2, "tank": 2, "spread": 2},
-		{"melee": 6, "ranged": 5, "agile": 3, "tank": 3, "spread": 2},
-		{"melee": 7, "ranged": 5, "agile": 3, "tank": 3, "spread": 3},
-		{"melee": 8, "ranged": 6, "agile": 4, "tank": 4, "spread": 3}
+		{"melee": 7, "ranged": 4, "agile": 3, "tank": 2, "spread": 2},
+		{"melee": 8, "ranged": 5, "agile": 3, "tank": 3, "spread": 3}
 	],
 	6: [  # Greed
-		{"melee": 6, "ranged": 5, "agile": 3, "tank": 2, "spread": 3},
-		{"melee": 7, "ranged": 6, "agile": 4, "tank": 3, "spread": 3},
-		{"melee": 7, "ranged": 6, "agile": 4, "tank": 3, "spread": 4},
-		{"melee": 8, "ranged": 7, "agile": 5, "tank": 4, "spread": 4}
+		{"melee": 5, "ranged": 4, "agile": 2, "tank": 2, "spread": 2},
+		{"melee": 6, "ranged": 4, "agile": 3, "tank": 3, "spread": 2},
+		{"melee": 7, "ranged": 5, "agile": 3, "tank": 3, "spread": 3},
+		{"melee": 8, "ranged": 5, "agile": 4, "tank": 4, "spread": 3}
 	],
 	7: [  # Pride
-		{"melee": 7, "ranged": 6, "agile": 4, "tank": 3, "spread": 4},
-		{"melee": 7, "ranged": 6, "agile": 5, "tank": 4, "spread": 4},
-		{"melee": 8, "ranged": 7, "agile": 5, "tank": 4, "spread": 5},
-		{"melee": 8, "ranged": 7, "agile": 6, "tank": 5, "spread": 5}
+		{"melee": 6, "ranged": 4, "agile": 3, "tank": 2, "spread": 2},
+		{"melee": 7, "ranged": 5, "agile": 3, "tank": 3, "spread": 3},
+		{"melee": 8, "ranged": 5, "agile": 4, "tank": 3, "spread": 3},
+		{"melee": 9, "ranged": 6, "agile": 4, "tank": 4, "spread": 4}
 	]
 }
 
@@ -96,6 +96,11 @@ var run_finished: bool = false
 var wave_finish_pending: bool = false
 
 func _ready() -> void:
+	for musica in get_tree().get_nodes_in_group("Music"):
+		musica.set_volume_db(Global.somVolume)
+	for som in get_tree().get_nodes_in_group("SFX"):
+		som.set_volume_db(Global.somSFX)
+
 	randomize()
 	Global.pecado = 1
 	Global.start_run_timer()
@@ -547,6 +552,8 @@ func _try_finish_wave() -> void:
 
 	wave_finish_pending = true
 	is_wave_active = false
+	if $Player.has_method("apply_heal_after_wave"):
+		$Player.apply_heal_after_wave()
 	await get_tree().create_timer(0.5, false).timeout
 	if not is_inside_tree():
 		return

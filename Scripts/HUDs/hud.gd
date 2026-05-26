@@ -229,7 +229,7 @@ func _apply_effect(option):
 
 	match option:
 		"option_1":
-			player.recoil_force += player.recoil_force * 0.05
+			player.add_recoil_force_bonus(0.05)
 		"option_2":
 			player.current_health += player.current_health * 0.05
 			player.max_health += player.max_health * 0.05
@@ -238,6 +238,10 @@ func _apply_effect(option):
 			player.attack_damage += player.attack_damage * 0.15
 		"option_4":
 			player.add_attack_speed_bonus(0.05)
+		"option_5":
+			player.add_projectile_size_bonus(0.05)
+		"option_6":
+			player.add_heal_after_wave_bonus(0.03)
 		"glass_canon":
 			player.attack_damage += player.attack_damage * 0.5
 			player.max_health = int(player.max_health * 0.75)
@@ -249,7 +253,7 @@ func _apply_effect(option):
 			player.attack_damage *= 0.5
 			_on_hp_updated(player.current_health, player.max_health)
 		"deadly_slow":
-			player.recoil_force *= 0.5
+			player.multiply_base_recoil_force(0.5)
 			player.attack_damage *= 2.0
 		"sloth_slow_aura":
 			player.sloth_slow_aura_enabled = true

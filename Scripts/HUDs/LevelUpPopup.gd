@@ -8,11 +8,15 @@ var speedPlayer
 var speedEnemy
 var speedProjectile
 
+const HEAL_AFTER_WAVE_COMMON_ROLL_CHANCE: float = 0.4
+
 var passive_options = [
-	{ "id": "option_1", "text": "Recoil Force (+5%)", "description": "Increases the pushback force you receive after shooting, helping you move farther with each shot.", "rarity": "passive_common" },
+	{ "id": "option_1", "text": "Recoil Force (+5%)", "description": "+5% recoil force is additive from your base recoil, not your current recoil. Stops appearing at 8.0 recoil force.", "rarity": "passive_common" },
 	{ "id": "option_2", "text": "Health (+5%)", "description": "Increases your maximum health and heals you slightly based on your current health.", "rarity": "passive_common" },
 	{ "id": "option_3", "text": "Attack (+15%)", "description": "Increases the damage dealt by your bullets and damage-based effects.", "rarity": "passive_common" },
-	{ "id": "option_4", "text": "Atk-Speed (+5%)", "description": "+5% attack speed is additive from the original attack speed. Stops appearing at 0.25s shot cooldown.", "rarity": "passive_common" }
+	{ "id": "option_4", "text": "Atk-Speed (+5%)", "description": "+5% attack speed is additive from the original attack speed. Base shot cooldown is 1.10s. Stops appearing at 0.25s shot cooldown.", "rarity": "passive_common" },
+	{ "id": "option_5", "text": "Bullet Size (+5%)", "description": "+5% bullet size for friendly projectiles. Bonus is additive and stops at 200% bullet size.", "rarity": "passive_common" },
+	{ "id": "option_6", "text": "Heal After Wave (+3%)", "description": "Heal 3% max health after each enemy wave. This upgrade has a 40% chance to enter the common passive pool and stops at 15%.", "rarity": "passive_common" }
 ]
 
 var cursed_passive_options = [
@@ -217,8 +221,17 @@ func _get_available_rare_options() -> Array:
 func _get_available_passive_options() -> Array:
 	var available_options = []
 	for option in passive_options:
+		if option["id"] == "option_1" and player and player.has_method("can_upgrade_recoil_force") and not player.can_upgrade_recoil_force():
+			continue
 		if option["id"] == "option_4" and player and player.has_method("can_upgrade_attack_speed") and not player.can_upgrade_attack_speed():
 			continue
+		if option["id"] == "option_5" and player and player.has_method("can_upgrade_projectile_size") and not player.can_upgrade_projectile_size():
+			continue
+		if option["id"] == "option_6":
+			if player and player.has_method("can_upgrade_heal_after_wave") and not player.can_upgrade_heal_after_wave():
+				continue
+			if randf() > HEAL_AFTER_WAVE_COMMON_ROLL_CHANCE:
+				continue
 		available_options.append(option.duplicate())
 
 	return available_options

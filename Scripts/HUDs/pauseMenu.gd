@@ -16,6 +16,7 @@ var atk_speed_label_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLaye
 var atk_speed_label: Label
 var recoil_label_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer/Recoil"
 var recoil_label: Label
+var heal_after_wave_label: Label
 var active_skill_e_label_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer/ActiveSkillE"
 var active_skill_e_label: Label
 var active_skill_r_label_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer/ActiveSkillR"
@@ -36,6 +37,7 @@ func _ready() -> void:
 	attack_label = get_node_or_null(attack_label_path)
 	atk_speed_label = get_node_or_null(atk_speed_label_path)
 	recoil_label = get_node_or_null(recoil_label_path)
+	_setup_heal_after_wave_label()
 	active_skill_e_label = get_node_or_null(active_skill_e_label_path)
 	active_skill_r_label = get_node_or_null(active_skill_r_label_path)
 	game_over = get_node_or_null(game_over_path)
@@ -43,6 +45,29 @@ func _ready() -> void:
 
 	if player:
 		player.connect("stats_updated", Callable(self, "update_status_labels"))
+
+func _setup_heal_after_wave_label() -> void:
+	if recoil_label == null:
+		return
+
+	var stats_container = recoil_label.get_parent()
+	if stats_container == null:
+		return
+
+	heal_after_wave_label = stats_container.get_node_or_null("HealAfterWave")
+	if heal_after_wave_label == null:
+		heal_after_wave_label = Label.new()
+		heal_after_wave_label.name = "HealAfterWave"
+		heal_after_wave_label.layout_mode = 2
+		heal_after_wave_label.mouse_filter = Control.MOUSE_FILTER_STOP
+		heal_after_wave_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		heal_after_wave_label.add_theme_color_override("font_color", Color(1, 0.25882354, 0.2, 1))
+		heal_after_wave_label.add_theme_constant_override("outline_size", 4)
+		heal_after_wave_label.add_theme_font_size_override("font_size", 20)
+		stats_container.add_child(heal_after_wave_label)
+		stats_container.move_child(heal_after_wave_label, recoil_label.get_index() + 1)
+
+	heal_after_wave_label.visible = false
 	
 func _process(delta):
 	update_status_labels()
@@ -109,10 +134,20 @@ func update_status_labels():
 			if player.has_method("get_attack_speed_percent"):
 				attack_speed_percent = player.get_attack_speed_percent()
 			var shot_cooldown = player.get_shot_cooldown() if player.has_method("get_shot_cooldown") else player.fire_rate
+			var base_shot_cooldown = player.get_base_shot_cooldown() if player.has_method("get_base_shot_cooldown") else 1.1
 			atk_speed_label.text = "Atk-Speed: %.2f%%" % attack_speed_percent
-			atk_speed_label.tooltip_text = "How fast you can shot. Shot cooldown: %.2fs" % shot_cooldown
+			atk_speed_label.tooltip_text = "Attack speed is additive from the original attack speed. Base cooldown: %.2fs. Current cooldown: %.2fs" % [base_shot_cooldown, shot_cooldown]
 		if recoil_label:
 			recoil_label.text = "Recoil Force: %.1f" % (player.recoil_force/100)
+			var max_recoil_force = player.get_max_recoil_force() if player.has_method("get_max_recoil_force") else 800.0
+			recoil_label.tooltip_text = "Pushback force after shooting. Recoil upgrades add +5%% from base recoil and stop at %.1f displayed force." % (max_recoil_force / 100.0)
+		if heal_after_wave_label:
+			var heal_after_wave_percent = player.get_heal_after_wave_percent() if player.has_method("get_heal_after_wave_percent") else 0.0
+			heal_after_wave_label.visible = heal_after_wave_percent > 0.0
+			if heal_after_wave_label.visible:
+				var max_heal_after_wave_percent = player.get_max_heal_after_wave_percent() if player.has_method("get_max_heal_after_wave_percent") else 15.0
+				heal_after_wave_label.text = "Heal/Wave: %.1f%%" % heal_after_wave_percent
+				heal_after_wave_label.tooltip_text = "Heals %.1f%% of max health after each enemy wave. Maximum: %.1f%%." % [heal_after_wave_percent, max_heal_after_wave_percent]
 		_update_active_skill_labels()
 
 func _update_active_skill_labels() -> void:

@@ -65,3 +65,8 @@ func _play_sfx() -> void:
 	var sfx = get_node_or_null("SFX_Button")
 	if sfx:
 		sfx.play()
+
+func _on_back_button_pressed() -> void:
+	_play_sfx()
+	$OptionsMenu.visible = false
+	$Menu.visible = true

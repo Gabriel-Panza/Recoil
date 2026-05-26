@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://cya2rqdruf177"]
 
 [ext_resource type="Script" uid="uid://cxq03fhvhbjhy" path="res://Scripts/General/game_scene.gd" id="1_6fp5d"]
-[ext_resource type="Texture2D" uid="uid://bu8ebewoxx14s" path="res://Sprites/icon.svg" id="2_devmc"]
+[ext_resource type="Texture2D" uid="uid://crc1863pga7pa" path="res://Sprites/lava_background.png" id="2_6fp5d"]
 [ext_resource type="PackedScene" uid="uid://56ftx5purtp6" path="res://Cenas/Player/Player.tscn" id="3_v7wsa"]
 [ext_resource type="PackedScene" uid="uid://dwd2oyh8qwgdd" path="res://Cenas/Player/projectile.tscn" id="4_v2jpr"]
 
@@ -11,9 +11,9 @@ script = ExtResource("1_6fp5d")
 [node name="Arenas" type="Node2D" parent="." unique_id=526981497]
 
 [node name="Fundo" type="Sprite2D" parent="Arenas" unique_id=1287308056]
-position = Vector2(4584, 0)
-scale = Vector2(80, 60)
-texture = ExtResource("2_devmc")
+position = Vector2(4600, 300)
+scale = Vector2(20, 20)
+texture = ExtResource("2_6fp5d")
 
 [node name="ArenaEnemy" type="Sprite2D" parent="Arenas" unique_id=1853213105]
 position = Vector2(640, 320)
