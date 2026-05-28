@@ -708,7 +708,7 @@ func die():
 		musica.stop()
 	get_tree().paused = true
 	# $Lose.play()
-	await get_tree().create_timer(1.0, true).timeout
+	await get_tree().create_timer(0.25, true).timeout
 	if game_over:
 		game_over.visible = true
 

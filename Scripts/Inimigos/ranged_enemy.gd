@@ -2,8 +2,8 @@ extends BaseEnemy
 class_name RangedEnemy
 
 @export var projectile_scene: PackedScene = preload("res://Cenas/Inimigos/enemyProjectile.tscn")
-@export var attack_range: float = 175.0
-@export var stop_distance: float = 55.0
+@export var attack_range: float = 155.0
+@export var stop_distance: float = 75.0
 @export var fire_rate: float = 1.5
 
 const RANGED_SPRITESHEET: String = "res://Sprites/demonho_ranged.png"
@@ -51,14 +51,11 @@ func handle_shooting(delta: float) -> void:
 	var distance_to_player = global_position.distance_to(player.global_position)
 
 	if distance_to_player <= attack_range and distance_to_player >= stop_distance:
-		if _is_visible_on_screen():
-			if fire_cooldown > 0:
-				fire_cooldown -= delta
-			if fire_cooldown <= 0:
-				shoot()
-				fire_cooldown = fire_rate
-		else:
-			fire_cooldown = 0.0
+		if fire_cooldown > 0:
+			fire_cooldown -= delta
+		if fire_cooldown <= 0:
+			shoot()
+			fire_cooldown = fire_rate
 
 func shoot() -> void:
 	if is_shooting_animation or not projectile_scene:

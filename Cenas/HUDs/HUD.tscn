@@ -9,6 +9,7 @@
 [ext_resource type="Texture2D" uid="uid://ddhpi484jgi1q" path="res://Sprites/Menu/health.png" id="3_lkwe8"]
 [ext_resource type="Texture2D" uid="uid://ihnahr7k3pga" path="res://Sprites/Menu/health_fill.png" id="4_7j4vm"]
 [ext_resource type="Texture2D" uid="uid://c3vdftd30i0oo" path="res://Sprites/Menu/level_fill.png" id="4_curni"]
+[ext_resource type="Texture2D" uid="uid://c3v5vp4b0bipw" path="res://Sprites/Menu/Heart.png" id="8_jlgm3"]
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_xed4y"]
 texture = ExtResource("2_xed4y")
@@ -147,17 +148,31 @@ theme_override_font_sizes/font_size = 15
 text = "Level 1"
 horizontal_alignment = 1
 
-[node name="ProgressBar2" type="TextureProgressBar" parent="." unique_id=2042334151]
-offset_left = 12.0
-offset_top = 30.0
-offset_right = 219.0
-offset_bottom = 84.0
+[node name="HealthBarUnder" type="TextureRect" parent="." unique_id=2021630472]
+offset_left = 48.0
+offset_top = 45.0
+offset_right = 214.0
+offset_bottom = 66.0
 mouse_filter = 0
-max_value = 500.0
-value = 500.0
+texture = ExtResource("3_lkwe8")
+
+[node name="ProgressBar2" type="TextureProgressBar" parent="." unique_id=2042334151]
+offset_left = 48.0
+offset_top = 48.0
+offset_right = 208.0
+offset_bottom = 60.0
+mouse_filter = 0
+max_value = 1000.0
+value = 1000.0
 nine_patch_stretch = true
-texture_under = ExtResource("3_lkwe8")
 texture_progress = ExtResource("4_7j4vm")
+
+[node name="HealthSymbol" type="TextureRect" parent="." unique_id=475736898]
+offset_left = 12.0
+offset_top = 36.0
+offset_right = 219.0
+offset_bottom = 90.0
+texture = ExtResource("8_jlgm3")
 
 [node name="LevelUpPopup" parent="." unique_id=1017833206 instance=ExtResource("2_jet5o")]
 visible = false

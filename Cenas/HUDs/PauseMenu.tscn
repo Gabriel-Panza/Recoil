@@ -11,6 +11,7 @@
 [ext_resource type="Texture2D" uid="uid://0y0wpxjhectw" path="res://Sprites/Menu/panel_options_hud.png" id="9_81ba2"]
 [ext_resource type="Texture2D" uid="uid://cdxdy4khmm05w" path="res://Sprites/Menu/Back_button_normal.png" id="10_0l46b"]
 [ext_resource type="Texture2D" uid="uid://dimbpn40bj757" path="res://Sprites/Menu/Back_button_hover_and_pressed.png" id="11_cblwv"]
+[ext_resource type="Texture2D" uid="uid://bpe77mquesgup" path="res://Sprites/Menu/gameOver.png" id="12_cblwv"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_428n7"]
 bg_color = Color(0.2, 0.239216, 0.270588, 1)
@@ -184,10 +185,12 @@ layout_mode = 1
 anchors_preset = -1
 anchor_right = 0.998
 anchor_bottom = 0.994
-offset_left = -0.2
-offset_right = 6.104004
-offset_bottom = 9.8880005
+offset_left = -2.9999878
+offset_top = -4.0
+offset_right = 18.303955
+offset_bottom = 166.888
 scale = Vector2(1, 0.8)
+texture = ExtResource("12_cblwv")
 expand_mode = 1
 
 [node name="MarginContainer" type="MarginContainer" parent="GameOver" unique_id=117709613]

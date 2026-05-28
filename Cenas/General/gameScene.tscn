@@ -10,9 +10,46 @@ script = ExtResource("1_6fp5d")
 
 [node name="Arenas" type="Node2D" parent="." unique_id=526981497]
 
-[node name="Fundo" type="Sprite2D" parent="Arenas" unique_id=1287308056]
-position = Vector2(4600, 300)
-scale = Vector2(20, 20)
+[node name="Node2D" type="Node2D" parent="Arenas" unique_id=1082153676]
+
+[node name="Fundo" type="Sprite2D" parent="Arenas/Node2D" unique_id=1287308056]
+position = Vector2(643, 324)
+scale = Vector2(3, 3)
+texture = ExtResource("2_6fp5d")
+
+[node name="Fundo2" type="Sprite2D" parent="Arenas/Node2D" unique_id=906864049]
+position = Vector2(2133, -1027)
+scale = Vector2(3, 3)
+texture = ExtResource("2_6fp5d")
+
+[node name="Fundo3" type="Sprite2D" parent="Arenas/Node2D" unique_id=65348474]
+position = Vector2(4414, -1027)
+scale = Vector2(3, 3)
+texture = ExtResource("2_6fp5d")
+
+[node name="Fundo4" type="Sprite2D" parent="Arenas/Node2D" unique_id=516988603]
+position = Vector2(6679, -1027)
+scale = Vector2(3, 3)
+texture = ExtResource("2_6fp5d")
+
+[node name="Fundo5" type="Sprite2D" parent="Arenas/Node2D" unique_id=1211365843]
+position = Vector2(2133.0002, 1635)
+scale = Vector2(3, 3)
+texture = ExtResource("2_6fp5d")
+
+[node name="Fundo6" type="Sprite2D" parent="Arenas/Node2D" unique_id=744703823]
+position = Vector2(4415, 1635)
+scale = Vector2(3, 3)
+texture = ExtResource("2_6fp5d")
+
+[node name="Fundo7" type="Sprite2D" parent="Arenas/Node2D" unique_id=942720123]
+position = Vector2(6679, 1635)
+scale = Vector2(3, 3)
+texture = ExtResource("2_6fp5d")
+
+[node name="Fundo8" type="Sprite2D" parent="Arenas/Node2D" unique_id=1218737864]
+position = Vector2(8489, 319)
+scale = Vector2(3, 3)
 texture = ExtResource("2_6fp5d")
 
 [node name="ArenaEnemy" type="Sprite2D" parent="Arenas" unique_id=1853213105]
