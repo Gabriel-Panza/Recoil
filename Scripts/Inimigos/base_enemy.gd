@@ -2,12 +2,21 @@ extends CharacterBody2D
 class_name BaseEnemy 
 
 @export var max_health: int = 100
-@export var speed: float = 130.0
+@export var speed: float = 125.0
 @export var damage: int = 15
 @export var xp_drop: int = 1
 
 const ENEMY_COLLISION_MASK: int = 4
 const ENEMY_BODY_COLLISION_SCALE: float = 0.7
+const PECADO_SPRITE_ROW_BY_ID = {
+	1: 6,
+	2: 4,
+	3: 5,
+	4: 2,
+	5: 3,
+	6: 1,
+	7: 0,
+}
 
 var current_health: int
 var player: Node2D
@@ -30,6 +39,67 @@ func mover(_delta: float) -> void:
 	var direction = global_position.direction_to(player.global_position)
 	velocity = direction * speed
 	move_and_slide()
+
+func _configure_enemy_sprite_sheet(
+	texture_path: String,
+	frame_size: Vector2i,
+	frames_per_row: int,
+	states: Array,
+	pecado_group_rows: Dictionary = {},
+	animation_speed: float = 6.0,
+	visual_scale: Vector2 = Vector2.ONE
+) -> void:
+	if aparencia == null:
+		return
+
+	var texture = load(texture_path) as Texture2D
+	if texture == null:
+		return
+
+	var sprite_frames = SpriteFrames.new()
+	if sprite_frames.has_animation("default"):
+		sprite_frames.remove_animation("default")
+
+	for pecado_id in range(1, 8):
+		var group_row = int(pecado_group_rows.get(pecado_id, PECADO_SPRITE_ROW_BY_ID.get(pecado_id, 0)))
+		for state_index in range(states.size()):
+			var state_name = str(states[state_index])
+			var animation_name = _get_pecado_animation_name(pecado_id, state_name if states.size() > 1 else "")
+			sprite_frames.add_animation(animation_name)
+			sprite_frames.set_animation_speed(animation_name, animation_speed)
+			sprite_frames.set_animation_loop(animation_name, true)
+
+			var sheet_row = group_row * states.size() + state_index
+			for frame_index in range(frames_per_row):
+				var atlas_frame = AtlasTexture.new()
+				atlas_frame.atlas = texture
+				atlas_frame.region = Rect2(
+					Vector2(frame_index * frame_size.x, sheet_row * frame_size.y),
+					Vector2(frame_size.x, frame_size.y)
+				)
+				sprite_frames.add_frame(animation_name, atlas_frame)
+
+	aparencia.sprite_frames = sprite_frames
+	aparencia.scale = visual_scale
+
+func _play_pecado_animation(state_name: String = "") -> void:
+	if aparencia == null or aparencia.sprite_frames == null:
+		return
+
+	var pecado_id = clampi(Global.pecado, 1, 7)
+	var animation_name = _get_pecado_animation_name(pecado_id, state_name)
+	if not aparencia.sprite_frames.has_animation(animation_name):
+		animation_name = _get_pecado_animation_name(2, state_name)
+	if not aparencia.sprite_frames.has_animation(animation_name):
+		return
+
+	if str(aparencia.animation) != animation_name or not aparencia.is_playing():
+		aparencia.play(animation_name)
+
+func _get_pecado_animation_name(pecado_id: int, state_name: String = "") -> String:
+	if state_name == "":
+		return "pecado%d" % pecado_id
+	return "pecado%d_%s" % [pecado_id, state_name]
 
 func _setup_enemy_body_collision() -> void:
 	collision_mask = collision_mask | ENEMY_COLLISION_MASK

@@ -13,7 +13,7 @@ func _on_start_game_pressed() -> void:
 	await get_tree().create_timer(0.1).timeout
 	get_tree().change_scene_to_file("res://Cenas/General/gameScene.tscn")
 	
-func _on_button_2_pressed() -> void:
+func _on_exit_button_pressed() -> void:
 	_play_sfx()
 	await get_tree().create_timer(0.1).timeout
 	get_tree().quit()

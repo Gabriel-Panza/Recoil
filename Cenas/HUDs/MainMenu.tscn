@@ -1,8 +1,18 @@
 [gd_scene format=3 uid="uid://xywhrxgsjyey"]
 
 [ext_resource type="Script" uid="uid://bre3maa3yjpb6" path="res://Scripts/HUDs/main_menu.gd" id="2_lhkw5"]
+[ext_resource type="Texture2D" uid="uid://dqwkp7u2muh1x" path="res://Sprites/Menu/Play_button_normal.png" id="2_xe10a"]
 [ext_resource type="Script" uid="uid://cbu5wg2uwwswg" path="res://Scripts/HUDs/h_slider.gd" id="3_7yn15"]
+[ext_resource type="Texture2D" uid="uid://boi4gvans1och" path="res://Sprites/Menu/Play_button_hover_and_pressed.png" id="3_b8upb"]
 [ext_resource type="Texture2D" uid="uid://0y0wpxjhectw" path="res://Sprites/Menu/panel_options_hud.png" id="3_nlrbi"]
+[ext_resource type="Texture2D" uid="uid://m3ijv4m8qf10" path="res://Sprites/Menu/Options_button_normal.png" id="4_bvot3"]
+[ext_resource type="Texture2D" uid="uid://dmoi5gdmqpa2b" path="res://Sprites/Menu/Exit_button_normal.png" id="4_jie5y"]
+[ext_resource type="Texture2D" uid="uid://btl8uyigkckg5" path="res://Sprites/Menu/Options_button_hover_and_pressed.png" id="5_8b04f"]
+[ext_resource type="Texture2D" uid="uid://ctyp6wqg3qn2n" path="res://Sprites/Menu/Exit_button_hover_and_pressed.png" id="5_a4pvi"]
+[ext_resource type="Texture2D" uid="uid://eqwe8oa45uh5" path="res://Sprites/Menu/Ranking_button_normal.png" id="6_57byf"]
+[ext_resource type="Texture2D" uid="uid://drkgt1w8eo5lp" path="res://Sprites/Menu/Ranking_button_hover_and_pressed.png" id="7_disip"]
+[ext_resource type="Texture2D" uid="uid://cdxdy4khmm05w" path="res://Sprites/Menu/Back_button_normal.png" id="12_57byf"]
+[ext_resource type="Texture2D" uid="uid://dimbpn40bj757" path="res://Sprites/Menu/Back_button_hover_and_pressed.png" id="13_disip"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_7yn15"]
 bg_color = Color(0.2, 0.239216, 0.270588, 1)
@@ -33,81 +43,89 @@ offset_bottom = 650.0
 
 [node name="Titulo" type="MarginContainer" parent="Menu" unique_id=1941741753]
 layout_mode = 0
-offset_left = 722.0
-offset_top = 99.0
-offset_right = 762.0
-offset_bottom = 139.0
+offset_left = 563.0
+offset_top = 62.00001
+offset_right = 603.0
+offset_bottom = 102.000015
 scale = Vector2(0.62, 0.62)
 
 [node name="Titulo" type="Sprite2D" parent="Menu/Titulo" unique_id=1359029706]
 
 [node name="MarginContainer" type="MarginContainer" parent="Menu" unique_id=144147291]
+custom_minimum_size = Vector2(146, 40)
 layout_mode = 0
-offset_left = 469.0
-offset_top = 146.0
-offset_right = 661.0
-offset_bottom = 226.0
+offset_left = 478.0
+offset_top = 212.0
+offset_right = 670.0
+offset_bottom = 271.0
 
-[node name="TextureButton" type="Button" parent="Menu/MarginContainer" unique_id=1806028155]
+[node name="PlayButton" type="TextureButton" parent="Menu/MarginContainer" unique_id=223760500]
+custom_minimum_size = Vector2(146, 40)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.882353, 0, 0, 1)
-theme_override_colors/font_pressed_color = Color(0.666667, 0, 0, 1)
-theme_override_colors/font_hover_color = Color(0.882353, 0, 0, 1)
-theme_override_colors/font_hover_pressed_color = Color(0.882353, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 24
-text = "Start Game"
+texture_normal = ExtResource("2_xe10a")
+texture_pressed = ExtResource("3_b8upb")
+texture_hover = ExtResource("3_b8upb")
+texture_disabled = ExtResource("2_xe10a")
+texture_focused = ExtResource("2_xe10a")
+ignore_texture_size = true
+stretch_mode = 0
 
-[node name="MarginContainer2" type="MarginContainer" parent="Menu" unique_id=542111730]
+[node name="MarginContainer2" type="MarginContainer" parent="Menu" unique_id=1627233419]
+custom_minimum_size = Vector2(146, 40)
 layout_mode = 0
-offset_left = 460.0
-offset_top = 236.0
-offset_right = 672.0
-offset_bottom = 336.0
+offset_left = 478.0
+offset_top = 295.0
+offset_right = 670.0
+offset_bottom = 354.0
 
-[node name="TextureButton" type="Button" parent="Menu/MarginContainer2" unique_id=766053521]
+[node name="OptionsButton" type="TextureButton" parent="Menu/MarginContainer2" unique_id=1692633453]
+custom_minimum_size = Vector2(146, 40)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.882353, 0, 0, 1)
-theme_override_colors/font_pressed_color = Color(0.666667, 0, 0, 1)
-theme_override_colors/font_hover_color = Color(0.882353, 0, 0, 1)
-theme_override_colors/font_hover_pressed_color = Color(0.882353, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 24
-text = "Settings"
+texture_normal = ExtResource("4_bvot3")
+texture_pressed = ExtResource("5_8b04f")
+texture_hover = ExtResource("5_8b04f")
+texture_disabled = ExtResource("4_bvot3")
+texture_focused = ExtResource("4_bvot3")
+ignore_texture_size = true
+stretch_mode = 0
 
-[node name="RankingButtonContainer" type="MarginContainer" parent="Menu" unique_id=1602987589]
+[node name="MarginContainer3" type="MarginContainer" parent="Menu" unique_id=1566693352]
+custom_minimum_size = Vector2(146, 40)
 layout_mode = 0
-offset_left = 460.0
-offset_top = 347.0
-offset_right = 672.0
-offset_bottom = 427.0
+offset_left = 478.0
+offset_top = 384.0
+offset_right = 670.0
+offset_bottom = 443.0
 
-[node name="RankingButton" type="Button" parent="Menu/RankingButtonContainer" unique_id=1597887845]
+[node name="RankingButton" type="TextureButton" parent="Menu/MarginContainer3" unique_id=925690450]
+custom_minimum_size = Vector2(146, 40)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.882353, 0, 0, 1)
-theme_override_colors/font_pressed_color = Color(0.666667, 0, 0, 1)
-theme_override_colors/font_hover_color = Color(0.882353, 0, 0, 1)
-theme_override_colors/font_hover_pressed_color = Color(0.882353, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 24
-text = "Ranking"
+texture_normal = ExtResource("6_57byf")
+texture_pressed = ExtResource("7_disip")
+texture_hover = ExtResource("7_disip")
+texture_disabled = ExtResource("6_57byf")
+texture_focused = ExtResource("6_57byf")
+ignore_texture_size = true
+stretch_mode = 0
 
-[node name="MarginContainer3" type="MarginContainer" parent="Menu" unique_id=1201822918]
+[node name="MarginContainer4" type="MarginContainer" parent="Menu" unique_id=2072548704]
+custom_minimum_size = Vector2(146, 40)
 layout_mode = 0
-offset_left = 469.0
-offset_top = 437.0
-offset_right = 661.0
-offset_bottom = 517.0
+offset_left = 478.0
+offset_top = 468.0
+offset_right = 670.0
+offset_bottom = 527.0
 
-[node name="TextureButton" type="Button" parent="Menu/MarginContainer3" unique_id=1723390624]
+[node name="ExitButton" type="TextureButton" parent="Menu/MarginContainer4" unique_id=1527520183]
+custom_minimum_size = Vector2(146, 40)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.882353, 0, 0, 1)
-theme_override_colors/font_pressed_color = Color(0.666667, 0, 0, 1)
-theme_override_colors/font_hover_color = Color(0.882353, 0, 0, 1)
-theme_override_colors/font_hover_pressed_color = Color(0.882353, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 24
-text = "Exit"
+texture_normal = ExtResource("4_jie5y")
+texture_pressed = ExtResource("5_a4pvi")
+texture_hover = ExtResource("5_a4pvi")
+texture_disabled = ExtResource("4_jie5y")
+texture_focused = ExtResource("4_jie5y")
+ignore_texture_size = true
+stretch_mode = 0
 
 [node name="OptionsMenu" type="Panel" parent="." unique_id=204691688]
 process_mode = 3
@@ -154,16 +172,17 @@ min_value = -80.0
 max_value = 24.0
 value = -25.0
 
-[node name="BackButton" type="Button" parent="OptionsMenu/VBoxContainer" unique_id=276301316]
+[node name="BackButton" type="TextureButton" parent="OptionsMenu/VBoxContainer" unique_id=1671192322]
 process_mode = 3
+custom_minimum_size = Vector2(0, 24)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.88235295, 0, 0, 1)
-theme_override_colors/font_pressed_color = Color(0.6666667, 0, 0, 1)
-theme_override_colors/font_hover_color = Color(0.88235295, 0, 0, 1)
-theme_override_colors/font_hover_pressed_color = Color(0.88235295, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 12
-text = "Back"
+texture_normal = ExtResource("12_57byf")
+texture_pressed = ExtResource("13_disip")
+texture_hover = ExtResource("13_disip")
+texture_disabled = ExtResource("12_57byf")
+texture_focused = ExtResource("12_57byf")
+ignore_texture_size = true
+stretch_mode = 0
 
 [node name="RankingPanel" type="Panel" parent="." unique_id=1662812340]
 visible = false
@@ -217,10 +236,10 @@ text = "Back"
 volume_db = 6.0
 autoplay = true
 
-[connection signal="pressed" from="Menu/MarginContainer/TextureButton" to="." method="_on_start_game_pressed"]
-[connection signal="pressed" from="Menu/MarginContainer2/TextureButton" to="." method="_on_options_button_pressed"]
-[connection signal="pressed" from="Menu/RankingButtonContainer/RankingButton" to="." method="_on_ranking_button_pressed"]
-[connection signal="pressed" from="Menu/MarginContainer3/TextureButton" to="." method="_on_button_2_pressed"]
+[connection signal="pressed" from="Menu/MarginContainer/PlayButton" to="." method="_on_start_game_pressed"]
+[connection signal="pressed" from="Menu/MarginContainer2/OptionsButton" to="." method="_on_options_button_pressed"]
+[connection signal="pressed" from="Menu/MarginContainer3/RankingButton" to="." method="_on_ranking_button_pressed"]
+[connection signal="pressed" from="Menu/MarginContainer4/ExitButton" to="." method="_on_exit_button_pressed"]
 [connection signal="value_changed" from="OptionsMenu/VBoxContainer/HSlider" to="OptionsMenu/VBoxContainer/HSlider" method="_on_value_changed"]
 [connection signal="value_changed" from="OptionsMenu/VBoxContainer/HSlider2" to="OptionsMenu/VBoxContainer/HSlider" method="_on_h_slider_2_value_changed"]
 [connection signal="pressed" from="OptionsMenu/VBoxContainer/BackButton" to="." method="_on_back_button_pressed"]

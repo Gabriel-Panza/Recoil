@@ -1,40 +1,35 @@
 extends BaseEnemy
 class_name TankEnemy
 
+const TANK_SPRITESHEET: String = "res://Sprites/demonho_tank.png"
+const TANK_FRAME_SIZE: Vector2i = Vector2i(48, 48)
+const TANK_FRAMES_PER_ROW: int = 4
+const TANK_ROW_BY_PECADO = {
+	1: 0,
+	2: 0,
+	3: 1,
+	4: 2,
+	5: 3,
+	6: 4,
+	7: 5,
+}
+
 func _ready() -> void:
 	super()
-	
-	# Status massivos (Escala bem com o nível de Pecado)
-	max_health = 200.0 + ((Global.pecado - 1) * 100.0)
+
+	max_health = 200 + ((Global.pecado - 1) * 100)
 	current_health = max_health
-	aparencia = $AnimatedAppearence
-	
-	# Status de movimentação e ataque do colosso
 	speed = 90.0
-	damage = 35.0   
+	damage = 35
+	_configure_enemy_sprite_sheet(TANK_SPRITESHEET, TANK_FRAME_SIZE, TANK_FRAMES_PER_ROW, ["walk"], TANK_ROW_BY_PECADO, 5.5, Vector2(1.5, 1.5))
+	_play_pecado_animation()
 
 func mover(_delta: float) -> void:
-	# Usa a movimentação padrão herdada 
 	super(_delta)
-	
-	# Inverte o sprite para olhar pro player baseado no movimento
+
 	if aparencia and velocity.x != 0:
 		aparencia.flip_h = velocity.x < 0
 
 func _physics_process(delta: float) -> void:
 	super(delta)
-	
-	if Global.pecado == 1:
-		aparencia.play("pecado1")
-	elif Global.pecado == 2:
-		aparencia.play("pecado2")
-	elif Global.pecado == 3:
-		aparencia.play("pecado3")
-	elif Global.pecado == 4:
-		aparencia.play("pecado4")
-	elif Global.pecado == 5:
-		aparencia.play("pecado5")
-	elif Global.pecado == 6:
-		aparencia.play("pecado6")
-	elif Global.pecado == 7:
-		aparencia.play("pecado7")
+	_play_pecado_animation()

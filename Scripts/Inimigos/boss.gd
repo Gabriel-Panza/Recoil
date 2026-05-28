@@ -441,7 +441,7 @@ func _spawn_gluttony_food() -> void:
 	_get_vfx_parent().add_child(food)
 	food.global_position = _get_random_arena_edge_position()
 	food.player = self
-	food.speed = 135.0 if phase == 1 else 165.0
+	food.speed = 155.0 if phase == 1 else 190.0
 	food.max_health = 45 if phase == 1 else 60
 	food.current_health = food.max_health
 	food.damage = 10
@@ -463,7 +463,7 @@ func _update_gluttony_foods(_delta: float) -> void:
 		if food.global_position.distance_to(global_position) <= 40.0:
 			food.set_meta("gluttony_delivered", true)
 			gluttony_foods.erase(food)
-			var heal_amount = max_health * (0.09 if phase == 1 else 0.055)
+			var heal_amount = max_health * (0.18 if phase == 1 else 0.11)
 			current_health = int(min(current_health + heal_amount, max_health))
 			_update_health_bar()
 			_spawn_heal_particles(food.global_position)

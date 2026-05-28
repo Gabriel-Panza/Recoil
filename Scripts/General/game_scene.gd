@@ -363,11 +363,12 @@ func spawn_boss():
 	_set_player_xp_goal(1, "boss", Global.pecado)
 	await _transition_player_to(centro_node.global_position)
 	await get_tree().create_timer(1, false).timeout
+	await get_tree().process_frame
 
 	var boss = BOSS_ENEMY.instantiate()
 	_apply_enemy_spawn_modifiers(boss)
 	var spawn_margin = _get_body_spawn_margin(boss)
-	boss.global_position = get_random_camera_edge_position(spawn_margin)
+	boss.global_position = get_camera_top_center_position(spawn_margin)
 	boss.add_to_group("Boss")
 	boss.connect("boss_defeated", Callable(self, "_on_boss_died"))
 	add_child(boss)
@@ -419,6 +420,15 @@ func get_random_camera_edge_position(spawn_margin: float = 0.0) -> Vector2:
 				return pos
 
 	return get_random_arena_position(spawn_margin)
+
+func get_camera_top_center_position(spawn_margin: float = 0.0) -> Vector2:
+	var camera = get_viewport().get_camera_2d()
+	if not camera:
+		return get_random_arena_position(spawn_margin)
+
+	var viewport_size = get_viewport_rect().size / camera.zoom
+	var top_center = camera.global_position + Vector2(0.0, -viewport_size.y * 0.5 + spawn_margin + SPAWN_WALL_PADDING)
+	return clamp_position_to_current_arena(top_center, spawn_margin)
 
 func get_random_arena_position(spawn_margin: float = 0.0) -> Vector2:
 	var collision_polygon = _get_current_arena_collision_polygon()
