@@ -279,6 +279,29 @@ func _render_options(options: Array, show_skip: bool) -> void:
 			button.disabled = false
 			button.tooltip_text = ""
 
+	_center_popup()
+
+func _center_popup() -> void:
+	var has_bounds := false
+	var popup_bounds := Rect2()
+
+	for child in get_children():
+		if not (child is Control) or not child.visible:
+			continue
+
+		var control := child as Control
+		var child_rect := Rect2(control.position, control.size)
+		if not has_bounds:
+			popup_bounds = child_rect
+			has_bounds = true
+		else:
+			popup_bounds = popup_bounds.merge(child_rect)
+
+	if not has_bounds:
+		return
+
+	position = (get_viewport_rect().size * 0.5 - popup_bounds.get_center()).round()
+
 func _get_option_button_text(option: Dictionary) -> String:
 	return str(option.get("text", option.get("name", option.get("id", ""))))
 

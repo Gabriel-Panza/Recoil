@@ -432,9 +432,9 @@ func _apply_recoil_impulse(direction: Vector2) -> void:
 
 	velocity = velocity.limit_length(_get_movement_force_speed_cap())
 
-func _apply_knockback(attacker_position: Vector2) -> void:
+func _apply_knockback(attacker_position: Vector2, force_multiplier: float = 1.0) -> void:
 	var knockback_direction = attacker_position.direction_to(global_position)
-	var knockback_force = 275.0
+	var knockback_force = 275.0 * clampf(force_multiplier, 0.0, 1.0)
 	velocity = (knockback_direction * knockback_force).limit_length(_get_movement_force_speed_cap())
 	movement_force_combo_lock_remaining = MOVEMENT_FORCE_COMBO_LOCK_DURATION
 
@@ -669,7 +669,7 @@ func _consume_dash_charge() -> bool:
 	emit_signal("stats_updated")
 	return true
 
-func take_damage(amount: float, attacker_position: Vector2 = Vector2.ZERO) -> void:
+func take_damage(amount: float, attacker_position: Vector2 = Vector2.ZERO, knockback_multiplier: float = 1.0) -> void:
 	if is_invulnerable: 
 		return
 
@@ -682,7 +682,7 @@ func take_damage(amount: float, attacker_position: Vector2 = Vector2.ZERO) -> vo
 		return
 
 	if attacker_position != Vector2.ZERO:
-		_apply_knockback(attacker_position)
+		_apply_knockback(attacker_position, knockback_multiplier)
 
 	current_health -= int(round(amount * damage_taken_multiplier))
 	emit_signal("hp_updated", current_health, max_health)
@@ -746,7 +746,7 @@ func _on_hitbox_area_entered(area: Area2D) -> void:
 			enemies_in_contact.append(parent)
 		
 		if contact_damage_timer.is_stopped():
-			take_damage(_get_contact_damage(parent), parent.global_position)
+			take_damage(_get_contact_damage(parent), parent.global_position, _get_contact_knockback_multiplier(parent))
 			contact_damage_timer.start()
 
 func _on_hitbox_area_exited(area: Area2D) -> void:
@@ -762,7 +762,7 @@ func _on_contact_damage_timer_timeout() -> void:
 	
 	if not enemies_in_contact.is_empty():
 		var prime_enemy = enemies_in_contact[0]
-		take_damage(_get_contact_damage(prime_enemy), prime_enemy.global_position)
+		take_damage(_get_contact_damage(prime_enemy), prime_enemy.global_position, _get_contact_knockback_multiplier(prime_enemy))
 	else:
 		contact_damage_timer.stop()
 
@@ -771,6 +771,12 @@ func _get_contact_damage(enemy: Node) -> float:
 		return float(enemy.get("damage"))
 
 	return 20.0
+
+func _get_contact_knockback_multiplier(enemy: Node) -> float:
+	if enemy and enemy.has_meta("contact_knockback_multiplier"):
+		return float(enemy.get_meta("contact_knockback_multiplier"))
+
+	return 1.0
 
 func is_active_ability_id(option_id: String) -> bool:
 	return ACTIVE_ABILITY_DATA.has(option_id)
