@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3 uid="uid://dwd2oyh8qwgdd"]
+[gd_scene format=3 uid="uid://dwd2oyh8qwgdd"]
 
 [ext_resource type="Script" uid="uid://binxodd7w4itw" path="res://Scripts/Player/projectile.gd" id="1_sgihj"]
 [ext_resource type="Texture2D" uid="uid://lch0yhr80h5u" path="res://Sprites/recoil_gun_bullet.png" id="2_6xjbl"]
@@ -61,7 +61,6 @@ animations = [{
 }]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_sgihj"]
-radius = 18.0
 
 [sub_resource type="Gradient" id="Gradient_sgihj"]
 offsets = PackedFloat32Array(0, 0.5745192, 1)
@@ -78,9 +77,8 @@ collision_mask = 5
 script = ExtResource("1_sgihj")
 
 [node name="AnimatedProjectile" type="AnimatedSprite2D" parent="." unique_id=1133076180]
-scale = Vector2(2.25, 2.25)
+scale = Vector2(1.75, 1.75)
 sprite_frames = SubResource("SpriteFrames_6xjbl")
-animation = &"default"
 autoplay = "default"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1827623167]
@@ -88,7 +86,7 @@ visibility_layer = 2
 shape = SubResource("CircleShape2D_sgihj")
 
 [node name="VisibleOnScreenNotifier2D" type="VisibleOnScreenNotifier2D" parent="." unique_id=754933066]
-rect = Rect2(-26, -26, 52, 52)
+rect = Rect2(-11, -11, 22, 22)
 
 [node name="CPUParticles2D" type="CPUParticles2D" parent="." unique_id=742465443]
 amount = 48
