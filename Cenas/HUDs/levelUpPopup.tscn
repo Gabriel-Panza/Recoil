@@ -45,45 +45,45 @@ theme_override_constants/separation = 10
 [node name="Button1" type="Button" parent="VBoxContainer" unique_id=254546289]
 layout_direction = 1
 layout_mode = 2
-theme_override_font_sizes/font_size = 36
-text = "________________________________________"
+theme_override_font_sizes/font_size = 34
+text = "_____________________________________________"
 
 [node name="Label" type="Label" parent="VBoxContainer/Button1" unique_id=477822215]
 layout_mode = 0
 offset_right = 641.0
 offset_bottom = 56.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 36
+theme_override_font_sizes/font_size = 34
 text = "Option 1"
 horizontal_alignment = 1
 
 [node name="Button2" type="Button" parent="VBoxContainer" unique_id=229808152]
 layout_direction = 1
 layout_mode = 2
-theme_override_font_sizes/font_size = 36
-text = "________________________________________"
+theme_override_font_sizes/font_size = 34
+text = "_____________________________________________"
 
 [node name="Label" type="Label" parent="VBoxContainer/Button2" unique_id=1951167246]
 layout_mode = 0
 offset_right = 641.0
 offset_bottom = 56.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 36
+theme_override_font_sizes/font_size = 34
 text = "Option 2"
 horizontal_alignment = 1
 
 [node name="Button3" type="Button" parent="VBoxContainer" unique_id=413636694]
 layout_direction = 1
 layout_mode = 2
-theme_override_font_sizes/font_size = 36
-text = "________________________________________"
+theme_override_font_sizes/font_size = 34
+text = "_____________________________________________"
 
 [node name="Label" type="Label" parent="VBoxContainer/Button3" unique_id=1062689931]
 layout_mode = 0
 offset_right = 641.0
 offset_bottom = 56.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 36
+theme_override_font_sizes/font_size = 34
 text = "Option 3"
 horizontal_alignment = 1
 
@@ -98,5 +98,5 @@ tooltip_text = "Skip this level up"
 theme_override_colors/font_color = Color(1, 1, 0, 1)
 theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
 theme_override_constants/outline_size = 3
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 18
 text = "Skip"

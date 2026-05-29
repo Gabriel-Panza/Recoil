@@ -8,21 +8,23 @@ var speedPlayer
 var speedEnemy
 var speedProjectile
 
-const HEAL_AFTER_WAVE_COMMON_ROLL_CHANCE: float = 0.4
+const HEAL_AFTER_WAVE_COMMON_ROLL_CHANCE: float = 0.3
+const DEFAULT_VIEWPORT_SIZE: Vector2 = Vector2(1152.0, 648.0)
 
 var passive_options = [
 	{ "id": "option_1", "text": "Recoil Force (+5%)", "description": "+5% recoil force is additive from your base recoil, not your current recoil. Stops appearing at 8.0 recoil force.", "rarity": "passive_common" },
 	{ "id": "option_2", "text": "Health (+5%)", "description": "Increases your maximum health and heals you slightly based on your current health.", "rarity": "passive_common" },
 	{ "id": "option_3", "text": "Attack (+15%)", "description": "Increases the damage dealt by your bullets and damage-based effects.", "rarity": "passive_common" },
-	{ "id": "option_4", "text": "Atk-Speed (+5%)", "description": "+5% attack speed is additive from the original attack speed. Base shot cooldown is 1.10s. Stops appearing at 0.25s shot cooldown.", "rarity": "passive_common" },
+	{ "id": "option_4", "text": "Atk-Speed (+5%)", "description": "+5% attack speed is additive from the original attack speed. This upgrade stops appearing at 0.25s shot cooldown.", "rarity": "passive_common" },
 	{ "id": "option_5", "text": "Bullet Size (+5%)", "description": "+5% bullet size for friendly projectiles. Bonus is additive and stops at 200% bullet size.", "rarity": "passive_common" },
-	{ "id": "option_6", "text": "Heal After Wave (+3%)", "description": "Heal 3% max health after each enemy wave. This upgrade has a 40% chance to enter the common passive pool and stops at 15%.", "rarity": "passive_common" }
+	{ "id": "option_6", "text": "Heal After Wave (+3%)", "description": "Heal 3% max health after each enemy wave. This upgrade stops appearing at 18%.", "rarity": "passive_common" }
 ]
 
 var cursed_passive_options = [
 	{ "id": "glass_canon", "text": "Attack (+50%), Health (-25%)", "description": "Greatly increases damage, but lowers your maximum health. Strong if you can avoid hits.", "rarity": "passive_cursed" },
 	{ "id": "tanky", "text": "Health (+25%), Attack (-50%)", "description": "Greatly increases survivability, but lowers your damage output.", "rarity": "passive_cursed" },
-	{ "id": "deadly_slow", "text": "Recoil Force (-50%), Attack (+100%)", "description": "Greatly increases damage, but weakens your recoil movement by cutting pushback force.", "rarity": "passive_cursed" }
+	{ "id": "deadly_slow", "text": "Recoil Force (-25%), Attack (+75%)", "description": "Greatly increases damage, but weakens your recoil movement by cutting pushback force.", "rarity": "passive_cursed" },
+	{ "id": "fast_but_small", "text": "Bullet Size (-30%), Atk-Speed (+30%)", "description": "Adds +30% attack speed, but reduces bullet size by 50%. Bullet size cannot drop below 50%.", "rarity": "passive_cursed" }
 ]
 
 var rare_options = [
@@ -89,7 +91,7 @@ func _setup_title_label() -> void:
 		title_label.offset_right = 644
 		title_label.offset_bottom = -10
 		title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		title_label.add_theme_font_size_override("font_size", 28)
+		title_label.add_theme_font_size_override("font_size", 20)
 		add_child(title_label)
 	title_label.visible = false
 
@@ -103,7 +105,7 @@ func _setup_skip_button() -> void:
 		skip_button.offset_right = 388
 		skip_button.offset_bottom = 252
 		skip_button.text = "Skip"
-		skip_button.add_theme_font_size_override("font_size", 20)
+		skip_button.add_theme_font_size_override("font_size", 16)
 		add_child(skip_button)
 
 	skip_button.tooltip_text = "Skip this level up"
@@ -300,7 +302,13 @@ func _center_popup() -> void:
 	if not has_bounds:
 		return
 
-	position = (get_viewport_rect().size * 0.5 - popup_bounds.get_center()).round()
+	position = (_get_design_viewport_size() * 0.5 - popup_bounds.get_center()).round()
+
+func _get_design_viewport_size() -> Vector2:
+	return Vector2(
+		float(ProjectSettings.get_setting("display/window/size/viewport_width", DEFAULT_VIEWPORT_SIZE.x)),
+		float(ProjectSettings.get_setting("display/window/size/viewport_height", DEFAULT_VIEWPORT_SIZE.y))
+	)
 
 func _get_option_button_text(option: Dictionary) -> String:
 	return str(option.get("text", option.get("name", option.get("id", ""))))

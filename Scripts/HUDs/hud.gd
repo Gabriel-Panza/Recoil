@@ -255,6 +255,9 @@ func _apply_effect(option):
 		"deadly_slow":
 			player.multiply_base_recoil_force(0.5)
 			player.attack_damage *= 2.0
+		"fast_but_small":
+			player.add_attack_speed_bonus(0.3)
+			player.add_projectile_size_bonus(-0.3)
 		"sloth_slow_aura":
 			player.sloth_slow_aura_enabled = true
 		"gluttony_heal_kill":

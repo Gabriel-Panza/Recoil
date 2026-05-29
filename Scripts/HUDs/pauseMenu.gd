@@ -127,8 +127,10 @@ func update_status_labels():
 	if player:
 		if health_label:
 			health_label.text = "Health: %.2f/%d" % [player.current_health, player.max_health]
+			health_label.tooltip_text = "Current HP over max HP. Reaching 0 ends the run."
 		if attack_label:
 			attack_label.text = "Attack: %.1f" % player.attack_damage
+			attack_label.tooltip_text = "Damage dealt by bullets and most damage-based effects."
 		if atk_speed_label:
 			var attack_speed_percent = (1.0 / max(player.fire_rate, 0.001)) * 100.0
 			if player.has_method("get_attack_speed_percent"):
@@ -136,11 +138,11 @@ func update_status_labels():
 			var shot_cooldown = player.get_shot_cooldown() if player.has_method("get_shot_cooldown") else player.fire_rate
 			var base_shot_cooldown = player.get_base_shot_cooldown() if player.has_method("get_base_shot_cooldown") else 1.1
 			atk_speed_label.text = "Atk-Speed: %.2f%%" % attack_speed_percent
-			atk_speed_label.tooltip_text = "Attack speed is additive from the original attack speed. Base cooldown: %.2fs. Current cooldown: %.2fs" % [base_shot_cooldown, shot_cooldown]
+			atk_speed_label.tooltip_text = "Shots per second compared to your base speed. Base cooldown: %.2fs. Current cooldown: %.2fs." % [base_shot_cooldown, shot_cooldown]
 		if recoil_label:
 			recoil_label.text = "Recoil Force: %.1f" % (player.recoil_force/100)
 			var max_recoil_force = player.get_max_recoil_force() if player.has_method("get_max_recoil_force") else 800.0
-			recoil_label.tooltip_text = "Pushback force after shooting. Recoil upgrades add +5%% from base recoil and stop at %.1f displayed force." % (max_recoil_force / 100.0)
+			recoil_label.tooltip_text = "Pushback after shooting. Upgrades add +5%% from base recoil. Max displayed force: %.1f." % (max_recoil_force / 100.0)
 		if heal_after_wave_label:
 			var heal_after_wave_percent = player.get_heal_after_wave_percent() if player.has_method("get_heal_after_wave_percent") else 0.0
 			heal_after_wave_label.visible = heal_after_wave_percent > 0.0

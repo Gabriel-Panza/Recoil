@@ -30,6 +30,10 @@ const LUST_WALL_THICKNESS: float = 24.0
 const LUST_WALL_LENGTH: float = 260.0
 const LUST_BREAKABLE_WALL_HP: float = 110.0
 const SLOTH_SLOW_ZONE_RADIUS: float = 95.0
+const SLOTH_SUMMON_SPAWN_INTERVAL: float = 1.15
+const SLOTH_ZONE_TELEGRAPH_DURATION: float = 0.55
+const SLOTH_ZONE_SPAWN_INTERVAL: float = 1.15
+const SLOTH_SLOW_ZONE_LIFETIME: float = 15.0
 const GLUTTONY_STRESS_DURATION_PHASE_1: float = 7.5
 const GLUTTONY_STRESS_DURATION_PHASE_2: float = 10.0
 const ENVY_CLONE_MAX_HEALTH: float = 180.0
@@ -366,7 +370,8 @@ func _start_sloth_summon(amount: int) -> void:
 		_get_vfx_parent().add_child(enemy)
 		enemy.global_position = _get_random_arena_position_near_player(160.0, 300.0)
 		_register_boss_summon(enemy)
-		await get_tree().create_timer(1.75, false).timeout
+		if i < amount - 1:
+			await get_tree().create_timer(SLOTH_SUMMON_SPAWN_INTERVAL, false).timeout
 
 	_finish_action(1.7 if phase == 1 else 1.2)
 
@@ -375,9 +380,11 @@ func _start_sloth_slow_zones(amount: int) -> void:
 	current_sub_state = BossSubState.TELEGRAPH
 	for i in range(amount):
 		var zone_position = _get_random_arena_position_near_player(80.0, 280.0)
-		_spawn_circle_telegraph(zone_position, SLOTH_SLOW_ZONE_RADIUS, _with_alpha(SLOTH_COLOR, 0.24), 0.55)
-		await get_tree().create_timer(2.5, false).timeout
+		_spawn_circle_telegraph(zone_position, SLOTH_SLOW_ZONE_RADIUS, _with_alpha(SLOTH_COLOR, 0.24), SLOTH_ZONE_TELEGRAPH_DURATION)
+		await get_tree().create_timer(SLOTH_ZONE_TELEGRAPH_DURATION, false).timeout
 		_create_sloth_slow_zone(zone_position)
+		if i < amount - 1:
+			await get_tree().create_timer(SLOTH_ZONE_SPAWN_INTERVAL, false).timeout
 
 	_trim_node_array(active_slow_zones, 4 if phase == 1 else 7)
 	_finish_action(2.0 if phase == 1 else 1.5)
@@ -389,12 +396,12 @@ func _create_sloth_slow_zone(zone_position: Vector2) -> void:
 	zone.collision_layer = 0
 	zone.collision_mask = PLAYER_LAYER_MASK
 	zone.set_meta("radius", SLOTH_SLOW_ZONE_RADIUS)
-	zone.set_meta("lifetime", 15.0)
+	zone.set_meta("lifetime", SLOTH_SLOW_ZONE_LIFETIME)
 
 	_add_circle_collision(zone, SLOTH_SLOW_ZONE_RADIUS)
-	_add_circle_visual(zone, SLOTH_SLOW_ZONE_RADIUS, _with_alpha(SLOTH_COLOR, 0.12), 5)
-	_add_ring_visual(zone, SLOTH_SLOW_ZONE_RADIUS, _with_alpha(SLOTH_COLOR, 0.42), 2.0, 6)
-	_add_loop_particles(zone, "SlothZoneParticles", _with_alpha(SLOTH_COLOR, 0.28), 42, 1.0, 18.0, 72.0, 7)
+	_add_circle_visual(zone, SLOTH_SLOW_ZONE_RADIUS, _with_alpha(SLOTH_COLOR, 0.16), 5)
+	_add_ring_visual(zone, SLOTH_SLOW_ZONE_RADIUS, _with_alpha(SLOTH_COLOR, 0.5), 2.0, 6)
+	_add_loop_particles(zone, "SlothZoneParticles", _with_alpha(SLOTH_COLOR, 0.34), 42, 1.0, 18.0, 72.0, 7)
 
 	_get_vfx_parent().add_child(zone)
 	active_slow_zones.append(zone)

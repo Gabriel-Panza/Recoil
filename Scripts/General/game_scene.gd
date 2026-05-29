@@ -8,6 +8,7 @@ const FADE_DURATION: float = 0.4
 const ENEMY_ARENA_PLAYER_POSITION: Vector2 = Vector2(770, 414)
 const SPAWN_WALL_PADDING: float = 8.0
 const SPAWN_PLAYER_MIN_DISTANCE: float = 100.0
+const WAVE_SPAWN_INTERVAL: float = 1.35
 const CAMERA_LIMIT_MARGIN: int = 50
 const ARENA_TILESET_TEXTURE = preload("res://Sprites/tileset_hell.png")
 const ARENA_TILE_SIZE: Vector2i = Vector2i(48, 48)
@@ -345,7 +346,8 @@ func spawn_wave(data: Dictionary):
 	enemies_left_to_spawn = spawn_queue.size()
 
 	# Spawna um por um com delay
-	for enemy_scene in spawn_queue:
+	for i in range(spawn_queue.size()):
+		var enemy_scene = spawn_queue[i]
 		# Se a wave foi cancelada ou o player morreu, para de spawnar
 		if not is_inside_tree() or not is_wave_active: 
 			break
@@ -353,8 +355,8 @@ func spawn_wave(data: Dictionary):
 		spawn_enemy(enemy_scene)
 		enemies_left_to_spawn -= 1
 		
-		# Espera 0.8 segundos entre cada inimigo
-		await get_tree().create_timer(2, false).timeout
+		if i < spawn_queue.size() - 1:
+			await get_tree().create_timer(WAVE_SPAWN_INTERVAL, false).timeout
 
 	await _try_finish_wave()
 		

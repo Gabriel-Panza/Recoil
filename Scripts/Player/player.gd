@@ -33,7 +33,8 @@ const SHOCKWAVE_DASH_DAMAGE_MULTIPLIER: float = 0.75
 const WRATH_OVERHEAT_SHOT_INTERVAL: int = 4
 const MIRROR_SHOT_DAMAGE_MULTIPLIER: float = 0.5
 const MAX_PROJECTILE_SIZE_MULTIPLIER: float = 2.0
-const MAX_HEAL_AFTER_WAVE_BONUS: float = 0.15
+const MIN_PROJECTILE_SIZE_MULTIPLIER: float = 0.5
+const MAX_HEAL_AFTER_WAVE_BONUS: float = 0.18
 
 # --- TIRO ---
 @export var pistol_bullet_scene: PackedScene
@@ -290,16 +291,20 @@ func _recalculate_recoil_force() -> void:
 	recoil_force = min(base_recoil_force * max(1.0 + recoil_force_bonus, 0.0), MAX_RECOIL_FORCE)
 
 func add_projectile_size_bonus(amount: float) -> void:
-	if not can_upgrade_projectile_size():
+	if amount > 0.0 and not can_upgrade_projectile_size():
 		return
 
-	projectile_size_bonus = min(projectile_size_bonus + amount, MAX_PROJECTILE_SIZE_MULTIPLIER - 1.0)
+	projectile_size_bonus = clamp(
+		projectile_size_bonus + amount,
+		MIN_PROJECTILE_SIZE_MULTIPLIER - 1.0,
+		MAX_PROJECTILE_SIZE_MULTIPLIER - 1.0
+	)
 
 func can_upgrade_projectile_size() -> bool:
 	return get_projectile_size_multiplier() < MAX_PROJECTILE_SIZE_MULTIPLIER - 0.0001
 
 func get_projectile_size_multiplier() -> float:
-	return min(1.0 + projectile_size_bonus, MAX_PROJECTILE_SIZE_MULTIPLIER)
+	return clamp(1.0 + projectile_size_bonus, MIN_PROJECTILE_SIZE_MULTIPLIER, MAX_PROJECTILE_SIZE_MULTIPLIER)
 
 func get_projectile_size_percent() -> float:
 	return get_projectile_size_multiplier() * 100.0
@@ -433,6 +438,9 @@ func _apply_recoil_impulse(direction: Vector2) -> void:
 	velocity = velocity.limit_length(_get_movement_force_speed_cap())
 
 func _apply_knockback(attacker_position: Vector2, force_multiplier: float = 1.0) -> void:
+	if is_dashing:
+		return
+
 	var knockback_direction = attacker_position.direction_to(global_position)
 	var knockback_force = 275.0 * clampf(force_multiplier, 0.0, 1.0)
 	velocity = (knockback_direction * knockback_force).limit_length(_get_movement_force_speed_cap())
@@ -1135,13 +1143,10 @@ func _update_passive_status_vfx(delta: float) -> void:
 	_set_passive_ring_vfx_enabled("recoil_explosion", recoil_explosion_enabled, 28.0, Color(1.0, 0.55, 0.14, 0.36), 1.5)
 	_set_passive_ring_vfx_enabled("offensive_dash", offensive_dash_enabled, 31.0, Color(0.38, 0.95, 1.0, 0.34), 1.5)
 
-	if max_dash_charges > 1:
-		var double_dash_vfx = _ensure_double_dash_vfx()
-		if is_instance_valid(double_dash_vfx):
-			_update_double_dash_vfx(double_dash_vfx)
-			double_dash_vfx.rotation += delta * 1.7
-	else:
-		_remove_passive_status_vfx("double_dash")
+	var dash_charge_vfx = _ensure_double_dash_vfx()
+	if is_instance_valid(dash_charge_vfx):
+		_update_double_dash_vfx(dash_charge_vfx)
+		dash_charge_vfx.rotation += delta * 1.7
 
 	_set_passive_ring_vfx_enabled("vengeance", lust_for_vengeance_enabled and current_health >= max_health, 34.0, Color(1.0, 0.24, 0.46, 0.34), 1.6)
 
