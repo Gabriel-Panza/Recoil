@@ -21,11 +21,7 @@ Global="*uid://dkq71raesmyqv"
 
 [display]
 
-window/size/viewport_width=1152
-window/size/viewport_height=648
-window/size/resizable=true
 window/stretch/mode="viewport"
-window/stretch/aspect="keep"
 
 [file_customization]
 
