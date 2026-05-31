@@ -24,6 +24,8 @@ const SKILL_STATUS_LIST_WIDTH = 69.0 * SKILL_STATUS_SCALE
 const SKILL_STATUS_LIST_MIN_HEIGHT = 10.0 * SKILL_STATUS_SCALE
 const SKILL_STATUS_LIST_VERTICAL_PADDING = 18.0
 const SKILL_STATUS_PASSIVE_LINE_HEIGHT = 24.0
+const SKILL_STATUS_BACKGROUND_ALPHA = 0.72
+const SKILL_STATUS_LABEL_ALPHA = 0.88
 
 func _ready() -> void:
 	player = get_node_or_null(player_path)
@@ -57,10 +59,12 @@ func _setup_active_skill_hud_labels() -> void:
 	active_skill_e_label = get_node_or_null("ActiveSkillHudE")
 	if active_skill_e_label == null:
 		active_skill_e_label = _create_active_skill_hud_label("ActiveSkillHudE", SKILL_STATUS_POSITION + Vector2(46.0, 14.0))
+	_apply_skill_status_label_alpha(active_skill_e_label)
 
 	active_skill_r_label = get_node_or_null("ActiveSkillHudR")
 	if active_skill_r_label == null:
 		active_skill_r_label = _create_active_skill_hud_label("ActiveSkillHudR", SKILL_STATUS_POSITION + Vector2(46.0, 48.0))
+	_apply_skill_status_label_alpha(active_skill_r_label)
 
 func _setup_skill_status_background() -> void:
 	var existing_background = get_node_or_null("SkillStatusBackground")
@@ -73,12 +77,14 @@ func _setup_skill_status_background() -> void:
 	skill_status_top_background.size = SKILL_STATUS_TOP_SIZE
 	skill_status_top_background.texture = SKILL_STATUS_TOP_TEXTURE
 	skill_status_top_background.stretch_mode = TextureRect.STRETCH_SCALE
+	skill_status_top_background.self_modulate = Color(1.0, 1.0, 1.0, SKILL_STATUS_BACKGROUND_ALPHA)
 
 	skill_status_list_background = _get_or_create_skill_status_texture_rect("SkillStatusListBackground")
 	skill_status_list_background.position = SKILL_STATUS_POSITION + Vector2(0.0, SKILL_STATUS_TOP_SIZE.y)
 	skill_status_list_background.size = Vector2(SKILL_STATUS_LIST_WIDTH, SKILL_STATUS_LIST_MIN_HEIGHT)
 	skill_status_list_background.texture = SKILL_STATUS_LIST_TEXTURE
 	skill_status_list_background.stretch_mode = TextureRect.STRETCH_SCALE
+	skill_status_list_background.self_modulate = Color(1.0, 1.0, 1.0, SKILL_STATUS_BACKGROUND_ALPHA)
 
 	move_child(skill_status_top_background, 0)
 	move_child(skill_status_list_background, 1)
@@ -102,6 +108,7 @@ func _get_or_create_skill_status_texture_rect(node_name: String) -> TextureRect:
 func _setup_passive_status_label() -> void:
 	passive_status_label = get_node_or_null("PassiveStatusHud")
 	if passive_status_label != null:
+		_apply_skill_status_label_alpha(passive_status_label)
 		return
 
 	passive_status_label = Label.new()
@@ -115,6 +122,7 @@ func _setup_passive_status_label() -> void:
 	passive_status_label.add_theme_font_size_override("font_size", 13)
 	passive_status_label.text = "- None"
 	passive_status_label.tooltip_text = "No passive skills equipped"
+	_apply_skill_status_label_alpha(passive_status_label)
 	add_child(passive_status_label)
 
 func _create_active_skill_hud_label(label_name: String, label_position: Vector2) -> Label:
@@ -128,8 +136,15 @@ func _create_active_skill_hud_label(label_name: String, label_position: Vector2)
 	label.add_theme_constant_override("outline_size", 3)
 	label.add_theme_font_size_override("font_size", 14)
 	label.text = "None"
+	_apply_skill_status_label_alpha(label)
 	add_child(label)
 	return label
+
+func _apply_skill_status_label_alpha(label: Label) -> void:
+	if label == null:
+		return
+
+	label.self_modulate = Color(1.0, 1.0, 1.0, SKILL_STATUS_LABEL_ALPHA)
 
 func _update_active_skill_hud_labels() -> void:
 	if player == null:

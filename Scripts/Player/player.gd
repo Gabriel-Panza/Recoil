@@ -18,6 +18,12 @@ var recoil_force_bonus: float = 0.0
 var is_invulnerable: bool = false
 const MOVEMENT_FORCE_COMBO_LOCK_DURATION: float = 0.2
 const MOVEMENT_FORCE_CAP_BUFFER: float = 100.0
+const WALL_COLLISION_LAYER: int = 1
+const WALL_BOUNCE_MIN_SPEED: float = 80.0
+const WALL_BOUNCE_MULTIPLIER: float = 0.8
+const WALL_BOUNCE_PUSH_OUT: float = 4.0
+const ISO_AOE_VISUAL_Y_SCALE: float = 0.65
+const GROUND_AREA_VFX_LAYER_NAME: String = "GroundAreaVFX"
 
 # --- DASH ---
 @export var dash_speed: float = 600.0
@@ -52,9 +58,9 @@ const STARTING_ARM_DATA = {
 		"name": "Braco rapido",
 		"description": "Tiros fracos, cadencia alta e recuo curto para controlar melhor o medico.",
 		"attack_damage": 30.0,
-		"base_fire_rate": 0.70,
-		"min_fire_rate": 0.40,
-		"base_recoil_force": 400.0,
+		"base_fire_rate": 0.65,
+		"min_fire_rate": 0.35,
+		"base_recoil_force": 450.0,
 		"friction": 900.0,
 		"attack_speed_upgrade_multiplier": 0.35,
 		"unstable_projectiles": false
@@ -62,9 +68,9 @@ const STARTING_ARM_DATA = {
 	"heavy": {
 		"name": "Braco pesado",
 		"description": "Tiros lentos com dano alto e recuo forte para reposicionamentos grandes.",
-		"attack_damage": 60.0,
-		"base_fire_rate": 1.30,
-		"min_fire_rate": 0.80,
+		"attack_damage": 65.0,
+		"base_fire_rate": 1.35,
+		"min_fire_rate": 0.9,
 		"base_recoil_force": 700.0,
 		"friction": 600.0,
 		"attack_speed_upgrade_multiplier": 0.5,
@@ -73,10 +79,10 @@ const STARTING_ARM_DATA = {
 	"unstable": {
 		"name": "Braco instavel",
 		"description": "Projeteis atravessam um alvo e ricocheteiam uma vez, mas voltam perigosos.",
-		"attack_damage": 30.0,
+		"attack_damage": 25.0,
 		"base_fire_rate": 1.00,
-		"min_fire_rate": 0.60,
-		"base_recoil_force": 550.0,
+		"min_fire_rate": 0.65,
+		"base_recoil_force": 575.0,
 		"friction": 750.0,
 		"attack_speed_upgrade_multiplier": 0.7,
 		"unstable_projectiles": true
@@ -87,13 +93,13 @@ const ACTIVE_ABILITY_DATA = {
 	"sloth_field": {
 		"name": "Sloth Field",
 		"description": "Create a 180px field for 5 seconds. Enemies inside drop to 35% speed, but your dash speed drops to 75% during the field.",
-		"cooldown": 20.0,
+		"cooldown": 15.0,
 		"method": "activate_sloth_field"
 	},
 	"gluttony_devour": {
 		"name": "Devour",
 		"description": "Consume up to two enemies within 180px. Green motes fly back and heal up to 12.5% max health when they arrive, but your dash speed is halved for 5 seconds.",
-		"cooldown": 24.0,
+		"cooldown": 25.0,
 		"method": "activate_gluttony_devour"
 	},
 	"envy_mirror_clone": {
@@ -104,8 +110,8 @@ const ACTIVE_ABILITY_DATA = {
 	},
 	"wrath_burst": {
 		"name": "Wrath Burst",
-		"description": "Fire 16 radial bullets for 110% attack damage each, then take 20 damage.",
-		"cooldown": 24.0,
+		"description": "Fire 16 radial bullets for 120% attack damage each, then take 20 damage.",
+		"cooldown": 25.0,
 		"method": "activate_wrath_burst"
 	},
 	"lust_for_perfection": {
@@ -256,7 +262,6 @@ var game_over_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/
 var game_over: Panel
 var game_win_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/PauseControl/GameWin"
 var game_win: Panel
-
 
 var type_animation = "walk_down"
 
@@ -531,6 +536,37 @@ func _recalculate_dash_speed() -> void:
 
 	dash_speed = base_dash_speed * final_multiplier
 
+func _apply_wall_bounce(incoming_velocity: Vector2) -> void:
+	if incoming_velocity.length() < WALL_BOUNCE_MIN_SPEED:
+		return
+
+	for i in range(get_slide_collision_count()):
+		var collision = get_slide_collision(i)
+		if collision == null or not _is_wall_collision(collision):
+			continue
+
+		var normal = collision.get_normal()
+		if incoming_velocity.dot(normal) >= 0.0:
+			continue
+
+		var bounced_velocity = incoming_velocity.bounce(normal) * WALL_BOUNCE_MULTIPLIER
+		if bounced_velocity.length() < WALL_BOUNCE_MIN_SPEED:
+			velocity = Vector2.ZERO
+		else:
+			velocity = bounced_velocity.limit_length(_get_movement_force_speed_cap())
+		global_position += normal * WALL_BOUNCE_PUSH_OUT
+		return
+
+func _is_wall_collision(collision: KinematicCollision2D) -> bool:
+	var collider = collision.get_collider()
+	if collider == null:
+		return false
+	var collision_layer = collider.get("collision_layer")
+	if collision_layer == null:
+		return false
+
+	return (int(collision_layer) & WALL_COLLISION_LAYER) != 0
+
 func _take_direct_damage(amount: float) -> void:
 	current_health -= int(round(amount))
 	emit_signal("hp_updated", current_health, max_health)
@@ -572,7 +608,9 @@ func _physics_process(delta: float) -> void:
 		if velocity.length() > 0:
 			velocity = velocity.move_toward(Vector2.ZERO, friction * delta)
 
+	var velocity_before_slide = velocity
 	move_and_slide()
+	_apply_wall_bounce(velocity_before_slide)
 
 func shoot(direction: Vector2) -> void:
 	if not pistol_bullet_scene:
@@ -1004,7 +1042,7 @@ func activate_sloth_field() -> void:
 
 			_remember_enemy_base_speed(enemy)
 			var base_speed = enemy.get_meta("base_speed")
-			var is_inside_field = enemy.global_position.distance_to(field_position) <= field_radius
+			var is_inside_field = _is_position_inside_iso_aoe(enemy.global_position, field_position, field_radius)
 			if is_inside_field:
 				enemy.set_meta("sloth_field_active", true)
 				enemy.set("speed", base_speed * 0.35)
@@ -1026,7 +1064,7 @@ func activate_sloth_field() -> void:
 
 func activate_gluttony_devour() -> void:
 	var nearby_enemies = get_tree().get_nodes_in_group("Enemy")
-	nearby_enemies = nearby_enemies.filter(func(enemy): return is_instance_valid(enemy) and not enemy.is_in_group("Boss") and enemy.global_position.distance_to(global_position) <= DEVOUR_RADIUS)
+	nearby_enemies = nearby_enemies.filter(func(enemy): return is_instance_valid(enemy) and not enemy.is_in_group("Boss") and _is_position_inside_iso_aoe(enemy.global_position, global_position, DEVOUR_RADIUS))
 	nearby_enemies.sort_custom(func(a, b): return global_position.distance_squared_to(a.global_position) < global_position.distance_squared_to(b.global_position))
 
 	var devoured_count = min(2, nearby_enemies.size())
@@ -1054,7 +1092,7 @@ func activate_envy_mirror_clone() -> void:
 func activate_wrath_burst() -> void:
 	_spawn_burst_particles(global_position, Color(1.0, 0.25, 0.05, 0.95), 48, 0.4, 230.0)
 	_spawn_ring_vfx(global_position, 150.0, Color(1.0, 0.28, 0.08, 0.46), 0.35)
-	var burst_damage = attack_damage * 1.1
+	var burst_damage = attack_damage * 1.2
 	for i in range(16):
 		var angle = TAU * float(i) / 16.0
 		_spawn_projectile(global_position, angle, burst_damage, false, Color(1.0, 0.25, 0.05, 0.95))
@@ -1079,16 +1117,16 @@ func activate_greed_treasure_rain() -> void:
 
 func _trigger_recoil_explosion() -> void:
 	_spawn_burst_particles(global_position, Color(1.0, 0.52, 0.12, 0.95), 34, 0.3, 210.0)
-	_spawn_ring_vfx(global_position, 80.0, Color(1.0, 0.55, 0.12, 0.44), 0.28)
+	_spawn_ring_vfx(global_position, SHOCKWAVE_RADIUS, Color(1.0, 0.55, 0.12, 0.44), 0.28)
 	for enemy in get_tree().get_nodes_in_group("Enemy"):
-		if is_instance_valid(enemy) and enemy.has_method("take_damage") and enemy.global_position.distance_to(global_position) <= SHOCKWAVE_RADIUS:
+		if is_instance_valid(enemy) and enemy.has_method("take_damage") and _is_position_inside_iso_aoe(enemy.global_position, global_position, SHOCKWAVE_RADIUS):
 			enemy.take_damage(_get_shockwave_damage())
 
 func _trigger_offensive_dash_explosion() -> void:
 	_spawn_burst_particles(global_position, Color(0.25, 0.95, 1.0, 0.9), 36, 0.32, 190.0)
-	_spawn_ring_vfx(global_position, 120.0, Color(0.42, 0.95, 1.0, 0.44), 0.3)
+	_spawn_ring_vfx(global_position, SHOCKWAVE_RADIUS, Color(0.42, 0.95, 1.0, 0.44), 0.3)
 	for enemy in get_tree().get_nodes_in_group("Enemy"):
-		if is_instance_valid(enemy) and enemy.has_method("take_damage") and enemy.global_position.distance_to(global_position) <= SHOCKWAVE_RADIUS:
+		if is_instance_valid(enemy) and enemy.has_method("take_damage") and _is_position_inside_iso_aoe(enemy.global_position, global_position, SHOCKWAVE_RADIUS):
 			enemy.take_damage(_get_shockwave_dash_damage())
 
 func _get_shockwave_damage() -> float:
@@ -1106,7 +1144,7 @@ func _apply_sloth_slow_aura() -> void:
 
 		_remember_enemy_base_speed(enemy)
 		var base_speed = enemy.get_meta("base_speed")
-		if enemy.global_position.distance_to(global_position) <= SLOW_AURA_RADIUS:
+		if _is_position_inside_iso_aoe(enemy.global_position, global_position, SLOW_AURA_RADIUS):
 			enemy.set("speed", base_speed * 0.7)
 		else:
 			enemy.set("speed", base_speed)
@@ -1115,10 +1153,35 @@ func _remember_enemy_base_speed(enemy: Node) -> void:
 	if not enemy.has_meta("base_speed"):
 		enemy.set_meta("base_speed", enemy.get("speed"))
 
+func _is_position_inside_iso_aoe(point: Vector2, center: Vector2, radius: float) -> bool:
+	var safe_radius = max(radius, 0.001)
+	var y_radius = max(safe_radius * ISO_AOE_VISUAL_Y_SCALE, 0.001)
+	var local_position = point - center
+	var normalized_x = local_position.x / safe_radius
+	var normalized_y = local_position.y / y_radius
+	return normalized_x * normalized_x + normalized_y * normalized_y <= 1.0
+
 func _get_vfx_parent() -> Node:
 	if get_tree().current_scene:
 		return get_tree().current_scene
 	return get_tree().root
+
+func _get_ground_area_vfx_parent() -> Node:
+	var scene = get_tree().current_scene
+	if scene == null:
+		return _get_vfx_parent()
+
+	var layer = scene.get_node_or_null(GROUND_AREA_VFX_LAYER_NAME)
+	if layer == null:
+		layer = Node2D.new()
+		layer.name = GROUND_AREA_VFX_LAYER_NAME
+		scene.add_child(layer)
+
+	var player_node = scene.get_node_or_null("Player")
+	if player_node != null and layer.get_parent() == scene and layer.get_index() > player_node.get_index():
+		scene.move_child(layer, player_node.get_index())
+
+	return layer
 
 func _spawn_burst_particles(spawn_position: Vector2, color: Color, amount: int = 24, lifetime: float = 0.35, velocity: float = 120.0) -> void:
 	var particles = CPUParticles2D.new()
@@ -1153,8 +1216,7 @@ func _spawn_field_vfx(center: Vector2, radius: float, color: Color, duration: fl
 	particles.initial_velocity_min = radius * 0.05
 	particles.initial_velocity_max = radius * 0.24
 	particles.color = color
-	particles.z_index = 25
-	_get_vfx_parent().add_child(particles)
+	_get_ground_area_vfx_parent().add_child(particles)
 	particles.global_position = center
 	particles.emitting = true
 
@@ -1165,8 +1227,8 @@ func _spawn_attached_aura(radius: float, color: Color, duration: float) -> void:
 	radius = min(radius, MAX_ABILITY_AREA_RADIUS)
 	var aura = Node2D.new()
 	aura.name = "TimedAuraVFX"
-	aura.z_index = 25
 	add_child(aura)
+	move_child(aura, 0)
 
 	_add_ring_to_node(aura, radius, color, 2.0)
 	var particles = CPUParticles2D.new()
@@ -1178,7 +1240,6 @@ func _spawn_attached_aura(radius: float, color: Color, duration: float) -> void:
 	particles.initial_velocity_min = radius * 0.1
 	particles.initial_velocity_max = radius * 0.45
 	particles.color = color
-	particles.z_index = 25
 	aura.add_child(particles)
 	particles.emitting = true
 
@@ -1189,8 +1250,7 @@ func _spawn_ring_vfx(center: Vector2, radius: float, color: Color, duration: flo
 	radius = min(radius, MAX_ABILITY_AREA_RADIUS)
 	var ring_vfx = Node2D.new()
 	ring_vfx.name = "FilledRingVFX"
-	ring_vfx.z_index = 24
-	_get_vfx_parent().add_child(ring_vfx)
+	_get_ground_area_vfx_parent().add_child(ring_vfx)
 	ring_vfx.global_position = center
 	_add_ring_to_node(ring_vfx, radius, color, 3.0)
 
@@ -1205,8 +1265,7 @@ func _add_ring_to_node(parent: Node, radius: float, color: Color, width: float) 
 	var ring = Line2D.new()
 	ring.width = width
 	ring.default_color = color
-	ring.z_index = 24
-	_build_ring_points(ring, radius)
+	ring.points = _build_iso_ellipse_points(radius, true)
 	parent.add_child(ring)
 	return ring
 
@@ -1216,8 +1275,7 @@ func _add_circle_fill_to_node(parent: Node, radius: float, color: Color) -> Poly
 	var fill_color = color
 	fill_color.a *= 0.1
 	fill.color = fill_color
-	fill.polygon = _build_circle_points(radius, false)
-	fill.z_index = 23
+	fill.polygon = _build_iso_ellipse_points(radius, false)
 	parent.add_child(fill)
 	return fill
 
@@ -1245,8 +1303,8 @@ func _ensure_passive_ring_vfx(vfx_id: String, radius: float, color: Color, width
 
 	var vfx = Node2D.new()
 	vfx.name = "%sPassiveVFX" % vfx_id.capitalize().replace("_", "")
-	vfx.z_index = 22
 	add_child(vfx)
+	move_child(vfx, 0)
 	_add_ring_to_node(vfx, radius, color, width)
 	passive_status_vfx[vfx_id] = vfx
 
@@ -1264,9 +1322,9 @@ func _ensure_double_dash_vfx() -> Node2D:
 
 	var vfx = Node2D.new()
 	vfx.name = "DoubleDashPassiveVFX"
-	vfx.z_index = 23
 	add_child(vfx)
-	_add_ring_to_node(vfx, 25.0, Color(0.36, 0.72, 1.0, 0.24), 1.2)
+	move_child(vfx, 0)
+	_add_circular_ring_to_node(vfx, 25.0, Color(0.36, 0.72, 1.0, 0.24), 1.2)
 
 	for i in range(2):
 		var dot = Polygon2D.new()
@@ -1274,7 +1332,6 @@ func _ensure_double_dash_vfx() -> Node2D:
 		dot.polygon = _build_circle_points(3.6, false)
 		dot.color = Color(0.38, 0.78, 1.0, 0.82)
 		dot.position = Vector2(28.0, 0.0).rotated(PI * float(i))
-		dot.z_index = 26
 		vfx.add_child(dot)
 
 	passive_status_vfx["double_dash"] = vfx
@@ -1297,6 +1354,22 @@ func _remove_passive_status_vfx(vfx_id: String) -> void:
 func _build_ring_points(ring: Line2D, radius: float) -> void:
 	ring.points = _build_circle_points(radius, true)
 
+func _add_circular_ring_to_node(parent: Node, radius: float, color: Color, width: float) -> Line2D:
+	radius = min(radius, MAX_ABILITY_AREA_RADIUS)
+	var fill = Polygon2D.new()
+	var fill_color = color
+	fill_color.a *= 0.1
+	fill.color = fill_color
+	fill.polygon = _build_circle_points(radius, false)
+	parent.add_child(fill)
+
+	var ring = Line2D.new()
+	ring.width = width
+	ring.default_color = color
+	ring.points = _build_circle_points(radius, true)
+	parent.add_child(ring)
+	return ring
+
 func _build_circle_points(radius: float, closed: bool) -> PackedVector2Array:
 	var points = PackedVector2Array()
 	var segment_count = 48
@@ -1307,6 +1380,18 @@ func _build_circle_points(radius: float, closed: bool) -> PackedVector2Array:
 	for i in range(point_count):
 		var angle = TAU * float(i % segment_count) / float(segment_count)
 		points.append(Vector2(cos(angle), sin(angle)) * radius)
+	return points
+
+func _build_iso_ellipse_points(radius: float, closed: bool) -> PackedVector2Array:
+	var points = PackedVector2Array()
+	var segment_count = 48
+	var point_count = segment_count
+	if closed:
+		point_count += 1
+
+	for i in range(point_count):
+		var angle = TAU * float(i % segment_count) / float(segment_count)
+		points.append(Vector2(cos(angle) * radius, sin(angle) * radius * ISO_AOE_VISUAL_Y_SCALE))
 	return points
 
 func _spawn_heal_motes(from_position: Vector2, total_heal: float, mote_count: int) -> void:
@@ -1368,10 +1453,10 @@ func _ensure_sloth_slow_aura_vfx() -> void:
 
 	sloth_aura_vfx = Node2D.new()
 	sloth_aura_vfx.name = "SlothSlowAuraVFX"
-	sloth_aura_vfx.z_index = 20
 	add_child(sloth_aura_vfx)
+	move_child(sloth_aura_vfx, 0)
 
-	_add_ring_to_node(sloth_aura_vfx, SLOW_AURA_RADIUS-45, Color(0.25, 0.95, 1.0, 0.26), 2.0)
+	_add_ring_to_node(sloth_aura_vfx, SLOW_AURA_RADIUS, Color(0.25, 0.95, 1.0, 0.26), 2.0)
 
 	var particles = CPUParticles2D.new()
 	particles.amount = 64
@@ -1382,7 +1467,6 @@ func _ensure_sloth_slow_aura_vfx() -> void:
 	particles.initial_velocity_min = 45.0
 	particles.initial_velocity_max = 120.0
 	particles.color = Color(0.25, 0.95, 1.0, 0.3)
-	particles.z_index = 20
 	sloth_aura_vfx.add_child(particles)
 	particles.emitting = true
 

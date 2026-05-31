@@ -52,7 +52,7 @@ func _on_area_entered(area):
 		_queue_hit(parent)
 
 func _on_body_entered(body: Node) -> void:
-	if self.is_in_group("Projectile") and _try_ricochet_from_body(body):
+	if (self.is_in_group("Projectile") or bool(get_meta("enemy_ricochet_enabled", false))) and _try_ricochet_from_body(body):
 		return
 
 	if self.is_in_group("EnemyProjectile") and body.is_in_group("Player"):
@@ -151,7 +151,7 @@ func _get_arena_bounce_normal() -> Vector2:
 	return Vector2.UP if direction.y > 0.0 else Vector2.DOWN
 
 func _on_screen_exited():
-	await get_tree().create_timer(1, false).timeout
+	await get_tree().create_timer(0.75, false).timeout
 	queue_free()
 
 func _configure_projectile_vfx() -> void:

@@ -24,7 +24,7 @@ var cursed_passive_options = [
 	{ "id": "glass_canon", "text": "Attack (+50%), Health (-25%)", "description": "Greatly increases damage, but lowers your maximum health. Strong if you can avoid hits.", "rarity": "passive_cursed" },
 	{ "id": "tanky", "text": "Health (+25%), Attack (-50%)", "description": "Greatly increases survivability, but lowers your damage output.", "rarity": "passive_cursed" },
 	{ "id": "deadly_slow", "text": "Recoil Force (-25%), Attack (+75%)", "description": "Greatly increases damage, but weakens your recoil movement by cutting pushback force.", "rarity": "passive_cursed" },
-	{ "id": "fast_but_small", "text": "Bullet Size (-30%), Atk-Speed (+30%)", "description": "Adds +30% attack speed, but reduces bullet size by 50%. Bullet size cannot drop below 50%.", "rarity": "passive_cursed" }
+	{ "id": "fast_but_small", "text": "Bullet Size (-30%), Atk-Speed (+30%)", "description": "Adds +30% attack speed before the chosen arm's tuning, but reduces bullet size by 50%. Bullet size cannot drop below 50%.", "rarity": "passive_cursed" }
 ]
 
 var rare_options = [

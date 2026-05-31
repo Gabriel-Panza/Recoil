@@ -37,8 +37,12 @@ const SLOTH_SLOW_ZONE_LIFETIME: float = 15.0
 const GLUTTONY_STRESS_DURATION_PHASE_1: float = 7.5
 const GLUTTONY_STRESS_DURATION_PHASE_2: float = 10.0
 const ENVY_CLONE_MAX_HEALTH: float = 180.0
+const ENVY_PINCER_TELEGRAPH_DURATION: float = 0.32
+const ENVY_SWAP_TELEGRAPH_DURATION: float = 0.42
 const GREED_TREASURE_RADIUS: float = 16.0
 const MAX_BOSS_CIRCLE_VFX_RADIUS: float = 180.0
+const ISO_AOE_VISUAL_Y_SCALE: float = 0.68
+const GROUND_AREA_VFX_LAYER_NAME: String = "GroundAreaVFX"
 const DEFAULT_BOSS_VISUAL_SCALE: Vector2 = Vector2(1.5, 1.5)
 
 const SLOTH_COLOR: Color = Color(0.25, 0.95, 1.0, 1.0)
@@ -55,11 +59,11 @@ const BOSS_INDICATOR_PADDING: float = 35.0
 const BOSS_CONFIG = {
 	1: { "max_health": 600, "speed": 0.0, "damage": 35, "state": BossState.SLOTH, "animation": "pecado1" },
 	2: { "max_health": 750, "speed": 80.0, "damage": 45, "state": BossState.GLUTTONY, "animation": "pecado2", "visual_scale": Vector2(2.15, 2.15) },
-	3: { "max_health": 825, "speed": 90.0, "damage": 40, "state": BossState.ENVY, "animation": "pecado3" },
-	4: { "max_health": 875, "speed": 90.0, "damage": 50, "state": BossState.WRATH, "animation": "pecado4" },
-	5: { "max_health": 1000, "speed": 80.0, "damage": 40, "state": BossState.LUST, "animation": "pecado5" },
-	6: { "max_health": 1250, "speed": 82.5, "damage": 45, "state": BossState.GREED, "animation": "pecado6" },
-	7: { "max_health": 1500, "speed": 75.0, "damage": 50, "state": BossState.PRIDE, "animation": "pecado7" },
+	3: { "max_health": 1000, "speed": 90.0, "damage": 45, "state": BossState.ENVY, "animation": "pecado3" },
+	4: { "max_health": 1200, "speed": 90.0, "damage": 50, "state": BossState.WRATH, "animation": "pecado4" },
+	5: { "max_health": 1400, "speed": 80.0, "damage": 45, "state": BossState.LUST, "animation": "pecado5" },
+	6: { "max_health": 1650, "speed": 85.0, "damage": 40, "state": BossState.GREED, "animation": "pecado6" },
+	7: { "max_health": 2000, "speed": 80.0, "damage": 50, "state": BossState.PRIDE, "animation": "pecado7" },
 }
 
 var current_health: int
@@ -90,6 +94,8 @@ var lust_invulnerability_active: bool = false
 var envy_clone: Area2D
 var envy_clone_fire_cooldown: float = 0.8
 var envy_boss_buff_remaining: float = 0.0
+var envy_clone_shot_pattern_index: int = 0
+var envy_clone_movement_locked: bool = false
 var active_treasures: Array = []
 var greed_money_stacks: int = 0
 var greed_shield_remaining: float = 0.0
@@ -107,7 +113,7 @@ func _ready() -> void:
 	add_to_group("Enemy")
 	_setup_enemy_body_collision()
 	aparencia = $AparenciaAnimada
-	aparencia.scale *= 2.5
+	aparencia.scale *= 3
 	_configure_boss_for_current_sin()
 	_setup_boss_edge_indicator()
 	current_health = max_health
@@ -222,12 +228,28 @@ func handle_envy(delta: float) -> void:
 	if phase == 1:
 		_keep_distance_from_player(delta, 180.0)
 	else:
-		_move_toward_player(delta, 1.0 + (0.22 if envy_boss_buff_remaining > 0.0 else 0.0))
-		if _can_start_action() and randf() < 0.45:
-			_start_envy_boss_shot()
+		_move_toward_player(delta, 1.0 + (0.25 if envy_boss_buff_remaining > 0.0 else 0.0))
 
 	if not is_instance_valid(envy_clone) and not is_performing_action:
 		_start_envy_clone()
+		return
+
+	if not _can_start_action() or not is_instance_valid(envy_clone):
+		return
+
+	var roll = randf()
+	if phase == 1:
+		if roll < 0.65:
+			_start_envy_pincer_shot()
+		else:
+			_start_envy_position_swap()
+	else:
+		if roll < 0.45:
+			_start_envy_pincer_shot()
+		elif roll < 0.7:
+			_start_envy_position_swap()
+		else:
+			_start_envy_boss_shot()
 
 func handle_wrath(delta: float) -> void:
 	_move_toward_player(delta, 1.05)
@@ -399,11 +421,11 @@ func _create_sloth_slow_zone(zone_position: Vector2) -> void:
 	zone.set_meta("lifetime", SLOTH_SLOW_ZONE_LIFETIME)
 
 	_add_circle_collision(zone, SLOTH_SLOW_ZONE_RADIUS)
-	_add_circle_visual(zone, SLOTH_SLOW_ZONE_RADIUS, _with_alpha(SLOTH_COLOR, 0.16), 5)
-	_add_ring_visual(zone, SLOTH_SLOW_ZONE_RADIUS, _with_alpha(SLOTH_COLOR, 0.5), 2.0, 6)
-	_add_loop_particles(zone, "SlothZoneParticles", _with_alpha(SLOTH_COLOR, 0.34), 42, 1.0, 18.0, 72.0, 7)
+	_add_circle_visual(zone, SLOTH_SLOW_ZONE_RADIUS, _with_alpha(SLOTH_COLOR, 0.16), 0)
+	_add_ring_visual(zone, SLOTH_SLOW_ZONE_RADIUS, _with_alpha(SLOTH_COLOR, 0.5), 2.0, 0)
+	_add_loop_particles(zone, "SlothZoneParticles", _with_alpha(SLOTH_COLOR, 0.34), 42, 1.0, 18.0, 72.0, 0)
 
-	_get_vfx_parent().add_child(zone)
+	_get_ground_area_vfx_parent().add_child(zone)
 	active_slow_zones.append(zone)
 
 func _update_sloth_slow_zones(delta: float) -> void:
@@ -421,7 +443,7 @@ func _update_sloth_slow_zones(delta: float) -> void:
 			active_slow_zones.erase(zone)
 			zone.queue_free()
 			continue
-		if player.global_position.distance_to(zone.global_position) <= float(zone.get_meta("radius", SLOTH_SLOW_ZONE_RADIUS)):
+		if _is_point_inside_iso_aoe(player.global_position, zone.global_position, float(zone.get_meta("radius", SLOTH_SLOW_ZONE_RADIUS))):
 			is_inside_any_zone = true
 
 	if is_inside_any_zone:
@@ -494,7 +516,7 @@ func _update_gluttony_stress(delta: float) -> void:
 func _start_gluttony_body_slam() -> void:
 	is_performing_action = true
 	current_sub_state = BossSubState.TELEGRAPH
-	_spawn_circle_telegraph(player.global_position, 90.0, _with_alpha(GLUTTONY_COLOR, 0.24), 0.75)
+	_spawn_circle_telegraph(player.global_position, 115.0, _with_alpha(GLUTTONY_COLOR, 0.24), 0.75)
 	await get_tree().create_timer(0.75, false).timeout
 
 	current_sub_state = BossSubState.ATTACK
@@ -502,7 +524,7 @@ func _start_gluttony_body_slam() -> void:
 	global_position = _clamp_to_current_arena(slam_position, 32.0)
 	_spawn_ring_vfx(global_position, 115.0, _with_alpha(GLUTTONY_COLOR, 0.44), 0.32)
 	_spawn_burst_particles(global_position, _with_alpha(GLUTTONY_COLOR, 0.88), 34, 0.3, 160.0)
-	if player.global_position.distance_to(global_position) <= 115.0:
+	if _is_point_inside_iso_aoe(player.global_position, global_position, 115.0):
 		player.take_damage(float(damage) * 1.25, global_position)
 	_finish_action(1.75 if phase == 1 else 1.25)
 
@@ -540,16 +562,157 @@ func _update_envy_clone(delta: float) -> void:
 	if not is_instance_valid(envy_clone) or player == null:
 		return
 
+	if envy_clone_movement_locked:
+		return
+
 	var mirror_target = global_position * 2.0 - player.global_position
 	envy_clone.global_position = envy_clone.global_position.lerp(_clamp_to_current_arena(mirror_target, 28.0), 0.07)
 	envy_clone_fire_cooldown = max(envy_clone_fire_cooldown - delta, 0.0)
 	if envy_clone_fire_cooldown <= 0.0:
-		envy_clone_fire_cooldown = 1.0 if phase == 1 else 0.75
-		var direction = envy_clone.global_position.direction_to(player.global_position)
-		if randf() < 0.65:
-			direction = Vector2(direction.x, -direction.y).normalized()
-		_spawn_line_telegraph(envy_clone.global_position, envy_clone.global_position + direction * 150.0, ENVY_COLOR, 0.12, 1.6)
-		_spawn_enemy_projectile(envy_clone.global_position, direction, float(damage) * 0.7, _with_alpha(ENVY_COLOR, 0.9), 440.0)
+		envy_clone_fire_cooldown = _get_envy_clone_fire_cooldown()
+		var direction = _get_envy_clone_shot_direction(envy_clone.global_position)
+		_spawn_line_telegraph(envy_clone.global_position, envy_clone.global_position + direction * 160.0, ENVY_COLOR, 0.12, 1.6)
+		_fire_envy_clone_weapon(envy_clone.global_position, direction)
+
+func _get_envy_clone_shot_direction(from_position: Vector2) -> Vector2:
+	var direct_direction = from_position.direction_to(player.global_position)
+	if direct_direction == Vector2.ZERO:
+		direct_direction = Vector2.RIGHT
+
+	var pattern_index = envy_clone_shot_pattern_index % 3
+	envy_clone_shot_pattern_index += 1
+	match pattern_index:
+		0:
+			return direct_direction.normalized()
+		1:
+			var mirrored_direction = Vector2(direct_direction.x, -direct_direction.y)
+			return mirrored_direction.normalized() if mirrored_direction != Vector2.ZERO else direct_direction.normalized()
+		_:
+			var player_velocity = Vector2.ZERO
+			if player.get("velocity") != null:
+				player_velocity = player.velocity
+			var predicted_position = player.global_position + player_velocity * (0.28 if phase == 1 else 0.38)
+			var predictive_direction = from_position.direction_to(predicted_position)
+			return predictive_direction.normalized() if predictive_direction != Vector2.ZERO else direct_direction.normalized()
+
+func _get_envy_clone_fire_cooldown() -> float:
+	match _get_envy_clone_arm_id():
+		"fast":
+			return 0.62 if phase == 1 else 0.48
+		"heavy":
+			return 1.25 if phase == 1 else 1.0
+		"unstable":
+			return 0.9 if phase == 1 else 0.72
+	return 1.0 if phase == 1 else 0.75
+
+func _get_envy_clone_arm_id() -> String:
+	if player != null and player.get("current_arm_id") != null:
+		var arm_id = str(player.get("current_arm_id"))
+		if arm_id != "":
+			return arm_id
+	return "fast"
+
+func _fire_envy_clone_weapon(spawn_position: Vector2, shot_direction: Vector2, damage_multiplier: float = 1.0) -> void:
+	if shot_direction == Vector2.ZERO:
+		return
+
+	var base_damage = float(damage) * damage_multiplier
+	match _get_envy_clone_arm_id():
+		"fast":
+			var base_angle = shot_direction.angle()
+			for angle_offset in [-7.0, 7.0]:
+				var direction = Vector2.RIGHT.rotated(base_angle + deg_to_rad(angle_offset))
+				var projectile = _spawn_enemy_projectile(spawn_position, direction, base_damage * 0.42, _with_alpha(ENVY_COLOR, 0.9), 530.0)
+				projectile.scale *= 0.78
+		"heavy":
+			var heavy_projectile = _spawn_enemy_projectile(spawn_position, shot_direction, base_damage * 1.05, _with_alpha(ENVY_COLOR, 0.95), 360.0)
+			heavy_projectile.scale *= 1.35
+		"unstable":
+			var unstable_projectile = _spawn_enemy_projectile(spawn_position, shot_direction, base_damage * 0.62, Color(0.68, 0.35, 1.0, 0.95), 470.0)
+			_configure_envy_unstable_projectile(unstable_projectile)
+		_:
+			_spawn_enemy_projectile(spawn_position, shot_direction, base_damage * 0.7, _with_alpha(ENVY_COLOR, 0.9), 440.0)
+
+func _configure_envy_unstable_projectile(projectile: Area2D) -> void:
+	if not is_instance_valid(projectile):
+		return
+
+	projectile.set_meta("enemy_ricochet_enabled", true)
+	projectile.set_meta("ricochet_remaining", 1)
+	projectile.collision_mask = PLAYER_LAYER_MASK | WALL_LAYER_MASK
+
+func _start_envy_pincer_shot() -> void:
+	if not is_instance_valid(envy_clone) or player == null:
+		return
+
+	is_performing_action = true
+	current_sub_state = BossSubState.TELEGRAPH
+	envy_clone_movement_locked = true
+	velocity = Vector2.ZERO
+
+	var boss_position = global_position
+	var clone_position = envy_clone.global_position
+	var boss_direction = boss_position.direction_to(player.global_position)
+	var clone_direction = clone_position.direction_to(player.global_position)
+	if boss_direction == Vector2.ZERO:
+		boss_direction = Vector2.RIGHT
+	if clone_direction == Vector2.ZERO:
+		clone_direction = Vector2.LEFT
+
+	_spawn_line_telegraph(boss_position, boss_position + boss_direction.normalized() * 210.0, ENVY_COLOR, ENVY_PINCER_TELEGRAPH_DURATION, 2.4)
+	_spawn_line_telegraph(clone_position, clone_position + clone_direction.normalized() * 210.0, ENVY_COLOR, ENVY_PINCER_TELEGRAPH_DURATION, 2.4)
+	_spawn_ring_vfx(boss_position, 36.0, _with_alpha(ENVY_COLOR, 0.36), ENVY_PINCER_TELEGRAPH_DURATION)
+	_spawn_ring_vfx(clone_position, 36.0, _with_alpha(ENVY_COLOR, 0.36), ENVY_PINCER_TELEGRAPH_DURATION)
+	await get_tree().create_timer(ENVY_PINCER_TELEGRAPH_DURATION, false).timeout
+
+	envy_clone_movement_locked = false
+	if is_dead or player == null or not is_instance_valid(envy_clone):
+		_finish_action(0.8)
+		return
+
+	current_sub_state = BossSubState.ATTACK
+	boss_direction = boss_position.direction_to(player.global_position)
+	clone_direction = clone_position.direction_to(player.global_position)
+	if boss_direction == Vector2.ZERO:
+		boss_direction = Vector2.RIGHT
+	if clone_direction == Vector2.ZERO:
+		clone_direction = Vector2.LEFT
+
+	_spawn_enemy_projectile(boss_position, boss_direction, float(damage) * (0.62 if phase == 1 else 0.72), _with_alpha(ENVY_COLOR, 0.92), 475.0)
+	if phase == 2:
+		for angle_offset in [-10.0, 10.0]:
+			_spawn_enemy_projectile(boss_position, boss_direction.rotated(deg_to_rad(angle_offset)), float(damage) * 0.48, _with_alpha(ENVY_COLOR, 0.82), 455.0)
+	_fire_envy_clone_weapon(clone_position, clone_direction, 0.95)
+	_finish_action(1.1 if phase == 1 else 0.85)
+
+func _start_envy_position_swap() -> void:
+	if not is_instance_valid(envy_clone):
+		return
+
+	is_performing_action = true
+	current_sub_state = BossSubState.TELEGRAPH
+	envy_clone_movement_locked = true
+	velocity = Vector2.ZERO
+
+	var boss_position = global_position
+	var clone_position = envy_clone.global_position
+	_spawn_line_telegraph(boss_position, clone_position, ENVY_COLOR, ENVY_SWAP_TELEGRAPH_DURATION, 3.0)
+	_spawn_ring_vfx(boss_position, 46.0, _with_alpha(ENVY_COLOR, 0.42), ENVY_SWAP_TELEGRAPH_DURATION)
+	_spawn_ring_vfx(clone_position, 46.0, _with_alpha(ENVY_COLOR, 0.42), ENVY_SWAP_TELEGRAPH_DURATION)
+	await get_tree().create_timer(ENVY_SWAP_TELEGRAPH_DURATION, false).timeout
+
+	if is_dead or not is_instance_valid(envy_clone):
+		envy_clone_movement_locked = false
+		_finish_action(0.8)
+		return
+
+	current_sub_state = BossSubState.ATTACK
+	global_position = _clamp_to_current_arena(clone_position, 32.0)
+	envy_clone.global_position = _clamp_to_current_arena(boss_position, 28.0)
+	_spawn_burst_particles(global_position, _with_alpha(ENVY_COLOR, 0.8), 24, 0.24, 110.0)
+	_spawn_burst_particles(envy_clone.global_position, _with_alpha(ENVY_COLOR, 0.72), 18, 0.2, 95.0)
+	envy_clone_movement_locked = false
+	_finish_action(1.0 if phase == 1 else 0.75)
 
 func _start_envy_boss_shot() -> void:
 	is_performing_action = true
@@ -618,7 +781,7 @@ func _update_wrath_bombs(delta: float) -> void:
 		var fuse_alpha = 0.78 + max(0.0, sin(Time.get_ticks_msec() * 0.012)) * 0.22
 		bomb.modulate = Color(1.0, 1.0, 1.0, fuse_alpha)
 
-		if bool(bomb.get_meta("pushed", false)) and bomb.global_position.distance_to(global_position) <= 38.0:
+		if bool(bomb.get_meta("pushed", false)) and _is_point_inside_iso_aoe(bomb.global_position, global_position, 38.0):
 			_explode_wrath_bomb(bomb, true)
 			continue
 
@@ -649,10 +812,10 @@ func _explode_wrath_bomb(bomb: Area2D, force_boss_damage: bool) -> void:
 	_spawn_circle_telegraph(explosion_position, WRATH_BOMB_EXPLOSION_RADIUS, _with_alpha(WRATH_COLOR, 0.18), 0.16)
 	_spawn_ring_vfx(explosion_position, WRATH_BOMB_EXPLOSION_RADIUS, _with_alpha(WRATH_COLOR, 0.44), 0.28)
 
-	if player and player.global_position.distance_to(explosion_position) <= WRATH_BOMB_EXPLOSION_RADIUS:
+	if player and _is_point_inside_iso_aoe(player.global_position, explosion_position, WRATH_BOMB_EXPLOSION_RADIUS):
 		player.take_damage(WRATH_BOMB_DAMAGE, explosion_position)
 
-	if (force_boss_damage or was_pushed) and global_position.distance_to(explosion_position) <= WRATH_BOMB_EXPLOSION_RADIUS:
+	if (force_boss_damage or was_pushed) and _is_point_inside_iso_aoe(global_position, explosion_position, WRATH_BOMB_EXPLOSION_RADIUS):
 		take_self_damage(max_health * (0.055 if phase == 1 else 0.04))
 
 func _start_lust_wall_pattern() -> void:
@@ -1309,11 +1472,9 @@ func _get_boss_color() -> Color:
 			return PRIDE_LIGHT_COLOR
 	return Color.WHITE
 
-func _add_circle_collision(parent: Node, radius: float) -> CollisionShape2D:
-	var collision = CollisionShape2D.new()
-	var shape = CircleShape2D.new()
-	shape.radius = radius
-	collision.shape = shape
+func _add_circle_collision(parent: Node, radius: float) -> CollisionPolygon2D:
+	var collision = CollisionPolygon2D.new()
+	collision.polygon = _build_iso_ellipse_points(radius, false)
 	parent.add_child(collision)
 	return collision
 
@@ -1328,7 +1489,7 @@ func _add_rect_collision(parent: Node, size: Vector2) -> CollisionShape2D:
 func _add_circle_visual(parent: Node, radius: float, color: Color, visual_z_index: int) -> Polygon2D:
 	var visual = Polygon2D.new()
 	radius = min(radius, MAX_BOSS_CIRCLE_VFX_RADIUS)
-	visual.polygon = _build_circle_points(radius, false)
+	visual.polygon = _build_iso_ellipse_points(radius, false)
 	visual.color = color
 	visual.z_index = visual_z_index
 	parent.add_child(visual)
@@ -1347,7 +1508,7 @@ func _add_ring_visual(parent: Node, radius: float, color: Color, width: float, v
 	radius = min(radius, MAX_BOSS_CIRCLE_VFX_RADIUS)
 	ring.width = width
 	ring.default_color = color
-	ring.points = _build_circle_points(radius, true)
+	ring.points = _build_iso_ellipse_points(radius, true)
 	ring.z_index = visual_z_index
 	parent.add_child(ring)
 	return ring
@@ -1371,6 +1532,23 @@ func _get_vfx_parent() -> Node:
 	if get_tree().current_scene:
 		return get_tree().current_scene
 	return get_tree().root
+
+func _get_ground_area_vfx_parent() -> Node:
+	var scene = get_tree().current_scene
+	if scene == null:
+		return _get_vfx_parent()
+
+	var layer = scene.get_node_or_null(GROUND_AREA_VFX_LAYER_NAME)
+	if layer == null:
+		layer = Node2D.new()
+		layer.name = GROUND_AREA_VFX_LAYER_NAME
+		scene.add_child(layer)
+
+	var player_node = scene.get_node_or_null("Player")
+	if player_node != null and layer.get_parent() == scene and layer.get_index() > player_node.get_index():
+		scene.move_child(layer, player_node.get_index())
+
+	return layer
 
 func _get_arena_center() -> Vector2:
 	var scene = get_tree().current_scene
@@ -1397,6 +1575,14 @@ func _is_inside_current_arena(point: Vector2, margin: float = 0.0) -> bool:
 	if scene and scene.has_method("_is_position_safe_in_current_arena"):
 		return scene.call("_is_position_safe_in_current_arena", point, margin)
 	return _get_arena_rect().grow(-margin).has_point(point)
+
+func _is_point_inside_iso_aoe(point: Vector2, center: Vector2, radius: float) -> bool:
+	var safe_radius = max(radius, 0.001)
+	var y_radius = max(safe_radius * ISO_AOE_VISUAL_Y_SCALE, 0.001)
+	var local_position = point - center
+	var normalized_x = local_position.x / safe_radius
+	var normalized_y = local_position.y / y_radius
+	return normalized_x * normalized_x + normalized_y * normalized_y <= 1.0
 
 func _clamp_to_current_arena(point: Vector2, margin: float = 0.0) -> Vector2:
 	var scene = get_tree().current_scene
@@ -1443,27 +1629,25 @@ func _spawn_action_charge_vfx(center: Vector2, radius: float, color: Color, dura
 func _spawn_line_telegraph(from_position: Vector2, to_position: Vector2, color: Color, duration: float, width: float = 3.0) -> void:
 	var telegraph = Node2D.new()
 	telegraph.global_position = from_position
-	telegraph.z_index = 18
 	var line = Line2D.new()
 	line.width = width
 	line.default_color = _with_alpha(color, 0.45)
 	line.points = PackedVector2Array([Vector2.ZERO, to_position - from_position])
 	telegraph.add_child(line)
-	_get_vfx_parent().add_child(telegraph)
+	_get_ground_area_vfx_parent().add_child(telegraph)
 	var timer = get_tree().create_timer(duration, false)
 	timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(telegraph))
 
 func _spawn_falling_warning(spawn_position: Vector2, color: Color, duration: float) -> void:
 	var warning = Node2D.new()
 	warning.global_position = spawn_position
-	warning.z_index = 18
 	var line = Line2D.new()
 	line.width = 2.5
 	line.default_color = _with_alpha(color, 0.55)
 	line.points = PackedVector2Array([Vector2.ZERO, Vector2(0.0, MAX_BOSS_CIRCLE_VFX_RADIUS)])
 	warning.add_child(line)
-	_add_ring_visual(warning, 11.0, _with_alpha(color, 0.72), 2.0, 19)
-	_get_vfx_parent().add_child(warning)
+	_add_ring_visual(warning, 11.0, _with_alpha(color, 0.72), 2.0, 0)
+	_get_ground_area_vfx_parent().add_child(warning)
 	var timer = get_tree().create_timer(duration, false)
 	timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(warning))
 
@@ -1487,11 +1671,11 @@ func _spawn_marker_on_node(target: Node2D, radius: float, color: Color, duration
 	if not is_instance_valid(target):
 		return
 	var marker = Node2D.new()
-	marker.z_index = 28
 	target.add_child(marker)
-	_add_circle_visual(marker, radius, _with_alpha(color, 0.1), 28)
-	_add_ring_visual(marker, radius, _with_alpha(color, 0.62), 2.0, 29)
-	_add_loop_particles(marker, "MarkerParticles", _with_alpha(color, 0.42), 28, 0.55, 12.0, 48.0, 30)
+	target.move_child(marker, 0)
+	_add_circle_visual(marker, radius, _with_alpha(color, 0.1), 0)
+	_add_ring_visual(marker, radius, _with_alpha(color, 0.62), 2.0, 0)
+	_add_loop_particles(marker, "MarkerParticles", _with_alpha(color, 0.42), 28, 0.55, 12.0, 48.0, 0)
 	var tween = create_tween().bind_node(marker)
 	tween.tween_property(marker, "modulate:a", 0.55, duration * 0.5)
 	tween.tween_property(marker, "modulate:a", 0.0, duration * 0.5)
@@ -1501,17 +1685,16 @@ func _spawn_circle_telegraph(center: Vector2, radius: float, color: Color, durat
 	radius = min(radius, MAX_BOSS_CIRCLE_VFX_RADIUS)
 	var telegraph = Node2D.new()
 	telegraph.global_position = center
-	telegraph.z_index = 18
 	var fill = Polygon2D.new()
-	fill.polygon = _build_circle_points(radius, false)
+	fill.polygon = _build_iso_ellipse_points(radius, false)
 	fill.color = color
 	telegraph.add_child(fill)
 	var ring = Line2D.new()
 	ring.width = 2.0
 	ring.default_color = Color(color.r, color.g, color.b, min(color.a + 0.24, 1.0))
-	ring.points = _build_circle_points(radius, true)
+	ring.points = _build_iso_ellipse_points(radius, true)
 	telegraph.add_child(ring)
-	_get_vfx_parent().add_child(telegraph)
+	_get_ground_area_vfx_parent().add_child(telegraph)
 	var timer = get_tree().create_timer(duration, false)
 	timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(telegraph))
 
@@ -1519,12 +1702,11 @@ func _spawn_rect_telegraph(center: Vector2, size: Vector2, rect_rotation: float,
 	var telegraph = Node2D.new()
 	telegraph.global_position = center
 	telegraph.rotation = rect_rotation
-	telegraph.z_index = 18
 	var fill = Polygon2D.new()
 	fill.polygon = _build_rect_points(size)
 	fill.color = color
 	telegraph.add_child(fill)
-	_get_vfx_parent().add_child(telegraph)
+	_get_ground_area_vfx_parent().add_child(telegraph)
 	var timer = get_tree().create_timer(duration, false)
 	timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(telegraph))
 
@@ -1532,13 +1714,12 @@ func _spawn_ring_vfx(center: Vector2, radius: float, color: Color, duration: flo
 	radius = min(radius, MAX_BOSS_CIRCLE_VFX_RADIUS)
 	var node = Node2D.new()
 	node.global_position = center
-	node.z_index = 22
 	var ring = Line2D.new()
 	ring.width = 3.0
 	ring.default_color = color
-	ring.points = _build_circle_points(radius, true)
+	ring.points = _build_iso_ellipse_points(radius, true)
 	node.add_child(ring)
-	_get_vfx_parent().add_child(node)
+	_get_ground_area_vfx_parent().add_child(node)
 	var tween = create_tween().bind_node(node)
 	tween.tween_property(node, "modulate:a", 0.0, duration)
 	tween.tween_callback(Callable(self, "_queue_free_if_valid").bind(node))
@@ -1546,10 +1727,10 @@ func _spawn_ring_vfx(center: Vector2, radius: float, color: Color, duration: flo
 func _spawn_attached_aura(radius: float, color: Color, duration: float) -> void:
 	radius = min(radius, MAX_BOSS_CIRCLE_VFX_RADIUS)
 	var aura = Node2D.new()
-	aura.z_index = 22
 	add_child(aura)
+	move_child(aura, 0)
 	var fill = Polygon2D.new()
-	fill.polygon = _build_circle_points(radius, false)
+	fill.polygon = _build_iso_ellipse_points(radius, false)
 	var fill_color = color
 	fill_color.a *= 0.16
 	fill.color = fill_color
@@ -1557,7 +1738,7 @@ func _spawn_attached_aura(radius: float, color: Color, duration: float) -> void:
 	var ring = Line2D.new()
 	ring.width = 2.0
 	ring.default_color = color
-	ring.points = _build_circle_points(radius, true)
+	ring.points = _build_iso_ellipse_points(radius, true)
 	aura.add_child(ring)
 	var timer = get_tree().create_timer(duration, false)
 	timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(aura))
@@ -1592,6 +1773,15 @@ func _build_circle_points(radius: float, closed: bool) -> PackedVector2Array:
 	for i in range(point_count):
 		var angle = TAU * float(i % segment_count) / float(segment_count)
 		points.append(Vector2(cos(angle), sin(angle)) * radius)
+	return points
+
+func _build_iso_ellipse_points(radius: float, closed: bool) -> PackedVector2Array:
+	var points = PackedVector2Array()
+	var segment_count = 48
+	var point_count = segment_count + (1 if closed else 0)
+	for i in range(point_count):
+		var angle = TAU * float(i % segment_count) / float(segment_count)
+		points.append(Vector2(cos(angle) * radius, sin(angle) * radius * ISO_AOE_VISUAL_Y_SCALE))
 	return points
 
 func _build_rect_points(size: Vector2) -> PackedVector2Array:
