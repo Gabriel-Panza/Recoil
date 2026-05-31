@@ -20,7 +20,7 @@ func _ready() -> void:
 
 	max_health = 200 + ((Global.pecado - 1) * 100)
 	current_health = max_health
-	speed = 90.0
+	speed *= 0.8
 	damage = 35
 	set_meta("contact_knockback_multiplier", CONTACT_KNOCKBACK_MULTIPLIER)
 	_configure_enemy_sprite_sheet(TANK_SPRITESHEET, TANK_FRAME_SIZE, TANK_FRAMES_PER_ROW, ["walk"], TANK_ROW_BY_PECADO, 5.5, Vector2(1.5, 1.5))

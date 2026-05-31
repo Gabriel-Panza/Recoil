@@ -27,6 +27,13 @@ var is_dead: bool = false
 func _ready() -> void:
 	current_health = max_health
 	player = get_tree().get_first_node_in_group("Player")
+	match player.STARTING_ARM_DATA:
+		"fast":
+			speed = 136
+		"heavy":
+			speed = 120
+		"unstable":
+			speed = 128
 	add_to_group("Enemy")
 	_setup_enemy_body_collision()
 	call_deferred("_setup_health_bar")

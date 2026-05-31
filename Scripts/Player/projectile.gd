@@ -13,6 +13,7 @@ var player
 
 # Lista de espera de colisões deste frame
 var hit_queue: Array = []
+var pierced_targets: Array = []
 
 func _ready():
 	player = get_node_or_null(player_path)
@@ -51,6 +52,9 @@ func _on_area_entered(area):
 		_queue_hit(parent)
 
 func _on_body_entered(body: Node) -> void:
+	if self.is_in_group("Projectile") and _try_ricochet_from_body(body):
+		return
+
 	if self.is_in_group("EnemyProjectile") and body.is_in_group("Player"):
 		_queue_hit(body)
 
@@ -71,8 +75,12 @@ func process_hit_queue():
 			continue
 
 		if target.is_in_group("Enemy") and target.has_method("take_damage"):
+			if target in pierced_targets:
+				continue
+
 			var enemy_damage = damage if damage != null else player.attack_damage
 			target.take_damage(enemy_damage)
+			pierced_targets.append(target)
 		elif target.is_in_group("Player") and target.has_method("take_damage"):
 			var player_damage = damage if damage != null else 20.0
 			target.take_damage(player_damage)
@@ -80,11 +88,67 @@ func process_hit_queue():
 		_spawn_hit_particles(global_position)
 			
 		# Destrói o projétil e interrompe o loop imediatamente
+		if target.is_in_group("Enemy") and _consume_pierce():
+			hit_queue.clear()
+			return
+
 		queue_free()
 		return
 		
 	# Limpa a lista para o próximo frame se não tiver achado alvos válidos
 	hit_queue.clear()
+
+func _consume_pierce() -> bool:
+	var remaining = int(get_meta("pierce_remaining", 0))
+	if remaining <= 0:
+		return false
+
+	set_meta("pierce_remaining", remaining - 1)
+	return true
+
+func _try_ricochet_from_body(body: Node) -> bool:
+	var remaining = int(get_meta("ricochet_remaining", 0))
+	if remaining <= 0 or not _is_wall_body(body):
+		return false
+
+	set_meta("ricochet_remaining", remaining - 1)
+	var bounce_normal = _get_arena_bounce_normal()
+	direction = direction.bounce(bounce_normal).normalized()
+	rotation = direction.angle()
+	global_position += direction * 8.0
+
+	if bool(get_meta("risk_after_ricochet", false)):
+		add_to_group("EnemyProjectile")
+		collision_mask = 6
+		damage = max(float(damage) * 0.45, 12.0)
+		set_meta("vfx_color", Color(1.0, 0.78, 0.08, 0.95))
+		_configure_projectile_vfx()
+
+	return true
+
+func _is_wall_body(body: Node) -> bool:
+	if body == null:
+		return false
+
+	return body.collision_layer & 1 != 0
+
+func _get_arena_bounce_normal() -> Vector2:
+	var scene = get_tree().current_scene
+	if scene != null and scene.has_method("_get_current_arena_bounds"):
+		var arena_bounds: Rect2 = scene.call("_get_current_arena_bounds")
+		if arena_bounds.size != Vector2.ZERO:
+			var distances = [
+				{ "normal": Vector2.RIGHT, "distance": abs(global_position.x - arena_bounds.position.x) },
+				{ "normal": Vector2.LEFT, "distance": abs(global_position.x - arena_bounds.end.x) },
+				{ "normal": Vector2.DOWN, "distance": abs(global_position.y - arena_bounds.position.y) },
+				{ "normal": Vector2.UP, "distance": abs(global_position.y - arena_bounds.end.y) }
+			]
+			distances.sort_custom(func(a, b): return float(a["distance"]) < float(b["distance"]))
+			return distances[0]["normal"]
+
+	if abs(direction.x) > abs(direction.y):
+		return Vector2.LEFT if direction.x > 0.0 else Vector2.RIGHT
+	return Vector2.UP if direction.y > 0.0 else Vector2.DOWN
 
 func _on_screen_exited():
 	await get_tree().create_timer(1, false).timeout

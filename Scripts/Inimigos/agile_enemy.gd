@@ -2,7 +2,6 @@ extends BaseEnemy
 class_name AgileEnemy
 
 @export var orbit_distance: float = 150.0
-@export var orbit_speed: float = 200.0
 @export var dash_speed: float = 450.0
 @export var time_to_dash: float = 3.5 
 @export var dash_duration: float = 0.75 
@@ -20,7 +19,7 @@ func _ready() -> void:
 	
 	max_health = 50 + ((Global.pecado - 1) * 25)
 	current_health = max_health
-	speed = orbit_speed
+	speed *= 1.67
 
 func mover(_delta: float) -> void:
 	var dir_to_player = global_position.direction_to(player.global_position)

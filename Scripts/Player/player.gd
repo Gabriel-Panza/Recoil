@@ -6,7 +6,8 @@ extends CharacterBody2D
 @export var attack_damage: float = 40.0
 @export var fire_rate: float = 1.1
 const STARTING_FIRE_RATE: float = 1.1
-const MIN_FIRE_RATE: float = 0.25
+const DEFAULT_MIN_FIRE_RATE: float = 0.25
+var min_fire_rate: float = DEFAULT_MIN_FIRE_RATE
 var base_fire_rate: float = 1.1
 var attack_speed_bonus: float = 0.0
 @export var recoil_force: float = 460.0
@@ -42,6 +43,45 @@ var shot_count = 1
 var spread_angle = 15.0 
 var projectile_size_bonus: float = 0.0
 var heal_after_wave_bonus: float = 0.0
+var current_arm_id: String = ""
+var arm_attack_speed_upgrade_multiplier: float = 1.0
+var unstable_arm_projectiles_enabled: bool = false
+
+const STARTING_ARM_DATA = {
+	"fast": {
+		"name": "Braco rapido",
+		"description": "Tiros fracos, cadencia alta e recuo curto para controlar melhor o medico.",
+		"attack_damage": 30.0,
+		"base_fire_rate": 0.70,
+		"min_fire_rate": 0.40,
+		"base_recoil_force": 400.0,
+		"friction": 900.0,
+		"attack_speed_upgrade_multiplier": 0.35,
+		"unstable_projectiles": false
+	},
+	"heavy": {
+		"name": "Braco pesado",
+		"description": "Tiros lentos com dano alto e recuo forte para reposicionamentos grandes.",
+		"attack_damage": 60.0,
+		"base_fire_rate": 1.30,
+		"min_fire_rate": 0.80,
+		"base_recoil_force": 700.0,
+		"friction": 600.0,
+		"attack_speed_upgrade_multiplier": 0.5,
+		"unstable_projectiles": false
+	},
+	"unstable": {
+		"name": "Braco instavel",
+		"description": "Projeteis atravessam um alvo e ricocheteiam uma vez, mas voltam perigosos.",
+		"attack_damage": 30.0,
+		"base_fire_rate": 1.00,
+		"min_fire_rate": 0.60,
+		"base_recoil_force": 550.0,
+		"friction": 750.0,
+		"attack_speed_upgrade_multiplier": 0.7,
+		"unstable_projectiles": true
+	}
+}
 
 const ACTIVE_ABILITY_DATA = {
 	"sloth_field": {
@@ -248,15 +288,41 @@ func _ready() -> void:
 	contact_damage_timer.timeout.connect(_on_contact_damage_timer_timeout)
 	add_child(contact_damage_timer)
 
+func apply_starting_arm(arm_id: String) -> void:
+	if not STARTING_ARM_DATA.has(arm_id):
+		return
+
+	var arm_data: Dictionary = STARTING_ARM_DATA[arm_id]
+	current_arm_id = arm_id
+	attack_damage = float(arm_data["attack_damage"])
+	base_fire_rate = float(arm_data["base_fire_rate"])
+	min_fire_rate = float(arm_data["min_fire_rate"])
+	attack_speed_bonus = 0.0
+	base_recoil_force = float(arm_data["base_recoil_force"])
+	recoil_force_bonus = 0.0
+	friction = float(arm_data["friction"])
+	arm_attack_speed_upgrade_multiplier = float(arm_data["attack_speed_upgrade_multiplier"])
+	unstable_arm_projectiles_enabled = bool(arm_data["unstable_projectiles"])
+	_recalculate_fire_rate()
+	_recalculate_recoil_force()
+	emit_signal("stats_updated")
+
+func get_starting_arm_name() -> String:
+	if current_arm_id == "" or not STARTING_ARM_DATA.has(current_arm_id):
+		return "Nenhum braco"
+
+	return str(STARTING_ARM_DATA[current_arm_id]["name"])
+
 func add_attack_speed_bonus(amount: float) -> void:
 	if not can_upgrade_attack_speed():
 		return
 
-	attack_speed_bonus += amount
+	attack_speed_bonus += amount * arm_attack_speed_upgrade_multiplier
 	_recalculate_fire_rate()
+	emit_signal("stats_updated")
 
 func get_attack_speed_percent() -> float:
-	return (base_fire_rate / max(fire_rate, MIN_FIRE_RATE)) * 100.0
+	return (base_fire_rate / max(fire_rate, min_fire_rate)) * 100.0
 
 func get_shot_cooldown() -> float:
 	return fire_rate
@@ -265,10 +331,10 @@ func get_base_shot_cooldown() -> float:
 	return base_fire_rate
 
 func can_upgrade_attack_speed() -> bool:
-	return fire_rate > MIN_FIRE_RATE + 0.0001
+	return fire_rate > min_fire_rate + 0.0001
 
 func _recalculate_fire_rate() -> void:
-	fire_rate = max(base_fire_rate / max(1.0 + attack_speed_bonus, 0.001), MIN_FIRE_RATE)
+	fire_rate = max(base_fire_rate / max(1.0 + attack_speed_bonus, 0.001), min_fire_rate)
 
 func add_recoil_force_bonus(amount: float) -> void:
 	if not can_upgrade_recoil_force():
@@ -619,8 +685,16 @@ func _spawn_projectile(spawn_position: Vector2, angle: float, projectile_damage:
 		bullet.set_meta("vfx_color", projectile_vfx_color)
 	if can_hit_player:
 		bullet.add_to_group("EnemyProjectile")
+	elif unstable_arm_projectiles_enabled:
+		_configure_unstable_projectile(bullet)
 	get_tree().root.add_child(bullet)
 	return bullet
+
+func _configure_unstable_projectile(bullet: Node) -> void:
+	bullet.set_meta("pierce_remaining", 1)
+	bullet.set_meta("ricochet_remaining", 1)
+	bullet.set_meta("risk_after_ricochet", true)
+	bullet.set_meta("vfx_color", Color(0.6, 0.2, 1.0, 0.95))
 
 func _can_perform_dash() -> bool:
 	return can_dash and double_dash_charges > 0 and not is_dashing
@@ -841,6 +915,14 @@ func get_equipped_passive_summaries() -> Array:
 			passive_ids.append(passive_id)
 
 	var summaries: Array = []
+	if current_arm_id != "" and STARTING_ARM_DATA.has(current_arm_id):
+		var arm_data: Dictionary = STARTING_ARM_DATA[current_arm_id]
+		summaries.append({
+			"id": current_arm_id,
+			"name": str(arm_data["name"]),
+			"description": str(arm_data["description"])
+		})
+
 	for passive_id in passive_ids:
 		summaries.append({
 			"id": passive_id,

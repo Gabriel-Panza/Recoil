@@ -8,7 +8,7 @@ const FADE_DURATION: float = 0.4
 const ENEMY_ARENA_PLAYER_POSITION: Vector2 = Vector2(770, 414)
 const SPAWN_WALL_PADDING: float = 8.0
 const SPAWN_PLAYER_MIN_DISTANCE: float = 100.0
-const WAVE_SPAWN_INTERVAL: float = 1.35
+const WAVE_SPAWN_INTERVAL: float = 0.75
 const CAMERA_LIMIT_MARGIN: int = 50
 const ARENA_TILESET_TEXTURE = preload("res://Sprites/tileset_hell.png")
 const ARENA_TILE_SIZE: Vector2i = Vector2i(48, 48)
@@ -30,6 +30,7 @@ const ARENA_LAVA_PATCHES = [
 
 var fade_layer: CanvasLayer
 var fade_rect: ColorRect
+var starting_arm_layer: CanvasLayer
 var is_transitioning: bool = false
 
 var arena_tile_set: TileSet
@@ -54,37 +55,37 @@ var wave_sets = {
 		{"melee": 3, "ranged": 1, "agile": 0, "tank": 1, "spread": 0},
 		{"melee": 4, "ranged": 2, "agile": 0, "tank": 1, "spread": 0},
 		{"melee": 5, "ranged": 3, "agile": 0, "tank": 2, "spread": 0},
-		{"melee": 6, "ranged": 3, "agile": 0, "tank": 2, "spread": 0}
+		{"melee": 5, "ranged": 3, "agile": 0, "tank": 2, "spread": 0}
 	],
 	3: [  # Envy
 		{"melee": 4, "ranged": 2, "agile": 1, "tank": 1, "spread": 0},
 		{"melee": 5, "ranged": 3, "agile": 1, "tank": 1, "spread": 0},
 		{"melee": 6, "ranged": 3, "agile": 2, "tank": 2, "spread": 0},
-		{"melee": 7, "ranged": 4, "agile": 2, "tank": 2, "spread": 0}
+		{"melee": 6, "ranged": 4, "agile": 2, "tank": 2, "spread": 0}
 	],
 	4: [  # Wrath
 		{"melee": 4, "ranged": 3, "agile": 1, "tank": 1, "spread": 1},
-		{"melee": 5, "ranged": 3, "agile": 2, "tank": 2, "spread": 1},
+		{"melee": 5, "ranged": 3, "agile": 2, "tank": 1, "spread": 1},
 		{"melee": 6, "ranged": 4, "agile": 2, "tank": 2, "spread": 2},
-		{"melee": 7, "ranged": 4, "agile": 3, "tank": 3, "spread": 2}
+		{"melee": 6, "ranged": 4, "agile": 3, "tank": 3, "spread": 2}
 	],
 	5: [  # Lust
 		{"melee": 5, "ranged": 3, "agile": 2, "tank": 1, "spread": 1},
 		{"melee": 6, "ranged": 4, "agile": 2, "tank": 2, "spread": 2},
 		{"melee": 7, "ranged": 4, "agile": 3, "tank": 2, "spread": 2},
-		{"melee": 8, "ranged": 5, "agile": 3, "tank": 3, "spread": 3}
+		{"melee": 7, "ranged": 4, "agile": 3, "tank": 3, "spread": 3}
 	],
 	6: [  # Greed
 		{"melee": 5, "ranged": 4, "agile": 2, "tank": 2, "spread": 2},
-		{"melee": 6, "ranged": 4, "agile": 3, "tank": 3, "spread": 2},
-		{"melee": 7, "ranged": 5, "agile": 3, "tank": 3, "spread": 3},
-		{"melee": 8, "ranged": 5, "agile": 4, "tank": 4, "spread": 3}
+		{"melee": 6, "ranged": 4, "agile": 3, "tank": 2, "spread": 2},
+		{"melee": 7, "ranged": 4, "agile": 3, "tank": 3, "spread": 3},
+		{"melee": 7, "ranged": 4, "agile": 4, "tank": 3, "spread": 3}
 	],
 	7: [  # Pride
-		{"melee": 6, "ranged": 4, "agile": 3, "tank": 2, "spread": 2},
-		{"melee": 7, "ranged": 5, "agile": 3, "tank": 3, "spread": 3},
+		{"melee": 6, "ranged": 4, "agile": 3, "tank": 3, "spread": 2},
+		{"melee": 7, "ranged": 4, "agile": 3, "tank": 3, "spread": 3},
 		{"melee": 8, "ranged": 5, "agile": 4, "tank": 3, "spread": 3},
-		{"melee": 9, "ranged": 6, "agile": 4, "tank": 4, "spread": 4}
+		{"melee": 8, "ranged": 5, "agile": 4, "tank": 3, "spread": 4}
 	]
 }
 
@@ -96,6 +97,29 @@ var enemies_left_to_spawn: int = 0
 var run_finished: bool = false
 var wave_finish_pending: bool = false
 
+signal starting_arm_selected
+
+const STARTING_ARM_OPTIONS = [
+	{
+		"id": "fast",
+		"name": "BRACO RAPIDO",
+		"summary": "Tiros fracos",
+		"details": "Muito controle e recuo curto."
+	},
+	{
+		"id": "heavy",
+		"name": "BRACO PESADO",
+		"summary": "Tiros fortes",
+		"details": "Pouco controle, recuo forte."
+	},
+	{
+		"id": "unstable",
+		"name": "BRACO INSTAVEL",
+		"summary": "Pierce e ricochete",
+		"details": "Tiro pode voltar contra voce."
+	}
+]
+
 func _ready() -> void:
 	for musica in get_tree().get_nodes_in_group("Music"):
 		musica.set_volume_db(Global.somVolume)
@@ -104,7 +128,6 @@ func _ready() -> void:
 
 	randomize()
 	Global.pecado = 1
-	Global.start_run_timer()
 	Global.pecado_changed.connect(_on_pecado_changed)
 	_setup_arena_tile_visuals()
 	current_arena = arena_nodes[0]
@@ -112,6 +135,8 @@ func _ready() -> void:
 	_update_enemy_arena_sprite()
 	set_waves_based_on_pecado()
 	_update_camera_limits()
+	await _show_starting_arm_selection()
+	Global.start_run_timer()
 	start_next_wave()
 
 func finish_run() -> void:
@@ -120,6 +145,109 @@ func finish_run() -> void:
 
 	run_finished = true
 	Global.finish_current_run()
+
+func _show_starting_arm_selection() -> void:
+	if $Player == null or not $Player.has_method("apply_starting_arm"):
+		return
+
+	get_tree().paused = true
+	starting_arm_layer = CanvasLayer.new()
+	starting_arm_layer.name = "StartingArmSelectionLayer"
+	starting_arm_layer.layer = 120
+	starting_arm_layer.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	add_child(starting_arm_layer)
+
+	var overlay = Control.new()
+	overlay.name = "StartingArmSelection"
+	overlay.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	starting_arm_layer.add_child(overlay)
+
+	var backdrop = ColorRect.new()
+	backdrop.color = Color(0.02, 0.01, 0.015, 0.88)
+	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
+	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.add_child(backdrop)
+
+	var panel = PanelContainer.new()
+	panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	var viewport_size = get_viewport_rect().size
+	var panel_size = Vector2(min(viewport_size.x - 96.0, 1040.0), 380.0)
+	panel.custom_minimum_size = panel_size
+	panel.size = panel_size
+	panel.position = ((viewport_size - panel_size) * 0.5).round()
+	panel.add_theme_stylebox_override("panel", _make_starting_arm_style(Color(0.10, 0.045, 0.055, 0.96), Color(0.95, 0.25, 0.12, 0.92), 3))
+	overlay.add_child(panel)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 28)
+	margin.add_theme_constant_override("margin_top", 24)
+	margin.add_theme_constant_override("margin_right", 28)
+	margin.add_theme_constant_override("margin_bottom", 24)
+	panel.add_child(margin)
+
+	var layout = VBoxContainer.new()
+	layout.add_theme_constant_override("separation", 18)
+	margin.add_child(layout)
+
+	var title = Label.new()
+	title.text = "O demonio escolhe como segurar seu braco"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 26)
+	title.add_theme_color_override("font_color", Color(1.0, 0.72, 0.42, 1.0))
+	layout.add_child(title)
+
+	var subtitle = Label.new()
+	subtitle.text = "Sua arma e seu movimento tambem. Escolha o pacto que definirá sua run."
+	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	subtitle.add_theme_font_size_override("font_size", 15)
+	subtitle.add_theme_color_override("font_color", Color(0.95, 0.86, 0.76, 1.0))
+	layout.add_child(subtitle)
+
+	var choices = HBoxContainer.new()
+	choices.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	choices.add_theme_constant_override("separation", 16)
+	layout.add_child(choices)
+
+	for option in STARTING_ARM_OPTIONS:
+		var button = Button.new()
+		button.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.custom_minimum_size = Vector2(0, 190)
+		button.text = "%s\n\n%s\n%s" % [option["name"], option["summary"], option["details"]]
+		button.tooltip_text = str(option["details"])
+		button.add_theme_font_size_override("font_size", 17)
+		button.add_theme_color_override("font_color", Color(1.0, 0.95, 0.82, 1.0))
+		button.add_theme_stylebox_override("normal", _make_starting_arm_style(Color(0.16, 0.07, 0.075, 0.98), Color(0.52, 0.18, 0.12, 0.95), 2))
+		button.add_theme_stylebox_override("hover", _make_starting_arm_style(Color(0.26, 0.10, 0.08, 0.98), Color(1.0, 0.54, 0.20, 1.0), 3))
+		button.add_theme_stylebox_override("pressed", _make_starting_arm_style(Color(0.34, 0.13, 0.08, 0.98), Color(1.0, 0.76, 0.28, 1.0), 3))
+		button.pressed.connect(Callable(self, "_on_starting_arm_button_pressed").bind(str(option["id"])))
+		choices.add_child(button)
+
+	await starting_arm_selected
+
+func _on_starting_arm_button_pressed(arm_id: String) -> void:
+	if $Player != null and $Player.has_method("apply_starting_arm"):
+		$Player.apply_starting_arm(arm_id)
+
+	if starting_arm_layer != null:
+		starting_arm_layer.queue_free()
+		starting_arm_layer = null
+
+	get_tree().paused = false
+	starting_arm_selected.emit()
+
+func _make_starting_arm_style(bg_color: Color, border_color: Color, border_width: int) -> StyleBoxFlat:
+	var style = StyleBoxFlat.new()
+	style.bg_color = bg_color
+	style.border_color = border_color
+	style.set_border_width_all(border_width)
+	style.set_corner_radius_all(6)
+	style.content_margin_left = 14
+	style.content_margin_top = 12
+	style.content_margin_right = 14
+	style.content_margin_bottom = 12
+	return style
 
 func _setup_fade_overlay() -> void:
 	fade_layer = CanvasLayer.new()
