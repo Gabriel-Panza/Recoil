@@ -99,6 +99,8 @@ var wave_finish_pending: bool = false
 
 signal starting_arm_selected
 
+const BOSS_CLEAR_HEAL_RATIO: float = 0.20
+
 const STARTING_ARM_OPTIONS = [
 	{
 		"id": "fast",
@@ -710,6 +712,7 @@ func _on_boss_died():
 	boss_phase = false
 	is_wave_active = false
 	current_wave_index = 0
+	_heal_player_after_boss()
 
 	if Global.pecado == 8:
 		return
@@ -721,6 +724,17 @@ func _on_boss_died():
 	await _wait_for_level_up_selection()
 	await _transition_player_to(ENEMY_ARENA_PLAYER_POSITION)
 	start_next_wave()
+
+func _heal_player_after_boss() -> void:
+	var player = get_tree().get_first_node_in_group("Player")
+	if player == null or not player.has_method("heal"):
+		return
+
+	var max_player_health = float(player.get("max_health")) if player.get("max_health") != null else 0.0
+	if max_player_health <= 0.0:
+		return
+
+	player.heal(max_player_health * BOSS_CLEAR_HEAL_RATIO)
 
 func _on_pecado_changed(new_pecado):
 	if new_pecado > 7:

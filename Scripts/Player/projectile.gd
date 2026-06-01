@@ -44,6 +44,8 @@ func _on_area_entered(area):
 			return
 
 	var parent = area.get_parent()
+	if parent == null:
+		return
 	
 	if self.is_in_group("Projectile") and parent.is_in_group("Enemy"):
 		_queue_hit(parent)

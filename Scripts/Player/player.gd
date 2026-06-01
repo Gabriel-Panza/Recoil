@@ -861,6 +861,9 @@ func _on_dash_cd_timer_timeout() -> void:
 
 func _on_hitbox_area_entered(area: Area2D) -> void:
 	var parent = area.get_parent()
+	if parent == null:
+		return
+
 	if parent.is_in_group("Enemy"): 
 		if not enemies_in_contact.has(parent):
 			enemies_in_contact.append(parent)
@@ -871,6 +874,9 @@ func _on_hitbox_area_entered(area: Area2D) -> void:
 
 func _on_hitbox_area_exited(area: Area2D) -> void:
 	var parent = area.get_parent()
+	if parent == null:
+		return
+
 	if parent in enemies_in_contact:
 		enemies_in_contact.erase(parent)
 	

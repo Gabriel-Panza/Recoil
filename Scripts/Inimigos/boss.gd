@@ -53,6 +53,12 @@ const LUST_COLOR: Color = Color(1.0, 0.09, 0.451, 1.0)
 const GREED_COLOR: Color = Color(1.0, 0.78, 0.0, 1.0)
 const PRIDE_LIGHT_COLOR: Color = Color(1.0, 0.961, 0.765, 1.0)
 const PRIDE_FIRE_COLOR: Color = Color(1.0, 0.46, 0.14, 1.0)
+const PRIDE_EDGE_BEAM_WIDTH: float = 30.0
+const PRIDE_EDGE_BEAM_DELAY_PHASE_1: float = 0.72
+const PRIDE_EDGE_BEAM_DELAY_PHASE_2: float = 0.56
+const PRIDE_EDGE_BEAM_DURATION: float = 0.42
+const PRIDE_EDGE_CROSSBAR_LENGTH: float = 155.0
+const PRIDE_EDGE_CROSSBAR_OFFSET_RATIO: float = 0.62
 const BOSS_INDICATOR_LAYER: int = 75
 const BOSS_INDICATOR_PADDING: float = 35.0
 
@@ -257,9 +263,9 @@ func handle_wrath(delta: float) -> void:
 		return
 
 	if phase == 1:
-		_start_wrath_bomb_volley(3, 4.0)
+		_start_wrath_bomb_volley(3, 3.35)
 	else:
-		_start_wrath_bomb_volley(5, 2.75)
+		_start_wrath_bomb_volley(5, 2.45)
 
 func handle_lust(delta: float) -> void:
 	_move_toward_player(delta, 0.7)
@@ -279,9 +285,9 @@ func handle_greed(delta: float) -> void:
 		return
 
 	var roll = randf()
-	if roll < 0.45:
+	if roll < 0.5:
 		_start_greed_treasure_drop(3 if phase == 1 else 5)
-	elif roll < 0.75:
+	elif roll < 0.82:
 		_start_greed_coin_rain()
 	else:
 		_start_greed_tax_mark()
@@ -298,20 +304,24 @@ func handle_pride(delta: float) -> void:
 
 	if phase == 1:
 		var roll = randf()
-		if roll < 0.45:
+		if roll < 0.35:
+			_start_pride_edge_bullet_hell(false)
+		elif roll < 0.62:
 			_start_pride_fire_orbs(false)
-		elif roll < 0.75:
+		elif roll < 0.84:
 			_start_pride_light_cross(false)
 		else:
 			_start_pride_judgement()
 	else:
 		var roll = randf()
-		if roll < 0.40:
+		if roll < 0.46:
+			_start_pride_edge_bullet_hell(true)
+		elif roll < 0.68:
 			_start_pride_fire_orbs(true)
-		elif roll < 0.75:
-			_start_pride_light_cross(true)
-		else:
+		elif roll < 0.87:
 			_start_pride_judgement()
+		else:
+			_start_pride_light_cross(true)
 
 func _move_toward_player(_delta: float, speed_multiplier: float = 1.0) -> void:
 	if player == null:
@@ -742,9 +752,9 @@ func _start_wrath_bomb_volley(amount: int, fuse_time: float) -> void:
 		var bomb_position = global_position + Vector2(randf_range(-18.0, 18.0), randf_range(-18.0, 18.0))
 		_spawn_line_telegraph(bomb_position, target, WRATH_COLOR, 0.18, 2.0)
 		_create_wrath_bomb(bomb_position, target, fuse_time)
-		await get_tree().create_timer(1.75 if phase == 1 else 1.35, false).timeout
+		await get_tree().create_timer(1.2 if phase == 1 else 0.9, false).timeout
 
-	_finish_action(1.25 if phase == 1 else 0.85)
+	_finish_action(0.95 if phase == 1 else 0.7)
 
 func _create_wrath_bomb(from_position: Vector2, target_position: Vector2, fuse_time: float) -> void:
 	var bomb = Area2D.new()
@@ -754,7 +764,7 @@ func _create_wrath_bomb(from_position: Vector2, target_position: Vector2, fuse_t
 	bomb.collision_mask = WALL_LAYER_MASK | PLAYER_LAYER_MASK
 	bomb.set_meta("projectile_special_owner", self)
 	bomb.set_meta("special_type", "wrath_bomb")
-	bomb.set_meta("velocity", from_position.direction_to(target_position) * 165.0)
+	bomb.set_meta("velocity", from_position.direction_to(target_position) * (185.0 if phase == 1 else 215.0))
 	bomb.set_meta("fuse", fuse_time)
 	bomb.set_meta("pushed", false)
 
@@ -816,24 +826,24 @@ func _explode_wrath_bomb(bomb: Area2D, force_boss_damage: bool) -> void:
 		player.take_damage(WRATH_BOMB_DAMAGE, explosion_position)
 
 	if (force_boss_damage or was_pushed) and _is_point_inside_iso_aoe(global_position, explosion_position, WRATH_BOMB_EXPLOSION_RADIUS):
-		take_self_damage(max_health * (0.055 if phase == 1 else 0.04))
+		take_self_damage(max_health * 0.10)
 
 func _start_lust_wall_pattern() -> void:
 	is_performing_action = true
 	current_sub_state = BossSubState.TELEGRAPH
-	var wall_count = 3 if phase == 1 else 5
-	var wall_lifetime = 5.5 if phase == 1 else 8.0
+	var wall_count = 3 if phase == 1 else 4
+	var wall_lifetime = 4.8 if phase == 1 else 6.2
 	for i in range(wall_count):
 		var horizontal = (i % 2 == 0)
 		var size = Vector2(LUST_WALL_LENGTH, LUST_WALL_THICKNESS) if horizontal else Vector2(LUST_WALL_THICKNESS, LUST_WALL_LENGTH)
 		var position = _get_lust_wall_position(i, wall_count)
-		var breakable = randf() < (0.52 if phase == 1 else 0.42)
+		var breakable = randf() < (0.64 if phase == 1 else 0.54)
 		_spawn_rect_telegraph(position, size, 0.0, _with_alpha(LUST_COLOR, 0.24), 0.65)
 		await get_tree().create_timer(0.25, false).timeout
 		_create_lust_wall(position, size, breakable, wall_lifetime)
 
 	await get_tree().create_timer(0.55, false).timeout
-	_finish_action(2.0 if phase == 1 else 1.35)
+	_finish_action(1.65 if phase == 1 else 1.15)
 
 func _get_lust_wall_position(index: int, wall_count: int) -> Vector2:
 	var center = _get_arena_center()
@@ -914,20 +924,20 @@ func _start_lust_invulnerability() -> void:
 	is_invulnerable = true
 	_spawn_attached_aura(92.0, _with_alpha(LUST_COLOR, 0.34), 1.8)
 	_spawn_burst_particles(global_position, _with_alpha(LUST_COLOR, 0.7), 28, 0.32, 125.0)
-	await get_tree().create_timer(1.75 if phase == 1 else 1.35, false).timeout
+	await get_tree().create_timer(1.35 if phase == 1 else 1.1, false).timeout
 	is_invulnerable = false
 	lust_invulnerability_active = false
-	lust_invulnerability_cooldown = 6.5 if phase == 1 else 4.25
+	lust_invulnerability_cooldown = 7.5 if phase == 1 else 5.25
 
 func _start_greed_treasure_drop(amount: int) -> void:
 	is_performing_action = true
 	current_sub_state = BossSubState.TELEGRAPH
 	for i in range(amount):
 		var pos = _get_random_arena_position_near_player(80.0, 300.0)
-		_spawn_circle_telegraph(pos, GREED_TREASURE_RADIUS + 14.0, _with_alpha(GREED_COLOR, 0.24), 0.45)
-		await get_tree().create_timer(1.1, false).timeout
+		_spawn_circle_telegraph(pos, GREED_TREASURE_RADIUS + 14.0, _with_alpha(GREED_COLOR, 0.24), 0.38)
+		await get_tree().create_timer(0.8, false).timeout
 		_create_greed_treasure(pos)
-	_finish_action(1.35 if phase == 1 else 0.9)
+	_finish_action(1.1 if phase == 1 else 0.8)
 
 func _create_greed_treasure(treasure_position: Vector2) -> void:
 	var treasure = Area2D.new()
@@ -976,8 +986,8 @@ func _collect_greed_treasure_for_boss(treasure: Area2D) -> void:
 		return
 	active_treasures.erase(treasure)
 	treasure.queue_free()
-	greed_money_stacks += 1 if phase == 1 else 2
-	greed_shield_remaining = max(greed_shield_remaining, 3.0)
+	greed_money_stacks = min(greed_money_stacks + 1, 8)
+	greed_shield_remaining = max(greed_shield_remaining, 2.6)
 	_spawn_marker_on_node(self, 54.0, GREED_COLOR, greed_shield_remaining)
 	_spawn_burst_particles(global_position, _with_alpha(GREED_COLOR, 0.9), 24, 0.32, 130.0)
 
@@ -1022,15 +1032,15 @@ func _update_greed_tax(delta: float) -> void:
 		return
 
 	greed_tax_timer -= delta
-	greed_tax_meter += player.global_position.distance_to(greed_previous_player_position) * 0.01
+	greed_tax_meter += player.global_position.distance_to(greed_previous_player_position) * 0.008
 	if greed_previous_can_shoot and not player.can_shoot:
-		greed_tax_meter += 3.0
+		greed_tax_meter += 2.0
 	greed_previous_can_shoot = player.can_shoot
 	greed_previous_player_position = player.global_position
 	if greed_tax_timer <= 0.0:
 		greed_tax_active = false
-		if greed_tax_meter > 12.0:
-			player.take_damage((greed_tax_meter - 12.0) * 2.0 + 12.0, global_position)
+		if greed_tax_meter > 14.0:
+			player.take_damage((greed_tax_meter - 14.0) * 1.6 + 10.0, global_position)
 			_spawn_burst_particles(player.global_position, _with_alpha(GREED_COLOR, 0.9), 28, 0.3, 150.0)
 
 func _start_pride_fire_orbs(overlap: bool) -> void:
@@ -1053,6 +1063,96 @@ func _start_pride_light_cross(overlap: bool) -> void:
 		await get_tree().create_timer(0.55, false).timeout
 		_spawn_radial_projectiles(10, float(damage) * 0.45, _with_alpha(PRIDE_FIRE_COLOR, 0.9), 360.0)
 	_finish_action(1.5 if phase == 1 else 0.9)
+
+func _start_pride_edge_bullet_hell(overlap: bool) -> void:
+	is_performing_action = true
+	current_sub_state = BossSubState.SPECIAL
+	var beam_count = 5 if phase == 1 else 8
+	var telegraph_delay = PRIDE_EDGE_BEAM_DELAY_PHASE_1 if phase == 1 else PRIDE_EDGE_BEAM_DELAY_PHASE_2
+	var beam_spacing = 0.44 if phase == 1 else 0.32
+	var beam_width = PRIDE_EDGE_BEAM_WIDTH if phase == 1 else PRIDE_EDGE_BEAM_WIDTH + 6.0
+	_spawn_action_charge_vfx(global_position, 72.0, PRIDE_LIGHT_COLOR, 0.36, 24)
+
+	for i in range(beam_count):
+		if is_dead or player == null:
+			break
+		var start_position = _get_pride_edge_beam_start(i)
+		var target_position = player.global_position
+		if phase == 2 and player.get("velocity") != null:
+			target_position += player.velocity * 0.12
+		var direction = start_position.direction_to(_clamp_to_current_arena(target_position, 28.0))
+		if direction == Vector2.ZERO:
+			direction = start_position.direction_to(_get_arena_center())
+		_spawn_pride_inverted_cross_beam(start_position, direction, telegraph_delay, beam_width)
+		if overlap or i % 2 == 0:
+			_spawn_pride_aimed_fireballs(2 if phase == 1 else 3, 14.0 if phase == 1 else 22.0)
+		await get_tree().create_timer(beam_spacing, false).timeout
+
+	await get_tree().create_timer(telegraph_delay + PRIDE_EDGE_BEAM_DURATION, false).timeout
+	_finish_action(1.05 if phase == 1 else 0.7)
+
+func _get_pride_edge_beam_start(index: int) -> Vector2:
+	var rect = _get_arena_rect()
+	var side = (index + randi()) % 4
+	var t = randf_range(0.08, 0.92)
+	match side:
+		0:
+			return Vector2(lerp(rect.position.x, rect.end.x, t), rect.position.y + 8.0)
+		1:
+			return Vector2(lerp(rect.position.x, rect.end.x, t), rect.end.y - 8.0)
+		2:
+			return Vector2(rect.position.x + 8.0, lerp(rect.position.y, rect.end.y, t))
+		_:
+			return Vector2(rect.end.x - 8.0, lerp(rect.position.y, rect.end.y, t))
+
+func _spawn_pride_inverted_cross_beam(start_position: Vector2, beam_direction: Vector2, telegraph_delay: float, beam_width: float) -> void:
+	if beam_direction == Vector2.ZERO:
+		return
+
+	beam_direction = beam_direction.normalized()
+	var arena_rect = _get_arena_rect()
+	var beam_length = arena_rect.size.length() + 180.0
+	var main_center = start_position + beam_direction * beam_length * 0.5
+	var main_size = Vector2(beam_length, beam_width)
+	var rotation_angle = beam_direction.angle()
+	var crossbar_distance = beam_length * PRIDE_EDGE_CROSSBAR_OFFSET_RATIO
+	if player != null:
+		crossbar_distance = clamp(start_position.distance_to(player.global_position) + 80.0, beam_length * 0.34, beam_length * 0.78)
+	var crossbar_center = start_position + beam_direction * crossbar_distance
+	var crossbar_size = Vector2(PRIDE_EDGE_CROSSBAR_LENGTH if phase == 1 else PRIDE_EDGE_CROSSBAR_LENGTH + 45.0, beam_width)
+	var crossbar_rotation = rotation_angle + PI * 0.5
+	var telegraph_color = _with_alpha(PRIDE_LIGHT_COLOR, 0.2)
+
+	_spawn_rect_telegraph(main_center, main_size, rotation_angle, telegraph_color, telegraph_delay)
+	_spawn_rect_telegraph(crossbar_center, crossbar_size, crossbar_rotation, telegraph_color, telegraph_delay)
+	_create_pride_inverted_cross_beam_after_delay(main_center, main_size, rotation_angle, crossbar_center, crossbar_size, crossbar_rotation, telegraph_delay)
+
+func _create_pride_inverted_cross_beam_after_delay(main_center: Vector2, main_size: Vector2, main_rotation: float, crossbar_center: Vector2, crossbar_size: Vector2, crossbar_rotation: float, delay: float) -> void:
+	await get_tree().create_timer(delay, false).timeout
+	if is_dead or not is_inside_tree():
+		return
+	var beam_damage = float(damage) * (0.62 if phase == 1 else 0.72)
+	var beam_color = _with_alpha(PRIDE_LIGHT_COLOR, 0.36)
+	_create_damaging_area(main_center, main_size, main_rotation, beam_damage, beam_color, PRIDE_EDGE_BEAM_DURATION)
+	_create_damaging_area(crossbar_center, crossbar_size, crossbar_rotation, beam_damage, beam_color, PRIDE_EDGE_BEAM_DURATION)
+	_spawn_burst_particles(main_center, _with_alpha(PRIDE_LIGHT_COLOR, 0.55), 10, 0.18, 80.0)
+
+func _spawn_pride_aimed_fireballs(amount: int, spread_degrees: float) -> void:
+	if player == null:
+		return
+
+	var direction = global_position.direction_to(player.global_position)
+	if direction == Vector2.ZERO:
+		direction = Vector2.RIGHT
+	var base_angle = direction.angle()
+	var start_offset = -spread_degrees * 0.5
+	var step = spread_degrees / max(float(amount - 1), 1.0)
+	for i in range(amount):
+		var angle_offset = start_offset + step * float(i)
+		var projectile_direction = Vector2.RIGHT.rotated(base_angle + deg_to_rad(angle_offset))
+		var spawn_position = global_position + projectile_direction * 34.0
+		var projectile = _spawn_enemy_projectile(spawn_position, projectile_direction, float(damage) * (0.38 if phase == 1 else 0.46), _with_alpha(PRIDE_FIRE_COLOR, 0.94), 395.0 if phase == 1 else 445.0)
+		projectile.scale *= 0.92
 
 func _spawn_radial_projectiles(projectile_count: int, projectile_damage: float, color: Color, projectile_speed: float, angle_offset: float = 0.0) -> void:
 	for i in range(projectile_count):
@@ -1375,6 +1475,8 @@ func _spawn_enemy_projectile(spawn_position: Vector2, projectile_direction: Vect
 
 func _create_damaging_area_after_delay(area_position: Vector2, size: Vector2, area_rotation: float, area_damage: float, color: Color, delay: float, duration: float) -> void:
 	await get_tree().create_timer(delay, false).timeout
+	if is_dead or not is_inside_tree():
+		return
 	_create_damaging_area(area_position, size, area_rotation, area_damage, color, duration)
 
 func _create_damaging_area(area_position: Vector2, size: Vector2, area_rotation: float, area_damage: float, color: Color, duration: float) -> void:
@@ -1389,7 +1491,7 @@ func _create_damaging_area(area_position: Vector2, size: Vector2, area_rotation:
 	_add_rect_visual(area, size, color, 20)
 
 	area.body_entered.connect(Callable(self, "_on_damaging_area_body_entered").bind(area))
-	_get_vfx_parent().add_child(area)
+	_get_ground_area_vfx_parent().add_child(area)
 	if player and _is_point_inside_rotated_rect(player.global_position, area_position, size, area_rotation):
 		player.take_damage(area_damage, area_position)
 	var cleanup_timer = get_tree().create_timer(duration, false)
