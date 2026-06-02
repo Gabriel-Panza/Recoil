@@ -28,10 +28,10 @@ var cursed_passive_options = [
 ]
 
 var rare_options = [
-	{ "id": "Shield_Protection", "text": "Gain a one-hit shield", "description": "Grants a shield that blocks the next damage instance. Only one rare passive can be active at a time.", "rarity": "passive_rare" },
-	{ "id": "Recoil_Explosion", "text": "Your recoil creates a small shockwave", "description": "Every shot creates a 180px shockwave that deals 35% of your attack damage. Only one rare passive can be active at a time.", "rarity": "passive_rare" },
-	{ "id": "Double_Dash", "text": "You have two charges of dash", "description": "Gives you two dash charges. Each spent charge recharges one at a time. Only one rare passive can be active at a time.", "rarity": "passive_rare" },
-	{ "id": "Offensive_Dash", "text": "Offensive Dash", "description": "Dashing blocks damage and releases a 180px shockwave at the end of the dash, dealing 75% of your attack damage. Only one rare passive can be active at a time.", "rarity": "passive_rare" }
+	{ "id": "Shield_Protection", "text": "Gain a one-hit shield", "description": "Grants a shield that blocks the next damage instance. You can equip up to two rare passives.", "rarity": "passive_rare" },
+	{ "id": "Recoil_Explosion", "text": "Your recoil creates a small shockwave", "description": "Every shot creates a 180px shockwave that deals 35% of your attack damage. You can equip up to two rare passives.", "rarity": "passive_rare" },
+	{ "id": "Double_Dash", "text": "You have two charges of dash", "description": "Gives you two dash charges. Each spent charge recharges one at a time. You can equip up to two rare passives.", "rarity": "passive_rare" },
+	{ "id": "Offensive_Dash", "text": "Offensive Dash", "description": "Dashing blocks damage and releases a 180px shockwave at the end of the dash, dealing 75% of your attack damage. You can equip up to two rare passives.", "rarity": "passive_rare" }
 ]
 
 var boss_options = [
@@ -64,6 +64,7 @@ var blocked_level_option_ids: Array = []
 var current_mode: String = "level_up"
 var pending_active_option: String = ""
 var pending_old_rare_option: String = ""
+var pending_rare_options: Array = []
 var pending_new_rare_option: String = ""
 var title_label: Label
 var skip_button: Button
@@ -133,6 +134,7 @@ func show_popup(context: String = "normal", boss_pecado: int = 0):
 	current_mode = "level_up"
 	pending_active_option = ""
 	pending_old_rare_option = ""
+	pending_rare_options = []
 	pending_new_rare_option = ""
 	blocked_level_option_ids = []
 	title_label.visible = false
@@ -144,6 +146,7 @@ func show_active_discard_popup(new_option: String, active_slots: Dictionary) -> 
 	current_mode = "discard_active"
 	pending_active_option = new_option
 	pending_old_rare_option = ""
+	pending_rare_options = []
 	pending_new_rare_option = ""
 	title_label.text = "Escolha 1 habilidade para descartar"
 	title_label.visible = true
@@ -163,24 +166,31 @@ func show_active_discard_popup(new_option: String, active_slots: Dictionary) -> 
 	discard_options.append(new_option_data)
 	_render_options(discard_options, false)
 
-func show_rare_discard_popup(old_option: String, new_option: String) -> void:
+func show_rare_discard_popup(old_options, new_option: String) -> void:
 	get_tree().paused = true
 	current_mode = "discard_rare"
 	pending_active_option = ""
-	pending_old_rare_option = old_option
+	pending_rare_options = old_options.duplicate() if old_options is Array else [old_options]
+	pending_rare_options = pending_rare_options.filter(func(option_id): return str(option_id) != "")
+	pending_old_rare_option = str(pending_rare_options[0]) if pending_rare_options.size() > 0 else ""
 	pending_new_rare_option = new_option
-	title_label.text = "Escolha 1 passiva rara para descartar"
+	title_label.text = "Escolha 1 rara para substituir"
 	title_label.visible = true
 
-	var old_option_data = _get_option_by_id(old_option).duplicate()
-	old_option_data["discard_target"] = "old"
-	old_option_data["text"] = "Descartar atual - %s" % _get_option_button_text(old_option_data)
+	var discard_options = []
+	for old_option in pending_rare_options:
+		var old_option_data = _get_option_by_id(str(old_option)).duplicate()
+		old_option_data["discard_target"] = "equipped"
+		old_option_data["discard_option"] = str(old_option)
+		old_option_data["text"] = "Descartar - %s" % _get_option_button_text(old_option_data)
+		discard_options.append(old_option_data)
 
 	var new_option_data = _get_option_by_id(new_option).duplicate()
 	new_option_data["discard_target"] = "new"
-	new_option_data["text"] = "Recusar nova - %s" % _get_option_button_text(new_option_data)
+	new_option_data["text"] = "Manter atuais - %s" % _get_option_button_text(new_option_data)
+	discard_options.append(new_option_data)
 
-	_render_options([old_option_data, new_option_data], false)
+	_render_options(discard_options, false)
 
 func _build_options(context: String, boss_pecado: int) -> Array:
 	if context == "pre_boss":
@@ -209,12 +219,15 @@ func _build_pre_boss_options() -> Array:
 
 func _get_available_rare_options() -> Array:
 	var available_options = []
-	var current_rare_option = ""
+	var current_rare_options: Array = []
 	if player:
-		current_rare_option = player.current_rare_option
+		if player.has_method("get_rare_passive_options"):
+			current_rare_options = player.get_rare_passive_options()
+		elif player.current_rare_option != "":
+			current_rare_options = [player.current_rare_option]
 
 	for option in rare_options:
-		if option["id"] == current_rare_option:
+		if option["id"] in current_rare_options:
 			continue
 		available_options.append(option.duplicate())
 
@@ -367,7 +380,9 @@ func _on_option_button_pressed(index: int) -> void:
 	if current_mode == "discard_rare":
 		var discard_target = str(option.get("discard_target", ""))
 		var discarded_option = pending_new_rare_option
-		if discard_target == "old":
+		if discard_target == "equipped":
+			discarded_option = str(option.get("discard_option", option.get("id", pending_new_rare_option)))
+		elif discard_target == "old":
 			discarded_option = pending_old_rare_option
 		elif discard_target == "new":
 			discarded_option = pending_new_rare_option
@@ -396,6 +411,7 @@ func _return_to_saved_level_options() -> void:
 	current_mode = "level_up"
 	pending_active_option = ""
 	pending_old_rare_option = ""
+	pending_rare_options = []
 	pending_new_rare_option = ""
 	title_label.visible = false
 	_render_options(saved_level_options, true)
@@ -416,6 +432,10 @@ func _complete_level_up_choice() -> void:
 func _close_popup() -> void:
 	hide()
 	title_label.visible = false
+	pending_active_option = ""
+	pending_old_rare_option = ""
+	pending_rare_options = []
+	pending_new_rare_option = ""
 	if skip_button:
 		skip_button.visible = false
 	get_tree().paused = false

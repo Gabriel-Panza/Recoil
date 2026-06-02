@@ -72,7 +72,7 @@ const STARTING_ARM_DATA = {
 		"description": "Tiros lentos com dano alto e recuo forte para reposicionamentos grandes.",
 		"attack_damage": 65.0,
 		"base_fire_rate": 1.5,
-		"min_fire_rate": 0.9,
+		"min_fire_rate": 1.25,
 		"base_recoil_force": 750.0,
 		"friction": 600.0,
 		"attack_speed_upgrade_multiplier": 0.5,
@@ -204,6 +204,8 @@ var active_ability_cooldown_remaining = {
 var level_up_context: String = "normal"
 var level_up_boss_pecado: int = 0
 var current_rare_option: String = ""
+var current_rare_options: Array = []
+const MAX_RARE_PASSIVE_OPTIONS: int = 2
 const SHIELD_COOLDOWN: float = 12.0
 const SHIELD_VISUAL_RADIUS: float = 24.0
 var shield_protection_enabled: bool = false
@@ -973,8 +975,8 @@ func get_active_ability_description(option_id: String) -> String:
 
 func get_equipped_passive_summaries() -> Array:
 	var passive_ids: Array = []
-	if current_rare_option != "":
-		passive_ids.append(current_rare_option)
+	for passive_id in get_rare_passive_options():
+		passive_ids.append(passive_id)
 
 	for passive_id in SIN_PASSIVE_IDS:
 		if _is_passive_enabled(passive_id):
@@ -1010,7 +1012,64 @@ func _is_passive_enabled(passive_id: String) -> bool:
 	if SIN_PASSIVE_FLAGS.has(passive_id):
 		return bool(get(SIN_PASSIVE_FLAGS[passive_id]))
 
-	return current_rare_option == passive_id
+	return has_rare_passive(passive_id)
+
+func get_rare_passive_options() -> Array:
+	_sync_rare_passive_options()
+	return current_rare_options.duplicate()
+
+func has_rare_passive(option_id: String) -> bool:
+	_sync_rare_passive_options()
+	return option_id in current_rare_options
+
+func can_equip_rare_passive(option_id: String) -> bool:
+	_sync_rare_passive_options()
+	return option_id in current_rare_options or current_rare_options.size() < MAX_RARE_PASSIVE_OPTIONS
+
+func equip_rare_passive_id(option_id: String) -> void:
+	if option_id == "":
+		return
+
+	_sync_rare_passive_options()
+	if option_id not in current_rare_options and current_rare_options.size() < MAX_RARE_PASSIVE_OPTIONS:
+		current_rare_options.append(option_id)
+	_sync_current_rare_option_alias()
+
+func replace_rare_passive_id(old_option: String, new_option: String) -> void:
+	if new_option == "":
+		return
+
+	_sync_rare_passive_options()
+	var old_index = current_rare_options.find(old_option)
+	if old_index >= 0:
+		current_rare_options[old_index] = new_option
+	elif new_option not in current_rare_options and current_rare_options.size() < MAX_RARE_PASSIVE_OPTIONS:
+		current_rare_options.append(new_option)
+	_dedupe_rare_passive_options()
+	_sync_current_rare_option_alias()
+
+func remove_rare_passive_id(option_id: String) -> void:
+	_sync_rare_passive_options()
+	current_rare_options.erase(option_id)
+	_sync_current_rare_option_alias()
+
+func _sync_rare_passive_options() -> void:
+	if current_rare_option != "" and current_rare_option not in current_rare_options:
+		current_rare_options.insert(0, current_rare_option)
+	_dedupe_rare_passive_options()
+	while current_rare_options.size() > MAX_RARE_PASSIVE_OPTIONS:
+		current_rare_options.pop_back()
+	_sync_current_rare_option_alias()
+
+func _dedupe_rare_passive_options() -> void:
+	var unique_options: Array = []
+	for option_id in current_rare_options:
+		if option_id != "" and option_id not in unique_options:
+			unique_options.append(option_id)
+	current_rare_options = unique_options
+
+func _sync_current_rare_option_alias() -> void:
+	current_rare_option = str(current_rare_options[0]) if current_rare_options.size() > 0 else ""
 
 func use_active_ability(slot: String) -> void:
 	if not active_abilities.has(slot):

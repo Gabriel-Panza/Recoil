@@ -402,8 +402,7 @@ func _start_sloth_summon(amount: int) -> void:
 
 	current_sub_state = BossSubState.ATTACK
 	for i in range(amount):
-		var scene = MELEE_ENEMY_SCENE if i % 2 == 0 else RANGED_ENEMY_SCENE
-		var enemy = scene.instantiate()
+		var enemy = MELEE_ENEMY_SCENE.instantiate()
 		_get_vfx_parent().add_child(enemy)
 		enemy.global_position = _get_random_arena_position_near_player(160.0, 300.0)
 		_register_boss_summon(enemy)

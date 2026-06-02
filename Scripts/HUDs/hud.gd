@@ -235,8 +235,10 @@ func _apply_effect(option):
 		return
 
 	if _is_rare_option(option):
-		if player.current_rare_option != "" and player.current_rare_option != option:
-			level_up_popup.show_rare_discard_popup(player.current_rare_option, option)
+		var can_equip_rare = player.can_equip_rare_passive(option) if player.has_method("can_equip_rare_passive") else player.current_rare_option == "" or player.current_rare_option == option
+		if not can_equip_rare:
+			var equipped_rares = player.get_rare_passive_options() if player.has_method("get_rare_passive_options") else [player.current_rare_option]
+			level_up_popup.show_rare_discard_popup(equipped_rares, option)
 			return
 
 		_equip_rare_option(option)
@@ -292,11 +294,15 @@ func _is_rare_option(option: String) -> bool:
 	return option in RARE_OPTION_IDS
 
 func _equip_rare_option(option: String) -> void:
-	if player.current_rare_option != "" and player.current_rare_option != option:
-		_remove_rare_effect(player.current_rare_option)
+	var already_equipped = player.has_rare_passive(option) if player.has_method("has_rare_passive") else player.current_rare_option == option
 
-	player.current_rare_option = option
-	_apply_rare_effect(option)
+	if player.has_method("equip_rare_passive_id"):
+		player.equip_rare_passive_id(option)
+	else:
+		player.current_rare_option = option
+
+	if not already_equipped:
+		_apply_rare_effect(option)
 	_finish_effect_application()
 
 func _apply_rare_effect(option: String) -> void:
@@ -352,8 +358,13 @@ func _on_rare_discard_selected(discarded_option: String, old_option: String, new
 	if discarded_option == new_option:
 		return
 
-	if discarded_option == old_option:
-		_equip_rare_option(new_option)
+	_remove_rare_effect(discarded_option)
+	if player.has_method("replace_rare_passive_id"):
+		player.replace_rare_passive_id(discarded_option, new_option)
+	else:
+		player.current_rare_option = new_option
+	_apply_rare_effect(new_option)
+	_finish_effect_application()
 
 func _show_active_discard_popup(option: String) -> void:
 	level_up_popup.show_active_discard_popup(option, player.get_active_ability_slots())
