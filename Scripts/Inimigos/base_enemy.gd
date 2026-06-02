@@ -8,6 +8,7 @@ class_name BaseEnemy
 
 const ENEMY_COLLISION_MASK: int = 4
 const ENEMY_BODY_COLLISION_SCALE: float = 0.7
+const CHARACTER_RENDER_Z_INDEX: int = 10
 const PECADO_SPRITE_ROW_BY_ID = {
 	1: 6,
 	2: 4,
@@ -25,6 +26,8 @@ var is_dead: bool = false
 @onready var aparencia = get_node_or_null("AnimatedAppearence")
 
 func _ready() -> void:
+	z_index = CHARACTER_RENDER_Z_INDEX
+	z_as_relative = false
 	current_health = max_health
 	player = get_tree().get_first_node_in_group("Player")
 	match player.STARTING_ARM_DATA:

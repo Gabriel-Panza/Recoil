@@ -100,6 +100,7 @@ var wave_finish_pending: bool = false
 signal starting_arm_selected
 
 const BOSS_CLEAR_HEAL_RATIO: float = 0.20
+const BOSS_SPAWN_DELAY_AFTER_ARENA_ARRIVAL: float = 0.5
 
 const STARTING_ARM_OPTIONS = [
 	{
@@ -494,7 +495,7 @@ func spawn_boss():
 	var centro_node = current_arena.get_node("Centro")
 	_set_player_xp_goal(1, "boss", Global.pecado)
 	await _transition_player_to(centro_node.global_position)
-	await get_tree().create_timer(1, false).timeout
+	await get_tree().create_timer(BOSS_SPAWN_DELAY_AFTER_ARENA_ARRIVAL, false).timeout
 	await get_tree().process_frame
 
 	var boss = BOSS_ENEMY.instantiate()

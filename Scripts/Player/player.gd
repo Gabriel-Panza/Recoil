@@ -19,11 +19,13 @@ var is_invulnerable: bool = false
 const MOVEMENT_FORCE_COMBO_LOCK_DURATION: float = 0.2
 const MOVEMENT_FORCE_CAP_BUFFER: float = 100.0
 const WALL_COLLISION_LAYER: int = 1
-const WALL_BOUNCE_MIN_SPEED: float = 80.0
-const WALL_BOUNCE_MULTIPLIER: float = 0.8
+const WALL_BOUNCE_MIN_SPEED: float = 75.0
+const WALL_BOUNCE_MULTIPLIER: float = 0.75
 const WALL_BOUNCE_PUSH_OUT: float = 4.0
 const ISO_AOE_VISUAL_Y_SCALE: float = 0.65
 const GROUND_AREA_VFX_LAYER_NAME: String = "GroundAreaVFX"
+const GROUND_AREA_VFX_Z_INDEX: int = 1
+const CHARACTER_RENDER_Z_INDEX: int = 10
 
 # --- DASH ---
 @export var dash_speed: float = 600.0
@@ -58,9 +60,9 @@ const STARTING_ARM_DATA = {
 		"name": "Braco rapido",
 		"description": "Tiros fracos, cadencia alta e recuo curto para controlar melhor o medico.",
 		"attack_damage": 30.0,
-		"base_fire_rate": 0.65,
-		"min_fire_rate": 0.35,
-		"base_recoil_force": 450.0,
+		"base_fire_rate": 0.5,
+		"min_fire_rate": 0.3,
+		"base_recoil_force": 400.0,
 		"friction": 900.0,
 		"attack_speed_upgrade_multiplier": 0.35,
 		"unstable_projectiles": false
@@ -69,9 +71,9 @@ const STARTING_ARM_DATA = {
 		"name": "Braco pesado",
 		"description": "Tiros lentos com dano alto e recuo forte para reposicionamentos grandes.",
 		"attack_damage": 65.0,
-		"base_fire_rate": 1.35,
+		"base_fire_rate": 1.5,
 		"min_fire_rate": 0.9,
-		"base_recoil_force": 700.0,
+		"base_recoil_force": 750.0,
 		"friction": 600.0,
 		"attack_speed_upgrade_multiplier": 0.5,
 		"unstable_projectiles": false
@@ -79,10 +81,10 @@ const STARTING_ARM_DATA = {
 	"unstable": {
 		"name": "Braco instavel",
 		"description": "Projeteis atravessam um alvo e ricocheteiam uma vez, mas voltam perigosos.",
-		"attack_damage": 25.0,
-		"base_fire_rate": 1.00,
+		"attack_damage": 30.0,
+		"base_fire_rate": 1.15,
 		"min_fire_rate": 0.65,
-		"base_recoil_force": 575.0,
+		"base_recoil_force": 550.0,
 		"friction": 750.0,
 		"attack_speed_upgrade_multiplier": 0.7,
 		"unstable_projectiles": true
@@ -266,6 +268,8 @@ var game_win: Panel
 var type_animation = "walk_down"
 
 func _ready() -> void:
+	z_index = CHARACTER_RENDER_Z_INDEX
+	z_as_relative = false
 	base_fire_rate = STARTING_FIRE_RATE
 	fire_rate = STARTING_FIRE_RATE
 	_recalculate_fire_rate()
@@ -327,7 +331,19 @@ func add_attack_speed_bonus(amount: float) -> void:
 	emit_signal("stats_updated")
 
 func get_attack_speed_percent() -> float:
-	return (base_fire_rate / max(fire_rate, min_fire_rate)) * 100.0
+	var effective_fire_rate = max(max(fire_rate, min_fire_rate), 0.001)
+	return (base_fire_rate / effective_fire_rate) * 100.0
+
+func get_max_attack_speed_percent() -> float:
+	return (base_fire_rate / max(min_fire_rate, 0.001)) * 100.0
+
+func get_attack_speed_upgrade_scale_percent() -> float:
+	return arm_attack_speed_upgrade_multiplier * 100.0
+
+func get_current_arm_name() -> String:
+	if STARTING_ARM_DATA.has(current_arm_id):
+		return str(STARTING_ARM_DATA[current_arm_id].get("name", current_arm_id))
+	return "Base"
 
 func get_shot_cooldown() -> float:
 	return fire_rate
@@ -337,6 +353,9 @@ func get_base_shot_cooldown() -> float:
 
 func can_upgrade_attack_speed() -> bool:
 	return fire_rate > min_fire_rate + 0.0001
+
+func can_roll_attack_speed_upgrade() -> bool:
+	return current_arm_id != "fast" and can_upgrade_attack_speed()
 
 func _recalculate_fire_rate() -> void:
 	fire_rate = max(base_fire_rate / max(1.0 + attack_speed_bonus, 0.001), min_fire_rate)
@@ -350,6 +369,9 @@ func add_recoil_force_bonus(amount: float) -> void:
 
 func can_upgrade_recoil_force() -> bool:
 	return recoil_force < MAX_RECOIL_FORCE - 0.0001
+
+func can_roll_recoil_force_upgrade() -> bool:
+	return current_arm_id != "heavy" and can_upgrade_recoil_force()
 
 func get_max_recoil_force() -> float:
 	return MAX_RECOIL_FORCE
@@ -1183,6 +1205,8 @@ func _get_ground_area_vfx_parent() -> Node:
 		layer.name = GROUND_AREA_VFX_LAYER_NAME
 		scene.add_child(layer)
 
+	layer.z_index = GROUND_AREA_VFX_Z_INDEX
+	layer.z_as_relative = false
 	var player_node = scene.get_node_or_null("Player")
 	if player_node != null and layer.get_parent() == scene and layer.get_index() > player_node.get_index():
 		scene.move_child(layer, player_node.get_index())

@@ -30,10 +30,11 @@ const LUST_WALL_THICKNESS: float = 24.0
 const LUST_WALL_LENGTH: float = 260.0
 const LUST_BREAKABLE_WALL_HP: float = 110.0
 const SLOTH_SLOW_ZONE_RADIUS: float = 95.0
-const SLOTH_SUMMON_SPAWN_INTERVAL: float = 1.15
+const SLOTH_SUMMON_SPAWN_INTERVAL: float = 1.25
 const SLOTH_ZONE_TELEGRAPH_DURATION: float = 0.55
 const SLOTH_ZONE_SPAWN_INTERVAL: float = 1.15
 const SLOTH_SLOW_ZONE_LIFETIME: float = 15.0
+const GLUTTONY_FOOD_SPAWN_INTERVAL: float = 1.75
 const GLUTTONY_STRESS_DURATION_PHASE_1: float = 7.5
 const GLUTTONY_STRESS_DURATION_PHASE_2: float = 10.0
 const ENVY_CLONE_MAX_HEALTH: float = 180.0
@@ -43,6 +44,8 @@ const GREED_TREASURE_RADIUS: float = 16.0
 const MAX_BOSS_CIRCLE_VFX_RADIUS: float = 180.0
 const ISO_AOE_VISUAL_Y_SCALE: float = 0.68
 const GROUND_AREA_VFX_LAYER_NAME: String = "GroundAreaVFX"
+const GROUND_AREA_VFX_Z_INDEX: int = 1
+const CHARACTER_RENDER_Z_INDEX: int = 10
 const DEFAULT_BOSS_VISUAL_SCALE: Vector2 = Vector2(1.5, 1.5)
 
 const SLOTH_COLOR: Color = Color(0.25, 0.95, 1.0, 1.0)
@@ -114,6 +117,8 @@ var boss_indicator_layer: CanvasLayer
 var boss_indicator_node: Node2D
 
 func _ready() -> void:
+	z_index = CHARACTER_RENDER_Z_INDEX
+	z_as_relative = false
 	player = get_tree().get_first_node_in_group("Player")
 	add_to_group("Boss")
 	add_to_group("Enemy")
@@ -472,7 +477,7 @@ func _start_gluttony_food_wave(amount: int) -> void:
 	current_sub_state = BossSubState.ATTACK
 	for i in range(amount):
 		_spawn_gluttony_food()
-		await get_tree().create_timer(1.75, false).timeout
+		await get_tree().create_timer(GLUTTONY_FOOD_SPAWN_INTERVAL, false).timeout
 	_finish_action(1.75 if phase == 1 else 1.25)
 
 func _spawn_gluttony_food() -> void:
@@ -1488,7 +1493,7 @@ func _create_damaging_area(area_position: Vector2, size: Vector2, area_rotation:
 	area.collision_mask = PLAYER_LAYER_MASK
 	area.set_meta("damage", area_damage)
 	_add_rect_collision(area, size)
-	_add_rect_visual(area, size, color, 20)
+	_add_rect_visual(area, size, color, 0)
 
 	area.body_entered.connect(Callable(self, "_on_damaging_area_body_entered").bind(area))
 	_get_ground_area_vfx_parent().add_child(area)
@@ -1646,6 +1651,8 @@ func _get_ground_area_vfx_parent() -> Node:
 		layer.name = GROUND_AREA_VFX_LAYER_NAME
 		scene.add_child(layer)
 
+	layer.z_index = GROUND_AREA_VFX_Z_INDEX
+	layer.z_as_relative = false
 	var player_node = scene.get_node_or_null("Player")
 	if player_node != null and layer.get_parent() == scene and layer.get_index() > player_node.get_index():
 		scene.move_child(layer, player_node.get_index())

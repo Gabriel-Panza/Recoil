@@ -137,8 +137,11 @@ func update_status_labels():
 				attack_speed_percent = player.get_attack_speed_percent()
 			var shot_cooldown = player.get_shot_cooldown() if player.has_method("get_shot_cooldown") else player.fire_rate
 			var base_shot_cooldown = player.get_base_shot_cooldown() if player.has_method("get_base_shot_cooldown") else 1.1
+			var max_attack_speed_percent = player.get_max_attack_speed_percent() if player.has_method("get_max_attack_speed_percent") else attack_speed_percent
+			var arm_upgrade_scale_percent = player.get_attack_speed_upgrade_scale_percent() if player.has_method("get_attack_speed_upgrade_scale_percent") else 100.0
+			var arm_name = player.get_current_arm_name() if player.has_method("get_current_arm_name") else "Base"
 			atk_speed_label.text = "Atk-Speed: %.2f%%" % attack_speed_percent
-			atk_speed_label.tooltip_text = "Shots per second compared to your base speed. Base cooldown: %.2fs. Current cooldown: %.2fs." % [base_shot_cooldown, shot_cooldown]
+			atk_speed_label.tooltip_text = "%s shots per second compared to that arm's base speed. Base cooldown: %.2fs. Current cooldown: %.2fs. Arm upgrade scaling: %.0f%%. Max for this arm: %.2f%%." % [arm_name, base_shot_cooldown, shot_cooldown, arm_upgrade_scale_percent, max_attack_speed_percent]
 		if recoil_label:
 			recoil_label.text = "Recoil Force: %.1f" % (player.recoil_force/100)
 			var max_recoil_force = player.get_max_recoil_force() if player.has_method("get_max_recoil_force") else 800.0

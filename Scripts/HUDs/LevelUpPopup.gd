@@ -12,10 +12,10 @@ const HEAL_AFTER_WAVE_COMMON_ROLL_CHANCE: float = 0.3
 const DEFAULT_VIEWPORT_SIZE: Vector2 = Vector2(1152.0, 648.0)
 
 var passive_options = [
-	{ "id": "option_1", "text": "Recoil Force (+5%)", "description": "+5% recoil force is additive from your base recoil, not your current recoil. Stops appearing at 8.0 recoil force.", "rarity": "passive_common" },
+	{ "id": "option_1", "text": "Recoil Force (+5%)", "description": "+5% recoil force is additive from your base recoil, not your current recoil. Does not appear for the heavy arm and stops appearing at 8.0 recoil force.", "rarity": "passive_common" },
 	{ "id": "option_2", "text": "Health (+5%)", "description": "Increases your maximum health and heals you slightly based on your current health.", "rarity": "passive_common" },
 	{ "id": "option_3", "text": "Attack (+15%)", "description": "Increases the damage dealt by your bullets and damage-based effects.", "rarity": "passive_common" },
-	{ "id": "option_4", "text": "Atk-Speed (+5%)", "description": "+5% attack speed before the chosen arm's tuning. Fast, heavy and unstable arms each have their own safe cooldown floor.", "rarity": "passive_common" },
+	{ "id": "option_4", "text": "Atk-Speed (+5%)", "description": "+5% attack speed before the chosen arm's tuning. Does not appear for the fast arm; heavy and unstable arms each have their own safe cooldown floor.", "rarity": "passive_common" },
 	{ "id": "option_5", "text": "Bullet Size (+5%)", "description": "+5% bullet size for friendly projectiles. Bonus is additive and stops at 200% bullet size.", "rarity": "passive_common" },
 	{ "id": "option_6", "text": "Heal After Wave (+3%)", "description": "Heal 3% max health after each enemy wave. This upgrade stops appearing at 18%.", "rarity": "passive_common" }
 ]
@@ -223,7 +223,11 @@ func _get_available_rare_options() -> Array:
 func _get_available_passive_options() -> Array:
 	var available_options = []
 	for option in passive_options:
+		if option["id"] == "option_1" and player and player.has_method("can_roll_recoil_force_upgrade") and not player.can_roll_recoil_force_upgrade():
+			continue
 		if option["id"] == "option_1" and player and player.has_method("can_upgrade_recoil_force") and not player.can_upgrade_recoil_force():
+			continue
+		if option["id"] == "option_4" and player and player.has_method("can_roll_attack_speed_upgrade") and not player.can_roll_attack_speed_upgrade():
 			continue
 		if option["id"] == "option_4" and player and player.has_method("can_upgrade_attack_speed") and not player.can_upgrade_attack_speed():
 			continue
