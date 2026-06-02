@@ -1,47 +1,48 @@
 extends Control
 
-var game_scene_path: NodePath = "/root/GameScene"
+const GAME_SCENE_PATH: NodePath = "/root/GameScene"
+const PLAYER_PATH: NodePath = "/root/GameScene/Player"
+const PAUSE_MENU_PATH: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/PauseControl/PauseMenu"
+const OPTIONS_MENU_PATH: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/PauseControl/PauseMenu/OptionsMenu"
+const HEALTH_LABEL_PATH: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer/HP_MaxHealth"
+const ATTACK_LABEL_PATH: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer/Ataque"
+const ATK_SPEED_LABEL_PATH: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer/Atk_Speed"
+const RECOIL_LABEL_PATH: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer/Recoil"
+const ACTIVE_SKILL_E_LABEL_PATH: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer/ActiveSkillE"
+const ACTIVE_SKILL_R_LABEL_PATH: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer/ActiveSkillR"
+const GAME_OVER_PATH: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/PauseControl/GameOver"
+const GAME_WIN_PATH: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/PauseControl/GameWin"
+
 var game_scene
-var player_path: NodePath = "/root/GameScene/Player"
 var player
-var pause_menu_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/PauseControl/PauseMenu"
 var pause_menu: Panel
-var options_menu_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/PauseControl/PauseMenu/OptionsMenu"
 var options_menu: Panel
-var health_label_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer/HP_MaxHealth"
 var health_label: Label
-var attack_label_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer/Ataque"
 var attack_label: Label
-var atk_speed_label_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer/Atk_Speed"
 var atk_speed_label: Label
-var recoil_label_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer/Recoil"
 var recoil_label: Label
 var heal_after_wave_label: Label
-var active_skill_e_label_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer/ActiveSkillE"
 var active_skill_e_label: Label
-var active_skill_r_label_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer/ActiveSkillR"
 var active_skill_r_label: Label
-var game_over_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/PauseControl/GameOver"
 var game_over: Panel
-var game_win_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/PauseControl/GameWin"
 var game_win: Panel
 
-var canMove = true
+var can_move: bool = true
 
 func _ready() -> void:
-	player = get_node_or_null(player_path)
-	game_scene = get_node_or_null(game_scene_path)
-	pause_menu = get_node_or_null(pause_menu_path)
-	options_menu = get_node_or_null(options_menu_path)
-	health_label = get_node_or_null(health_label_path)
-	attack_label = get_node_or_null(attack_label_path)
-	atk_speed_label = get_node_or_null(atk_speed_label_path)
-	recoil_label = get_node_or_null(recoil_label_path)
+	player = get_node_or_null(PLAYER_PATH)
+	game_scene = get_node_or_null(GAME_SCENE_PATH)
+	pause_menu = get_node_or_null(PAUSE_MENU_PATH)
+	options_menu = get_node_or_null(OPTIONS_MENU_PATH)
+	health_label = get_node_or_null(HEALTH_LABEL_PATH)
+	attack_label = get_node_or_null(ATTACK_LABEL_PATH)
+	atk_speed_label = get_node_or_null(ATK_SPEED_LABEL_PATH)
+	recoil_label = get_node_or_null(RECOIL_LABEL_PATH)
 	_setup_heal_after_wave_label()
-	active_skill_e_label = get_node_or_null(active_skill_e_label_path)
-	active_skill_r_label = get_node_or_null(active_skill_r_label_path)
-	game_over = get_node_or_null(game_over_path)
-	game_win = get_node_or_null(game_win_path)
+	active_skill_e_label = get_node_or_null(ACTIVE_SKILL_E_LABEL_PATH)
+	active_skill_r_label = get_node_or_null(ACTIVE_SKILL_R_LABEL_PATH)
+	game_over = get_node_or_null(GAME_OVER_PATH)
+	game_win = get_node_or_null(GAME_WIN_PATH)
 
 	if player:
 		player.connect("stats_updated", Callable(self, "update_status_labels"))
@@ -69,7 +70,7 @@ func _setup_heal_after_wave_label() -> void:
 
 	heal_after_wave_label.visible = false
 	
-func _process(delta):
+func _process(_delta: float) -> void:
 	update_status_labels()
 	if _is_end_screen_visible():
 		return
@@ -80,7 +81,7 @@ func _process(delta):
 		else:
 			_unpause_game()
 
-func _pause_game():
+func _pause_game() -> void:
 	if _is_end_screen_visible():
 		return
 
@@ -89,7 +90,7 @@ func _pause_game():
 	update_status_labels()
 	get_tree().paused = true
 
-func _unpause_game():
+func _unpause_game() -> void:
 	if _is_end_screen_visible():
 		return
 
@@ -108,11 +109,13 @@ func _on_back_button_pressed() -> void:
 	options_menu.hide()
 
 func _on_h_slider_value_changed(value: float) -> void:
-	for musica in get_tree().get_nodes_in_group("Music"):
+	Global.music_volume_db = value
+	for musica in get_tree().get_nodes_in_group(Global.GROUP_MUSIC):
 		musica.set_volume_db(value)
 
 func _on_h_slider_2_value_changed(value: float) -> void:
-	for som in get_tree().get_nodes_in_group("SFX"):
+	Global.sfx_volume_db = value
+	for som in get_tree().get_nodes_in_group(Global.GROUP_SFX):
 		som.set_volume_db(value)
 
 func _on_retry_button_pressed() -> void:
@@ -123,7 +126,7 @@ func _on_menu_button_pressed() -> void:
 	get_tree().paused = false
 	get_tree().change_scene_to_file("res://Cenas/HUDs/MainMenu.tscn")
 
-func update_status_labels():
+func update_status_labels() -> void:
 	if player:
 		if health_label:
 			health_label.text = "Health: %.2f/%d" % [player.current_health, player.max_health]

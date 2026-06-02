@@ -11,13 +11,8 @@ signal boss_defeated
 @export var damage: int = 50
 @export var xp_drop: int = 1
 
-const ENEMY_COLLISION_MASK: int = 4
-const ENEMY_BODY_COLLISION_SCALE: float = 0.7
 const ENRAGE_HEALTH_RATIO: float = 0.5
 const ENRAGE_STAT_MULTIPLIER: float = 1.25
-const PLAYER_LAYER_MASK: int = 2
-const ENEMY_LAYER_MASK: int = 4
-const WALL_LAYER_MASK: int = 1
 const PROJECTILE_SCENE = preload("res://Cenas/Inimigos/enemyProjectile.tscn")
 const MELEE_ENEMY_SCENE = preload("res://Cenas/Inimigos/melee_enemy.tscn")
 const RANGED_ENEMY_SCENE = preload("res://Cenas/Inimigos/ranged_enemy.tscn")
@@ -30,15 +25,14 @@ const LUST_WALL_THICKNESS: float = 24.0
 const LUST_WALL_LENGTH: float = 260.0
 const LUST_BREAKABLE_WALL_HP: float = 110.0
 const SLOTH_SLOW_ZONE_RADIUS: float = 95.0
-const SLOTH_SUMMON_SPAWN_INTERVAL: float = 1.25
+const SLOTH_SUMMON_SPAWN_INTERVAL: float = 1.5
 const SLOTH_ZONE_TELEGRAPH_DURATION: float = 0.55
 const SLOTH_ZONE_SPAWN_INTERVAL: float = 1.15
 const SLOTH_SLOW_ZONE_LIFETIME: float = 15.0
-const SLOTH_BOSS_PLAYER_DASH_SPEED_MULTIPLIER: float = 0.5
-const SLOTH_BOSS_PLAYER_VELOCITY_MULTIPLIER: float = 0.75
-const SLOTH_BOSS_ENEMY_SLOW_EFFECT_RATIO: float = 0.2
-const ENEMY_ATTACK_ACTIVE_COLOR_DARKENING: float = 0.3
-const GLUTTONY_FOOD_SPAWN_INTERVAL: float = 1.75
+const SLOTH_BOSS_PLAYER_DASH_SPEED_MULTIPLIER: float = 0.25
+const SLOTH_BOSS_PLAYER_VELOCITY_MULTIPLIER: float = 0.5
+const SLOTH_BOSS_ENEMY_SLOW_EFFECT_RATIO: float = 0.1
+const GLUTTONY_FOOD_SPAWN_INTERVAL: float = 1.8
 const GLUTTONY_STRESS_DURATION_PHASE_1: float = 7.5
 const GLUTTONY_STRESS_DURATION_PHASE_2: float = 10.0
 const ENVY_CLONE_MAX_HEALTH: float = 180.0
@@ -47,9 +41,6 @@ const ENVY_SWAP_TELEGRAPH_DURATION: float = 0.5
 const GREED_TREASURE_RADIUS: float = 16.0
 const MAX_BOSS_CIRCLE_VFX_RADIUS: float = 180.0
 const ISO_AOE_VISUAL_Y_SCALE: float = 0.7
-const GROUND_AREA_VFX_LAYER_NAME: String = "GroundAreaVFX"
-const GROUND_AREA_VFX_Z_INDEX: int = 1
-const CHARACTER_RENDER_Z_INDEX: int = 10
 const DEFAULT_BOSS_VISUAL_SCALE: Vector2 = Vector2(1.5, 1.5)
 
 const SLOTH_COLOR: Color = Color(0.25, 0.95, 1.0, 1.0)
@@ -121,11 +112,11 @@ var boss_indicator_layer: CanvasLayer
 var boss_indicator_node: Node2D
 
 func _ready() -> void:
-	z_index = CHARACTER_RENDER_Z_INDEX
+	z_index = Global.CHARACTER_RENDER_Z_INDEX
 	z_as_relative = false
-	player = get_tree().get_first_node_in_group("Player")
-	add_to_group("Boss")
-	add_to_group("Enemy")
+	player = get_tree().get_first_node_in_group(Global.GROUP_PLAYER)
+	add_to_group(Global.GROUP_BOSS)
+	add_to_group(Global.GROUP_ENEMY)
 	_setup_enemy_body_collision()
 	aparencia = $AparenciaAnimada
 	aparencia.scale *= 3
@@ -380,7 +371,7 @@ func _refresh_damage_value() -> void:
 	damage = int(round(float(base_damage) * multiplier))
 
 func _setup_enemy_body_collision() -> void:
-	collision_mask = collision_mask | ENEMY_COLLISION_MASK
+	collision_mask = collision_mask | Global.ENEMY_COLLISION_MASK
 	_shrink_body_collision_shape()
 
 func _shrink_body_collision_shape() -> void:
@@ -390,12 +381,12 @@ func _shrink_body_collision_shape() -> void:
 
 	var shape = collision.shape.duplicate()
 	if shape is CapsuleShape2D:
-		shape.radius = max(shape.radius * ENEMY_BODY_COLLISION_SCALE, 4.0)
-		shape.height = max(shape.height * ENEMY_BODY_COLLISION_SCALE, shape.radius * 2.0)
+		shape.radius = max(shape.radius * Global.ENEMY_BODY_COLLISION_SCALE, 4.0)
+		shape.height = max(shape.height * Global.ENEMY_BODY_COLLISION_SCALE, shape.radius * 2.0)
 	elif shape is CircleShape2D:
-		shape.radius = max(shape.radius * ENEMY_BODY_COLLISION_SCALE, 4.0)
+		shape.radius = max(shape.radius * Global.ENEMY_BODY_COLLISION_SCALE, 4.0)
 	elif shape is RectangleShape2D:
-		shape.size *= ENEMY_BODY_COLLISION_SCALE
+		shape.size *= Global.ENEMY_BODY_COLLISION_SCALE
 	collision.shape = shape
 
 func _start_sloth_summon(amount: int) -> void:
@@ -434,7 +425,7 @@ func _create_sloth_slow_zone(zone_position: Vector2) -> void:
 	zone.name = "SlothSlowZone"
 	zone.global_position = zone_position
 	zone.collision_layer = 0
-	zone.collision_mask = PLAYER_LAYER_MASK
+	zone.collision_mask = Global.PLAYER_LAYER_MASK
 	zone.set_meta("radius", SLOTH_SLOW_ZONE_RADIUS)
 	zone.set_meta("lifetime", SLOTH_SLOW_ZONE_LIFETIME)
 
@@ -464,7 +455,7 @@ func _update_sloth_slow_zones(delta: float) -> void:
 			continue
 		if _is_point_inside_iso_aoe(player.global_position, zone.global_position, float(zone.get_meta("radius", SLOTH_SLOW_ZONE_RADIUS))):
 			is_inside_any_zone = true
-		for enemy in get_tree().get_nodes_in_group("Enemy"):
+		for enemy in get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
 			if not _can_sloth_zone_slow_enemy(enemy):
 				continue
 			if _is_point_inside_iso_aoe(enemy.global_position, zone.global_position, float(zone.get_meta("radius", SLOTH_SLOW_ZONE_RADIUS))):
@@ -481,13 +472,13 @@ func _update_sloth_slow_zones(delta: float) -> void:
 	_update_sloth_zone_enemy_slow(enemies_inside_zone)
 
 func _can_sloth_zone_slow_enemy(enemy: Node) -> bool:
-	return is_instance_valid(enemy) and enemy != self and not enemy.is_in_group("Boss") and enemy.get("speed") != null
+	return is_instance_valid(enemy) and enemy != self and not enemy.is_in_group(Global.GROUP_BOSS) and enemy.get("speed") != null
 
 func _update_sloth_zone_enemy_slow(enemies_inside_zone: Array) -> void:
 	var player_slow_amount = 1.0 - SLOTH_BOSS_PLAYER_DASH_SPEED_MULTIPLIER
 	var enemy_speed_multiplier = 1.0 - player_slow_amount * SLOTH_BOSS_ENEMY_SLOW_EFFECT_RATIO
 
-	for enemy in get_tree().get_nodes_in_group("Enemy"):
+	for enemy in get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
 		if not _can_sloth_zone_slow_enemy(enemy):
 			continue
 		if enemy in enemies_inside_zone:
@@ -591,7 +582,7 @@ func _create_envy_clone() -> void:
 	envy_clone = Area2D.new()
 	envy_clone.name = "EnvyMirrorClone"
 	envy_clone.global_position = _clamp_to_current_arena(global_position * 2.0 - player.global_position, 26.0)
-	envy_clone.collision_layer = ENEMY_LAYER_MASK
+	envy_clone.collision_layer = Global.ENEMY_LAYER_MASK
 	envy_clone.collision_mask = 0
 	envy_clone.set_meta("projectile_special_owner", self)
 	envy_clone.set_meta("special_type", "envy_clone")
@@ -687,7 +678,7 @@ func _configure_envy_unstable_projectile(projectile: Area2D) -> void:
 
 	projectile.set_meta("enemy_ricochet_enabled", true)
 	projectile.set_meta("ricochet_remaining", 1)
-	projectile.collision_mask = PLAYER_LAYER_MASK | WALL_LAYER_MASK
+	projectile.collision_mask = Global.PLAYER_LAYER_MASK | Global.WALL_LAYER_MASK
 
 func _start_envy_pincer_shot() -> void:
 	if not is_instance_valid(envy_clone) or player == null:
@@ -798,8 +789,8 @@ func _create_wrath_bomb(from_position: Vector2, target_position: Vector2, fuse_t
 	var bomb = Area2D.new()
 	bomb.name = "WrathBomb"
 	bomb.global_position = from_position
-	bomb.collision_layer = ENEMY_LAYER_MASK
-	bomb.collision_mask = WALL_LAYER_MASK | PLAYER_LAYER_MASK
+	bomb.collision_layer = Global.ENEMY_LAYER_MASK
+	bomb.collision_mask = Global.WALL_LAYER_MASK | Global.PLAYER_LAYER_MASK
 	bomb.set_meta("projectile_special_owner", self)
 	bomb.set_meta("special_type", "wrath_bomb")
 	bomb.set_meta("velocity", from_position.direction_to(target_position) * (185.0 if phase == 1 else 215.0))
@@ -843,7 +834,7 @@ func _update_wrath_bombs(delta: float) -> void:
 func _on_wrath_bomb_body_entered(body: Node, bomb: Area2D) -> void:
 	if not is_instance_valid(bomb):
 		return
-	if body.is_in_group("Player"):
+	if body.is_in_group(Global.GROUP_PLAYER):
 		_explode_wrath_bomb(bomb, false)
 	elif body != self:
 		_explode_wrath_bomb(bomb, false)
@@ -895,7 +886,7 @@ func _create_lust_wall(wall_position: Vector2, size: Vector2, breakable: bool, l
 	var wall = StaticBody2D.new()
 	wall.name = "BreakableLustWall" if breakable else "LustWall"
 	wall.global_position = wall_position
-	wall.collision_layer = WALL_LAYER_MASK
+	wall.collision_layer = Global.WALL_LAYER_MASK
 	wall.collision_mask = 0
 	wall.set_meta("breakable", breakable)
 	wall.set_meta("lifetime", lifetime)
@@ -910,7 +901,7 @@ func _create_lust_wall(wall_position: Vector2, size: Vector2, breakable: bool, l
 		wall.set_meta("max_health", wall_health)
 		var hurtbox = Area2D.new()
 		hurtbox.name = "BreakableHurtbox"
-		hurtbox.collision_layer = ENEMY_LAYER_MASK
+		hurtbox.collision_layer = Global.ENEMY_LAYER_MASK
 		hurtbox.collision_mask = 0
 		hurtbox.set_meta("projectile_special_owner", self)
 		hurtbox.set_meta("special_type", "lust_wall")
@@ -982,7 +973,7 @@ func _create_greed_treasure(treasure_position: Vector2) -> void:
 	treasure.name = "GreedTreasure"
 	treasure.global_position = treasure_position
 	treasure.collision_layer = 0
-	treasure.collision_mask = PLAYER_LAYER_MASK
+	treasure.collision_mask = Global.PLAYER_LAYER_MASK
 	treasure.set_meta("lifetime", 6.6)
 
 	_add_circle_collision(treasure, GREED_TREASURE_RADIUS)
@@ -1008,7 +999,7 @@ func _update_greed_treasures(delta: float) -> void:
 			treasure.queue_free()
 
 func _on_greed_treasure_body_entered(body: Node, treasure: Area2D) -> void:
-	if body.is_in_group("Player"):
+	if body.is_in_group(Global.GROUP_PLAYER):
 		_collect_greed_treasure_for_player(treasure)
 
 func _collect_greed_treasure_for_player(treasure: Area2D) -> void:
@@ -1396,7 +1387,7 @@ func _cleanup_boss_objects() -> void:
 	_restore_sloth_zone_enemy_speeds()
 
 func _restore_sloth_zone_enemy_speeds() -> void:
-	for enemy in get_tree().get_nodes_in_group("Enemy"):
+	for enemy in get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
 		if not is_instance_valid(enemy):
 			continue
 		if enemy.has_meta("sloth_boss_zone_base_speed"):
@@ -1534,7 +1525,7 @@ func _create_damaging_area(area_position: Vector2, size: Vector2, area_rotation:
 	area.global_position = area_position
 	area.rotation = area_rotation
 	area.collision_layer = 0
-	area.collision_mask = PLAYER_LAYER_MASK
+	area.collision_mask = Global.PLAYER_LAYER_MASK
 	area.set_meta("damage", area_damage)
 	_add_rect_collision(area, size)
 	_add_rect_visual(area, size, _get_active_attack_color(color), 0)
@@ -1547,7 +1538,7 @@ func _create_damaging_area(area_position: Vector2, size: Vector2, area_rotation:
 	cleanup_timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(area))
 
 func _on_damaging_area_body_entered(body: Node, area: Area2D) -> void:
-	if body.is_in_group("Player"):
+	if body.is_in_group(Global.GROUP_PLAYER):
 		body.take_damage(float(area.get_meta("damage", damage)), area.global_position)
 
 func _setup_health_bar() -> void:
@@ -1606,7 +1597,7 @@ func _with_alpha(color: Color, alpha: float) -> Color:
 	return Color(color.r, color.g, color.b, alpha)
 
 func _get_active_attack_color(color: Color) -> Color:
-	var multiplier = 1.0 - ENEMY_ATTACK_ACTIVE_COLOR_DARKENING
+	var multiplier = 1.0 - Global.ENEMY_ATTACK_ACTIVE_COLOR_DARKENING
 	return Color(color.r * multiplier, color.g * multiplier, color.b * multiplier, color.a)
 
 func _get_boss_color() -> Color:
@@ -1693,13 +1684,13 @@ func _get_ground_area_vfx_parent() -> Node:
 	if scene == null:
 		return _get_vfx_parent()
 
-	var layer = scene.get_node_or_null(GROUND_AREA_VFX_LAYER_NAME)
+	var layer = scene.get_node_or_null(Global.GROUND_AREA_VFX_LAYER_NAME)
 	if layer == null:
 		layer = Node2D.new()
-		layer.name = GROUND_AREA_VFX_LAYER_NAME
+		layer.name = Global.GROUND_AREA_VFX_LAYER_NAME
 		scene.add_child(layer)
 
-	layer.z_index = GROUND_AREA_VFX_Z_INDEX
+	layer.z_index = Global.GROUND_AREA_VFX_Z_INDEX
 	layer.z_as_relative = false
 	var player_node = scene.get_node_or_null("Player")
 	if player_node != null and layer.get_parent() == scene and layer.get_index() > player_node.get_index():

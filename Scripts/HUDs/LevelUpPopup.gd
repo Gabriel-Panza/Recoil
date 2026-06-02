@@ -1,62 +1,12 @@
 extends Panel
 
-var player_path: NodePath = "/root/GameScene/Player"
-var player
-var game_scene_path: NodePath = "/root/GameScene"
-var game_scene
-var speedPlayer
-var speedEnemy
-var speedProjectile
-
+const PLAYER_PATH: NodePath = "/root/GameScene/Player"
+const GAME_SCENE_PATH: NodePath = "/root/GameScene"
 const HEAL_AFTER_WAVE_COMMON_ROLL_CHANCE: float = 0.3
 const DEFAULT_VIEWPORT_SIZE: Vector2 = Vector2(1152.0, 648.0)
 
-var passive_options = [
-	{ "id": "option_1", "text": "Recoil Force (+5%)", "description": "+5% recoil force is additive from your base recoil, not your current recoil. Does not appear for the heavy arm and stops appearing at 8.0 recoil force.", "rarity": "passive_common" },
-	{ "id": "option_2", "text": "Health (+5%)", "description": "Increases your maximum health and heals you slightly based on your current health.", "rarity": "passive_common" },
-	{ "id": "option_3", "text": "Attack (+15%)", "description": "Increases the damage dealt by your bullets and damage-based effects.", "rarity": "passive_common" },
-	{ "id": "option_4", "text": "Atk-Speed (+5%)", "description": "+5% attack speed before the chosen arm's tuning. Does not appear for the fast arm; heavy and unstable arms each have their own safe cooldown floor.", "rarity": "passive_common" },
-	{ "id": "option_5", "text": "Bullet Size (+5%)", "description": "+5% bullet size for friendly projectiles. Bonus is additive and stops at 200% bullet size.", "rarity": "passive_common" },
-	{ "id": "option_6", "text": "Heal After Wave (+3%)", "description": "Heal 3% max health after each enemy wave. This upgrade stops appearing at 18%.", "rarity": "passive_common" }
-]
-
-var cursed_passive_options = [
-	{ "id": "glass_canon", "text": "Attack (+50%), Health (-25%)", "description": "Greatly increases damage, but lowers your maximum health. Strong if you can avoid hits.", "rarity": "passive_cursed" },
-	{ "id": "tanky", "text": "Health (+25%), Attack (-50%)", "description": "Greatly increases survivability, but lowers your damage output.", "rarity": "passive_cursed" },
-	{ "id": "deadly_slow", "text": "Recoil Force (-25%), Attack (+75%)", "description": "Greatly increases damage, but weakens your recoil movement by cutting pushback force.", "rarity": "passive_cursed" },
-	{ "id": "fast_but_small", "text": "Bullet Size (-30%), Atk-Speed (+30%)", "description": "Adds +30% attack speed before the chosen arm's tuning, but reduces bullet size by 50%. Bullet size cannot drop below 50%.", "rarity": "passive_cursed" }
-]
-
-var rare_options = [
-	{ "id": "Shield_Protection", "text": "Gain a one-hit shield", "description": "Grants a shield that blocks the next damage instance. You can equip up to two rare passives.", "rarity": "passive_rare" },
-	{ "id": "Recoil_Explosion", "text": "Your recoil creates a small shockwave", "description": "Every shot creates a 180px shockwave that deals 35% of your attack damage. You can equip up to two rare passives.", "rarity": "passive_rare" },
-	{ "id": "Double_Dash", "text": "You have two charges of dash", "description": "Gives you two dash charges. Each spent charge recharges one at a time. You can equip up to two rare passives.", "rarity": "passive_rare" },
-	{ "id": "Offensive_Dash", "text": "Offensive Dash", "description": "Dashing blocks damage and releases a 180px shockwave at the end of the dash, dealing 75% of your attack damage. You can equip up to two rare passives.", "rarity": "passive_rare" }
-]
-
-var boss_options = [
-	{ "id": "sloth_slow_aura", "name": "Slow Aura", "text": "Slow Aura", "description": "Enemies within 180px move at 70% speed.", "rarity": "passive_sin" },
-	{ "id": "sloth_field", "name": "Sloth Field", "text": "Sloth Field", "description": "Create a 180px field near you for 5 seconds. Enemies inside drop to 35% speed, but your dash speed drops to 75% during the field.", "rarity": "active_sin" },
-	{ "id": "gluttony_heal_kill", "name": "Blood Feast", "text": "Blood Feast", "description": "Killing an enemy releases green motes that heal 1% max health when they return.", "rarity": "passive_sin" },
-	{ "id": "gluttony_devour", "name": "Devour", "text": "Devour", "description": "Consume up to two enemies within 180px. Green motes fly back and heal up to 12.5% max health when they arrive, but your dash speed is halved for 5 seconds.", "rarity": "active_sin" },
-	{ "id": "envy_mirror_shot", "name": "Mirror Shot", "text": "Mirror Shot", "description": "Every shot fires a mirrored bullet for 50% damage.", "rarity": "passive_sin" },
-	{ "id": "envy_mirror_clone", "name": "Mirror Clone", "text": "Mirror Clone", "description": "Summon a mirror clone that fires random risky shots with you for a short time. Clone bullets can hit anything, including you.", "rarity": "active_sin" },
-	{ "id": "wrath_overheat", "name": "Overheat", "text": "Overheat", "description": "Every 4th shot deals double damage.", "rarity": "passive_sin" },
-	{ "id": "wrath_burst", "name": "Wrath Burst", "text": "Wrath Burst", "description": "Fire 16 radial bullets for 110% attack damage each, then take 20 damage.", "rarity": "active_sin" },
-	{ "id": "lust_for_vengeance", "name": "Vengeance", "text": "Vengeance", "description": "Deal 75% more damage while at full HP, but lose the bonus when hit.", "rarity": "passive_sin" },
-	{ "id": "lust_for_perfection", "name": "Perfection", "text": "Perfection", "description": "Become invulnerable for 3 seconds, then take double damage for 5 seconds.", "rarity": "active_sin" },
-	{ "id": "greed_cursed_level", "name": "Cursed Level", "text": "Cursed Level", "description": "Gain 1 bonus level per wave. Enemies move 25% faster.", "rarity": "passive_sin" },
-	{ "id": "greed_treasure_rain", "name": "Treasure Rain", "text": "Treasure Rain", "description": "Rain golden projectiles from above. Each projectile deals 120% attack damage only when it collides, including with you.", "rarity": "active_sin" },
-]
-
-var boss_option_ids_by_pecado = {
-	1: ["sloth_slow_aura", "sloth_field"],
-	2: ["gluttony_heal_kill", "gluttony_devour"],
-	3: ["envy_mirror_shot", "envy_mirror_clone"],
-	4: ["wrath_overheat", "wrath_burst"],
-	5: ["lust_for_vengeance", "lust_for_perfection"],
-	6: ["greed_cursed_level", "greed_treasure_rain"],
-}
+var player
+var game_scene
 
 var current_options: Array = []
 var saved_level_options: Array = []
@@ -75,8 +25,8 @@ signal rare_discard_selected(discarded_option, old_option, new_option)
 
 func _ready() -> void:
 	randomize()
-	game_scene = get_node_or_null(game_scene_path)
-	player = get_node_or_null(player_path)
+	game_scene = get_node_or_null(GAME_SCENE_PATH)
+	player = get_node_or_null(PLAYER_PATH)
 	_setup_title_label()
 	_setup_skip_button()
 	_connect_buttons()
@@ -127,7 +77,8 @@ func _connect_buttons() -> void:
 		if button.get_child_count() > 0 and button.get_child(0) is Control:
 			button.get_child(0).mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-func show_popup(context: String = "normal", boss_pecado: int = 0):
+## Shows the correct level-up option set for a normal, pre-boss, or boss reward.
+func show_popup(context: String = "normal", boss_pecado: int = 0) -> void:
 	get_tree().paused = true
 	await get_tree().create_timer(0.25, true).timeout
 
@@ -226,7 +177,7 @@ func _get_available_rare_options() -> Array:
 		elif player.current_rare_option != "":
 			current_rare_options = [player.current_rare_option]
 
-	for option in rare_options:
+	for option in Global.RARE_PASSIVE_OPTIONS:
 		if option["id"] in current_rare_options:
 			continue
 		available_options.append(option.duplicate())
@@ -235,7 +186,7 @@ func _get_available_rare_options() -> Array:
 
 func _get_available_passive_options() -> Array:
 	var available_options = []
-	for option in passive_options:
+	for option in Global.PASSIVE_UPGRADE_OPTIONS:
 		if option["id"] == "option_1" and player and player.has_method("can_roll_recoil_force_upgrade") and not player.can_roll_recoil_force_upgrade():
 			continue
 		if option["id"] == "option_1" and player and player.has_method("can_upgrade_recoil_force") and not player.can_upgrade_recoil_force():
@@ -257,10 +208,10 @@ func _get_available_passive_options() -> Array:
 
 func _build_boss_options(boss_pecado: int) -> Array:
 	var options = []
-	for option_id in boss_option_ids_by_pecado.get(boss_pecado, []):
+	for option_id in Global.BOSS_OPTION_IDS_BY_PECADO.get(boss_pecado, []):
 		options.append(_get_option_by_id(option_id))
 
-	var cursed_pool = cursed_passive_options.duplicate()
+	var cursed_pool = Global.CURSED_PASSIVE_OPTIONS.duplicate(true)
 	cursed_pool.shuffle()
 	if cursed_pool.size() > 0:
 		options.append(cursed_pool[0])
@@ -352,7 +303,7 @@ func _get_option_button_color(option: Dictionary, is_blocked: bool) -> Color:
 	return color
 
 func _get_option_by_id(option_id: String) -> Dictionary:
-	for pool in [passive_options, cursed_passive_options, rare_options, boss_options]:
+	for pool in [Global.PASSIVE_UPGRADE_OPTIONS, Global.CURSED_PASSIVE_OPTIONS, Global.RARE_PASSIVE_OPTIONS, Global.BOSS_REWARD_OPTIONS]:
 		for option in pool:
 			if option["id"] == option_id:
 				return option.duplicate()

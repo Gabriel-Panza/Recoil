@@ -1,44 +1,39 @@
 extends Area2D
 
-# Configurações do tiro
+const PLAYER_PATH: NodePath = "/root/GameScene/Player"
+
 var speed: float = 700.0
 var direction: Vector2 = Vector2.RIGHT
-var damage
-@onready var aparencia = get_node_or_null("AnimatedProjectile") if get_node_or_null("AnimatedProjectile") else get_node_or_null("Sprite2D") # aqui tbm
-@onready var particles: CPUParticles2D = get_node_or_null("CPUParticles2D")
-
-# Player
-var player_path: NodePath = "/root/GameScene/Player"
+var damage = null
 var player
-
-# Lista de espera de colisões deste frame
 var hit_queue: Array = []
 var pierced_targets: Array = []
-const ENEMY_ATTACK_ACTIVE_COLOR_DARKENING: float = 0.3
 
-func _ready():
-	player = get_node_or_null(player_path)
+@onready var aparencia = get_node_or_null("AnimatedProjectile") if get_node_or_null("AnimatedProjectile") else get_node_or_null("Sprite2D")
+@onready var particles: CPUParticles2D = get_node_or_null("CPUParticles2D")
+
+func _ready() -> void:
+	player = get_node_or_null(PLAYER_PATH)
 	rotation = direction.angle()
 	area_entered.connect(_on_area_entered)
 	body_entered.connect(_on_body_entered)
-	
+
 	if aparencia and aparencia is AnimatedSprite2D:
 		aparencia.play("default")
-	
-	
-	if self.is_in_group("EnemyProjectile"):
+
+	if self.is_in_group(Global.GROUP_ENEMY_PROJECTILE):
 		speed = 500.0
 		collision_layer = 0
-		collision_mask = 6 if self.is_in_group("Projectile") else 2
+		collision_mask = (Global.ENEMY_LAYER_MASK | Global.PLAYER_LAYER_MASK) if self.is_in_group(Global.GROUP_PROJECTILE) else Global.PLAYER_LAYER_MASK
 
 	_configure_projectile_vfx()
-	
-func _process(delta):
-	position += direction * speed * delta
-	process_hit_queue()
 
-func _on_area_entered(area):
-	if self.is_in_group("Projectile") and area.has_meta("projectile_special_owner"):
+func _process(delta: float) -> void:
+	position += direction * speed * delta
+	_process_hit_queue()
+
+func _on_area_entered(area: Area2D) -> void:
+	if self.is_in_group(Global.GROUP_PROJECTILE) and area.has_meta("projectile_special_owner"):
 		var special_owner = area.get_meta("projectile_special_owner")
 		if is_instance_valid(special_owner) and special_owner.has_method("_on_projectile_hit_special_area"):
 			special_owner.call("_on_projectile_hit_special_area", area, self)
@@ -47,58 +42,55 @@ func _on_area_entered(area):
 	var parent = area.get_parent()
 	if parent == null:
 		return
-	
-	if self.is_in_group("Projectile") and parent.is_in_group("Enemy"):
+
+	if self.is_in_group(Global.GROUP_PROJECTILE) and parent.is_in_group(Global.GROUP_ENEMY):
 		_queue_hit(parent)
-	
-	elif self.is_in_group("EnemyProjectile") and parent.is_in_group("Player"):
+	elif self.is_in_group(Global.GROUP_ENEMY_PROJECTILE) and parent.is_in_group(Global.GROUP_PLAYER):
 		_queue_hit(parent)
 
 func _on_body_entered(body: Node) -> void:
-	if (self.is_in_group("Projectile") or bool(get_meta("enemy_ricochet_enabled", false))) and _try_ricochet_from_body(body):
+	if (self.is_in_group(Global.GROUP_PROJECTILE) or bool(get_meta("enemy_ricochet_enabled", false))) and _try_ricochet_from_body(body):
 		return
 
-	if self.is_in_group("EnemyProjectile") and body.is_in_group("Player"):
+	if self.is_in_group(Global.GROUP_ENEMY_PROJECTILE) and body.is_in_group(Global.GROUP_PLAYER):
 		_queue_hit(body)
 
 func _queue_hit(target: Node) -> void:
 	if target not in hit_queue:
 		hit_queue.append(target)
 
-func process_hit_queue():
+func _process_hit_queue() -> void:
 	if hit_queue.is_empty():
 		return
-	
+
 	hit_queue.sort_custom(func(a, b): 
 		return global_position.distance_squared_to(a.global_position) < global_position.distance_squared_to(b.global_position)
 	)
-	
+
 	for target in hit_queue:
 		if not is_instance_valid(target):
 			continue
 
-		if target.is_in_group("Enemy") and target.has_method("take_damage"):
+		if target.is_in_group(Global.GROUP_ENEMY) and target.has_method("take_damage"):
 			if target in pierced_targets:
 				continue
 
 			var enemy_damage = damage if damage != null else player.attack_damage
 			target.take_damage(enemy_damage)
 			pierced_targets.append(target)
-		elif target.is_in_group("Player") and target.has_method("take_damage"):
+		elif target.is_in_group(Global.GROUP_PLAYER) and target.has_method("take_damage"):
 			var player_damage = damage if damage != null else 20.0
 			target.take_damage(player_damage)
 
 		_spawn_hit_particles(global_position)
-			
-		# Destrói o projétil e interrompe o loop imediatamente
-		if target.is_in_group("Enemy") and _consume_pierce():
+
+		if target.is_in_group(Global.GROUP_ENEMY) and _consume_pierce():
 			hit_queue.clear()
 			return
 
 		queue_free()
 		return
-		
-	# Limpa a lista para o próximo frame se não tiver achado alvos válidos
+
 	hit_queue.clear()
 
 func _consume_pierce() -> bool:
@@ -121,8 +113,8 @@ func _try_ricochet_from_body(body: Node) -> bool:
 	global_position += direction * 8.0
 
 	if bool(get_meta("risk_after_ricochet", false)):
-		add_to_group("EnemyProjectile")
-		collision_mask = 6
+		add_to_group(Global.GROUP_ENEMY_PROJECTILE)
+		collision_mask = Global.ENEMY_LAYER_MASK | Global.PLAYER_LAYER_MASK
 		damage = max(float(damage) * 0.45, 12.0)
 		set_meta("vfx_color", Color(1.0, 0.78, 0.08, 0.95))
 		_configure_projectile_vfx()
@@ -133,7 +125,7 @@ func _is_wall_body(body: Node) -> bool:
 	if body == null:
 		return false
 
-	return body.collision_layer & 1 != 0
+	return (body.collision_layer & Global.WALL_LAYER_MASK) != 0
 
 func _get_arena_bounce_normal() -> Vector2:
 	var scene = get_tree().current_scene
@@ -153,7 +145,7 @@ func _get_arena_bounce_normal() -> Vector2:
 		return Vector2.LEFT if direction.x > 0.0 else Vector2.RIGHT
 	return Vector2.UP if direction.y > 0.0 else Vector2.DOWN
 
-func _on_screen_exited():
+func _on_screen_exited() -> void:
 	await get_tree().create_timer(0.75, false).timeout
 	queue_free()
 
@@ -161,7 +153,7 @@ func _configure_projectile_vfx() -> void:
 	if not particles:
 		return
 
-	if self.is_in_group("EnemyProjectile") and self.is_in_group("Projectile"):
+	if self.is_in_group(Global.GROUP_ENEMY_PROJECTILE) and self.is_in_group(Global.GROUP_PROJECTILE):
 		particles.amount = 72
 		particles.lifetime = 0.42
 		particles.initial_velocity_min = 18.0
@@ -169,9 +161,9 @@ func _configure_projectile_vfx() -> void:
 
 	if self.has_meta("vfx_color"):
 		particles.color = self.get_meta("vfx_color")
-	elif self.is_in_group("EnemyProjectile") and self.is_in_group("Projectile"):
+	elif self.is_in_group(Global.GROUP_ENEMY_PROJECTILE) and self.is_in_group(Global.GROUP_PROJECTILE):
 		particles.color = _get_active_attack_color(Color(1.0, 0.78, 0.08, 0.95))
-	elif self.is_in_group("Projectile"):
+	elif self.is_in_group(Global.GROUP_PROJECTILE):
 		particles.color = Color(1.0, 0.52, 0.16, 0.85)
 
 	particles.emitting = true
@@ -201,12 +193,12 @@ func _spawn_hit_particles(hit_position: Vector2) -> void:
 func _get_vfx_color() -> Color:
 	if self.has_meta("vfx_color"):
 		return self.get_meta("vfx_color")
-	if self.is_in_group("EnemyProjectile") and self.is_in_group("Projectile"):
+	if self.is_in_group(Global.GROUP_ENEMY_PROJECTILE) and self.is_in_group(Global.GROUP_PROJECTILE):
 		return _get_active_attack_color(Color(1.0, 0.78, 0.08, 0.95))
-	if self.is_in_group("EnemyProjectile"):
+	if self.is_in_group(Global.GROUP_ENEMY_PROJECTILE):
 		return _get_active_attack_color(Color(1.0, 0.18, 0.1, 0.9))
 	return Color(1.0, 0.36, 0.12, 0.9)
 
 func _get_active_attack_color(color: Color) -> Color:
-	var multiplier = 1.0 - ENEMY_ATTACK_ACTIVE_COLOR_DARKENING
+	var multiplier = 1.0 - Global.ENEMY_ATTACK_ACTIVE_COLOR_DARKENING
 	return Color(color.r * multiplier, color.g * multiplier, color.b * multiplier, color.a)

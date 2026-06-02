@@ -43,8 +43,7 @@ const TANK_ENEMY = preload("res://Cenas/Inimigos/tank_enemy.tscn")
 const AGILE_ENEMY = preload("res://Cenas/Inimigos/agile_enemy.tscn")
 const BOSS_ENEMY = preload("res://Cenas/Inimigos/boss.tscn")
 
-# Conjuntos de waves baseados no pecado, com introducao gradual de inimigos.
-var wave_sets = {
+const WAVE_SETS = {
 	1: [  # Sloth
 		{"melee": 3, "ranged": 0, "agile": 0, "tank": 0, "spread": 0},
 		{"melee": 3, "ranged": 1, "agile": 0, "tank": 0, "spread": 0},
@@ -102,32 +101,11 @@ signal starting_arm_selected
 const BOSS_CLEAR_HEAL_RATIO: float = 0.20
 const BOSS_SPAWN_DELAY_AFTER_ARENA_ARRIVAL: float = 0.5
 
-const STARTING_ARM_OPTIONS = [
-	{
-		"id": "fast",
-		"name": "BRACO RAPIDO",
-		"summary": "Tiros fracos",
-		"details": "Muito controle e recuo curto."
-	},
-	{
-		"id": "heavy",
-		"name": "BRACO PESADO",
-		"summary": "Tiros fortes",
-		"details": "Pouco controle, recuo forte."
-	},
-	{
-		"id": "unstable",
-		"name": "BRACO INSTAVEL",
-		"summary": "Pierce e ricochete",
-		"details": "Tiro pode voltar contra voce."
-	}
-]
-
 func _ready() -> void:
-	for musica in get_tree().get_nodes_in_group("Music"):
-		musica.set_volume_db(Global.somVolume)
-	for som in get_tree().get_nodes_in_group("SFX"):
-		som.set_volume_db(Global.somSFX)
+	for musica in get_tree().get_nodes_in_group(Global.GROUP_MUSIC):
+		musica.set_volume_db(Global.music_volume_db)
+	for som in get_tree().get_nodes_in_group(Global.GROUP_SFX):
+		som.set_volume_db(Global.sfx_volume_db)
 
 	randomize()
 	Global.pecado = 1
@@ -135,7 +113,6 @@ func _ready() -> void:
 	_setup_arena_tile_visuals()
 	current_arena = arena_nodes[0]
 	_setup_fade_overlay()
-	_update_enemy_arena_sprite()
 	set_waves_based_on_pecado()
 	_update_camera_limits()
 	await _show_starting_arm_selection()
@@ -212,7 +189,7 @@ func _show_starting_arm_selection() -> void:
 	choices.add_theme_constant_override("separation", 16)
 	layout.add_child(choices)
 
-	for option in STARTING_ARM_OPTIONS:
+	for option in Global.STARTING_ARM_OPTIONS:
 		var button = Button.new()
 		button.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -391,9 +368,6 @@ func _get_arena_unscaled_pixel_size() -> Vector2:
 func _is_tile_inside_arena_grid(tile_coords: Vector2i) -> bool:
 	return tile_coords.x >= 0 and tile_coords.y >= 0 and tile_coords.x < ARENA_GRID_SIZE.x and tile_coords.y < ARENA_GRID_SIZE.y
 
-func _update_enemy_arena_sprite() -> void:
-	pass
-
 func _update_camera_limits() -> void:
 	var camera = get_viewport().get_camera_2d()
 	if camera == null:
@@ -423,10 +397,10 @@ func _get_current_arena_bounds() -> Rect2:
 
 	return arena_rect
 
-func set_waves_based_on_pecado():
-	waves = wave_sets.get(Global.pecado, wave_sets[1])
+func set_waves_based_on_pecado() -> void:
+	waves = WAVE_SETS.get(Global.pecado, WAVE_SETS[1])
 
-func start_next_wave():
+func start_next_wave() -> void:
 	if current_wave_index >= waves.size():
 		if current_arena == arena_nodes[0]:
 			print("4 waves concluidas na arena principal! Indo para arena do pecado {0}.".format([Global.pecado]))
@@ -444,7 +418,7 @@ func start_next_wave():
 	spawn_wave(wave_data)
 	current_wave_index += 1
 
-func spawn_wave(data: Dictionary):
+func spawn_wave(data: Dictionary) -> void:
 	var level_context = "pre_boss" if current_arena == arena_nodes[0] and current_wave_index == waves.size() - 1 else "normal"
 	
 	var total_enemies = data["melee"] + data["ranged"] + data["spread"] + data["tank"] + data["agile"]
@@ -491,7 +465,7 @@ func spawn_wave(data: Dictionary):
 
 	await _try_finish_wave()
 		
-func spawn_boss():
+func spawn_boss() -> void:
 	var centro_node = current_arena.get_node("Centro")
 	_set_player_xp_goal(1, "boss", Global.pecado)
 	await _transition_player_to(centro_node.global_position)
@@ -502,11 +476,11 @@ func spawn_boss():
 	_apply_enemy_spawn_modifiers(boss)
 	var spawn_margin = _get_body_spawn_margin(boss)
 	boss.global_position = get_camera_top_center_position(spawn_margin)
-	boss.add_to_group("Boss")
+	boss.add_to_group(Global.GROUP_BOSS)
 	boss.connect("boss_defeated", Callable(self, "_on_boss_died"))
 	add_child(boss)
 
-func spawn_enemy(enemy_scene: PackedScene):
+func spawn_enemy(enemy_scene: PackedScene) -> void:
 	var enemy = enemy_scene.instantiate()
 	_apply_enemy_spawn_modifiers(enemy)
 	add_child(enemy)
@@ -548,7 +522,7 @@ func get_random_camera_edge_position(spawn_margin: float = 0.0) -> Vector2:
 				pos = Vector2(cam_rect.end.x + margin, randf_range(cam_rect.position.y, cam_rect.end.y))
 
 		if _is_position_safe_in_current_arena(pos, spawn_margin):
-			var player = get_tree().get_first_node_in_group("Player")
+			var player = get_tree().get_first_node_in_group(Global.GROUP_PLAYER)
 			if player == null or pos.distance_to(player.global_position) > SPAWN_PLAYER_MIN_DISTANCE:
 				return pos
 
@@ -582,7 +556,7 @@ func get_random_arena_position(spawn_margin: float = 0.0) -> Vector2:
 			randf_range(arena_rect.position.y, arena_rect.end.y)
 		)
 		if _is_position_safe_in_current_arena(pos, spawn_margin):
-			var player = get_tree().get_first_node_in_group("Player")
+			var player = get_tree().get_first_node_in_group(Global.GROUP_PLAYER)
 			if player == null or pos.distance_to(player.global_position) > SPAWN_PLAYER_MIN_DISTANCE:
 				return pos
 
@@ -690,7 +664,7 @@ func _try_finish_wave() -> void:
 	if enemies_left_to_spawn > 0:
 		return
 
-	if get_tree().get_nodes_in_group("Enemy"):
+	if get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
 		return
 
 	wave_finish_pending = true
@@ -706,7 +680,7 @@ func _try_finish_wave() -> void:
 	wave_finish_pending = false
 	start_next_wave()
 
-func _on_boss_died():
+func _on_boss_died() -> void:
 	if not boss_phase:
 		return
 
@@ -720,14 +694,13 @@ func _on_boss_died():
 
 	current_arena = arena_nodes[0]
 	set_waves_based_on_pecado()
-	_update_enemy_arena_sprite()
 	_update_camera_limits()
 	await _wait_for_level_up_selection()
 	await _transition_player_to(ENEMY_ARENA_PLAYER_POSITION)
 	start_next_wave()
 
 func _heal_player_after_boss() -> void:
-	var player = get_tree().get_first_node_in_group("Player")
+	var player = get_tree().get_first_node_in_group(Global.GROUP_PLAYER)
 	if player == null or not player.has_method("heal"):
 		return
 
@@ -737,9 +710,9 @@ func _heal_player_after_boss() -> void:
 
 	player.heal(max_player_health * BOSS_CLEAR_HEAL_RATIO)
 
-func _on_pecado_changed(new_pecado):
+func _on_pecado_changed(new_pecado: int) -> void:
 	if new_pecado > 7:
 		await _wait_for_level_up_selection()
-		var player = get_tree().get_first_node_in_group("Player")
+		var player = get_tree().get_first_node_in_group(Global.GROUP_PLAYER)
 		if player and player.has_method("win"):
 			player.win()

@@ -6,9 +6,6 @@ class_name BaseEnemy
 @export var damage: int = 15
 @export var xp_drop: int = 1
 
-const ENEMY_COLLISION_MASK: int = 4
-const ENEMY_BODY_COLLISION_SCALE: float = 0.7
-const CHARACTER_RENDER_Z_INDEX: int = 10
 const PECADO_SPRITE_ROW_BY_ID = {
 	1: 6,
 	2: 4,
@@ -26,18 +23,19 @@ var is_dead: bool = false
 @onready var aparencia = get_node_or_null("AnimatedAppearence")
 
 func _ready() -> void:
-	z_index = CHARACTER_RENDER_Z_INDEX
+	z_index = Global.CHARACTER_RENDER_Z_INDEX
 	z_as_relative = false
 	current_health = max_health
-	player = get_tree().get_first_node_in_group("Player")
-	match player.STARTING_ARM_DATA:
+	player = get_tree().get_first_node_in_group(Global.GROUP_PLAYER)
+	var player_arm_id = str(player.get("current_arm_id")) if player != null and player.get("current_arm_id") != null else ""
+	match player_arm_id:
 		"fast":
-			speed = 136
+			speed = 140
 		"heavy":
-			speed = 120
+			speed = 125
 		"unstable":
-			speed = 128
-	add_to_group("Enemy")
+			speed = 130
+	add_to_group(Global.GROUP_ENEMY)
 	_setup_enemy_body_collision()
 	call_deferred("_setup_health_bar")
 
@@ -112,7 +110,7 @@ func _get_pecado_animation_name(pecado_id: int, state_name: String = "") -> Stri
 	return "pecado%d_%s" % [pecado_id, state_name]
 
 func _setup_enemy_body_collision() -> void:
-	collision_mask = collision_mask | ENEMY_COLLISION_MASK
+	collision_mask = collision_mask | Global.ENEMY_COLLISION_MASK
 	_shrink_body_collision_shape()
 
 func _shrink_body_collision_shape() -> void:
@@ -123,12 +121,12 @@ func _shrink_body_collision_shape() -> void:
 	var shape = collision.shape.duplicate()
 
 	if shape is CapsuleShape2D:
-		shape.radius = max(shape.radius * ENEMY_BODY_COLLISION_SCALE, 4.0)
-		shape.height = max(shape.height * ENEMY_BODY_COLLISION_SCALE, shape.radius * 2.0)
+		shape.radius = max(shape.radius * Global.ENEMY_BODY_COLLISION_SCALE, 4.0)
+		shape.height = max(shape.height * Global.ENEMY_BODY_COLLISION_SCALE, shape.radius * 2.0)
 	elif shape is CircleShape2D:
-		shape.radius = max(shape.radius * ENEMY_BODY_COLLISION_SCALE, 4.0)
+		shape.radius = max(shape.radius * Global.ENEMY_BODY_COLLISION_SCALE, 4.0)
 	elif shape is RectangleShape2D:
-		shape.size *= ENEMY_BODY_COLLISION_SCALE
+		shape.size *= Global.ENEMY_BODY_COLLISION_SCALE
 
 	collision.shape = shape
 

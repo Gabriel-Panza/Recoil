@@ -18,14 +18,10 @@ var recoil_force_bonus: float = 0.0
 var is_invulnerable: bool = false
 const MOVEMENT_FORCE_COMBO_LOCK_DURATION: float = 0.2
 const MOVEMENT_FORCE_CAP_BUFFER: float = 100.0
-const WALL_COLLISION_LAYER: int = 1
 const WALL_BOUNCE_MIN_SPEED: float = 75.0
 const WALL_BOUNCE_MULTIPLIER: float = 0.75
 const WALL_BOUNCE_PUSH_OUT: float = 4.0
 const ISO_AOE_VISUAL_Y_SCALE: float = 0.65
-const GROUND_AREA_VFX_LAYER_NAME: String = "GroundAreaVFX"
-const GROUND_AREA_VFX_Z_INDEX: int = 1
-const CHARACTER_RENDER_Z_INDEX: int = 10
 
 # --- DASH ---
 @export var dash_speed: float = 600.0
@@ -54,142 +50,6 @@ var heal_after_wave_bonus: float = 0.0
 var current_arm_id: String = ""
 var arm_attack_speed_upgrade_multiplier: float = 1.0
 var unstable_arm_projectiles_enabled: bool = false
-
-const STARTING_ARM_DATA = {
-	"fast": {
-		"name": "Braco rapido",
-		"description": "Tiros fracos, cadencia alta e recuo curto para controlar melhor o medico.",
-		"attack_damage": 30.0,
-		"base_fire_rate": 0.5,
-		"min_fire_rate": 0.3,
-		"base_recoil_force": 400.0,
-		"friction": 900.0,
-		"attack_speed_upgrade_multiplier": 0.35,
-		"unstable_projectiles": false
-	},
-	"heavy": {
-		"name": "Braco pesado",
-		"description": "Tiros lentos com dano alto e recuo forte para reposicionamentos grandes.",
-		"attack_damage": 65.0,
-		"base_fire_rate": 1.5,
-		"min_fire_rate": 1.25,
-		"base_recoil_force": 750.0,
-		"friction": 600.0,
-		"attack_speed_upgrade_multiplier": 0.5,
-		"unstable_projectiles": false
-	},
-	"unstable": {
-		"name": "Braco instavel",
-		"description": "Projeteis atravessam um alvo e ricocheteiam uma vez, mas voltam perigosos.",
-		"attack_damage": 30.0,
-		"base_fire_rate": 1.15,
-		"min_fire_rate": 0.65,
-		"base_recoil_force": 550.0,
-		"friction": 750.0,
-		"attack_speed_upgrade_multiplier": 0.7,
-		"unstable_projectiles": true
-	}
-}
-
-const ACTIVE_ABILITY_DATA = {
-	"sloth_field": {
-		"name": "Sloth Field",
-		"description": "Create a 180px field for 5 seconds. Enemies inside drop to 35% speed, but your dash speed drops to 75% during the field.",
-		"cooldown": 15.0,
-		"method": "activate_sloth_field"
-	},
-	"gluttony_devour": {
-		"name": "Devour",
-		"description": "Consume up to two enemies within 180px. Green motes fly back and heal up to 12.5% max health when they arrive, but your dash speed is halved for 5 seconds.",
-		"cooldown": 25.0,
-		"method": "activate_gluttony_devour"
-	},
-	"envy_mirror_clone": {
-		"name": "Mirror Clone",
-		"description": "Summon a mirror clone that fires random risky shots with you for a short time. Clone bullets can hit anything, including you.",
-		"cooldown": 20.0,
-		"method": "activate_envy_mirror_clone"
-	},
-	"wrath_burst": {
-		"name": "Wrath Burst",
-		"description": "Fire 16 radial bullets for 120% attack damage each, then take 20 damage.",
-		"cooldown": 25.0,
-		"method": "activate_wrath_burst"
-	},
-	"lust_for_perfection": {
-		"name": "Perfection",
-		"description": "Become invulnerable for 3 seconds, then take double damage for 5 seconds.",
-		"cooldown": 25.0,
-		"method": "activate_lust_for_perfection"
-	},
-	"greed_treasure_rain": {
-		"name": "Treasure Rain",
-		"description": "Rain golden projectiles from above. Each projectile deals 120% attack damage only when it collides, including with you.",
-		"cooldown": 30.0,
-		"method": "activate_greed_treasure_rain"
-	},
-}
-
-const PASSIVE_STATUS_DATA = {
-	"Shield_Protection": {
-		"name": "One-hit Shield",
-		"description": "Blocks the next damage instance, then refreshes after 12 seconds."
-	},
-	"Recoil_Explosion": {
-		"name": "Recoil Explosion",
-		"description": "Every shot creates a 180px shockwave that deals 35% of your attack damage."
-	},
-	"Double_Dash": {
-		"name": "Double Dash",
-		"description": "Gain two dash charges. Each spent charge recharges one at a time."
-	},
-	"Offensive_Dash": {
-		"name": "Offensive Dash",
-		"description": "Dashing blocks damage and releases a 180px shockwave for 75% attack damage."
-	},
-	"sloth_slow_aura": {
-		"name": "Slow Aura",
-		"description": "Enemies within 180px move at 75% speed."
-	},
-	"gluttony_heal_kill": {
-		"name": "Blood Feast",
-		"description": "Killing an enemy releases green motes that heal 1% max health when they return."
-	},
-	"envy_mirror_shot": {
-		"name": "Mirror Shot",
-		"description": "Every shot fires a mirrored bullet for 50% damage."
-	},
-	"wrath_overheat": {
-		"name": "Overheat",
-		"description": "Every 4th shot deals double damage."
-	},
-	"lust_for_vengeance": {
-		"name": "Vengeance",
-		"description": "At full HP, deal 75% more damage."
-	},
-	"greed_cursed_level": {
-		"name": "Cursed Level",
-		"description": "Gain 1 bonus level per wave. Enemies move 25% faster."
-	},
-}
-
-const SIN_PASSIVE_IDS = [
-	"sloth_slow_aura",
-	"gluttony_heal_kill",
-	"envy_mirror_shot",
-	"wrath_overheat",
-	"lust_for_vengeance",
-	"greed_cursed_level"
-]
-
-const SIN_PASSIVE_FLAGS = {
-	"sloth_slow_aura": "sloth_slow_aura_enabled",
-	"gluttony_heal_kill": "gluttony_heal_kill_enabled",
-	"envy_mirror_shot": "envy_mirror_shot_enabled",
-	"wrath_overheat": "wrath_overheat_enabled",
-	"lust_for_vengeance": "lust_for_vengeance_enabled",
-	"greed_cursed_level": "greed_cursed_level_enabled"
-}
 
 var active_abilities = {
 	"E": "",
@@ -260,17 +120,18 @@ var shoot_timer: Timer
 var dash_cd_timer: Timer
 
 # --- Paths ---
-var pause_control_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/PauseControl"
+const PAUSE_CONTROL_PATH: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/PauseControl"
+const GAME_OVER_PATH: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/PauseControl/GameOver"
+const GAME_WIN_PATH: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/PauseControl/GameWin"
+
 var pause_control: Control
-var game_over_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/PauseControl/GameOver"
 var game_over: Panel
-var game_win_path: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/PauseControl/GameWin"
 var game_win: Panel
 
 var type_animation = "walk_down"
 
 func _ready() -> void:
-	z_index = CHARACTER_RENDER_Z_INDEX
+	z_index = Global.CHARACTER_RENDER_Z_INDEX
 	z_as_relative = false
 	base_fire_rate = STARTING_FIRE_RATE
 	fire_rate = STARTING_FIRE_RATE
@@ -279,9 +140,9 @@ func _ready() -> void:
 	_recalculate_recoil_force()
 	base_dash_speed = dash_speed
 	aparencia = get_node_or_null("Aparencia")
-	pause_control = get_node_or_null(pause_control_path)
-	game_over = get_node_or_null(game_over_path)
-	game_win = get_node_or_null(game_win_path)
+	pause_control = get_node_or_null(PAUSE_CONTROL_PATH)
+	game_over = get_node_or_null(GAME_OVER_PATH)
+	game_win = get_node_or_null(GAME_WIN_PATH)
 
 	shoot_timer = Timer.new()
 	shoot_timer.one_shot = true
@@ -299,11 +160,12 @@ func _ready() -> void:
 	contact_damage_timer.timeout.connect(_on_contact_damage_timer_timeout)
 	add_child(contact_damage_timer)
 
+## Applies the selected starting arm and resets arm-dependent upgrade scaling.
 func apply_starting_arm(arm_id: String) -> void:
-	if not STARTING_ARM_DATA.has(arm_id):
+	if not Global.STARTING_ARM_DATA.has(arm_id):
 		return
 
-	var arm_data: Dictionary = STARTING_ARM_DATA[arm_id]
+	var arm_data: Dictionary = Global.STARTING_ARM_DATA[arm_id]
 	current_arm_id = arm_id
 	attack_damage = float(arm_data["attack_damage"])
 	base_fire_rate = float(arm_data["base_fire_rate"])
@@ -318,11 +180,12 @@ func apply_starting_arm(arm_id: String) -> void:
 	_recalculate_recoil_force()
 	emit_signal("stats_updated")
 
+## Returns the display name of the arm selected at the start of the run.
 func get_starting_arm_name() -> String:
-	if current_arm_id == "" or not STARTING_ARM_DATA.has(current_arm_id):
+	if current_arm_id == "" or not Global.STARTING_ARM_DATA.has(current_arm_id):
 		return "Nenhum braco"
 
-	return str(STARTING_ARM_DATA[current_arm_id]["name"])
+	return str(Global.STARTING_ARM_DATA[current_arm_id]["name"])
 
 func add_attack_speed_bonus(amount: float) -> void:
 	if not can_upgrade_attack_speed():
@@ -343,8 +206,8 @@ func get_attack_speed_upgrade_scale_percent() -> float:
 	return arm_attack_speed_upgrade_multiplier * 100.0
 
 func get_current_arm_name() -> String:
-	if STARTING_ARM_DATA.has(current_arm_id):
-		return str(STARTING_ARM_DATA[current_arm_id].get("name", current_arm_id))
+	if Global.STARTING_ARM_DATA.has(current_arm_id):
+		return str(Global.STARTING_ARM_DATA[current_arm_id].get("name", current_arm_id))
 	return "Base"
 
 func get_shot_cooldown() -> float:
@@ -589,7 +452,7 @@ func _is_wall_collision(collision: KinematicCollision2D) -> bool:
 	if collision_layer == null:
 		return false
 
-	return (int(collision_layer) & WALL_COLLISION_LAYER) != 0
+	return (int(collision_layer) & Global.WALL_LAYER_MASK) != 0
 
 func _take_direct_damage(amount: float) -> void:
 	current_health -= int(round(amount))
@@ -606,7 +469,7 @@ func _physics_process(delta: float) -> void:
 	var look_direction = global_position.direction_to(mouse_pos)
 	_update_direction_animation(look_direction)
 	
-	if pause_control.canMove:
+	if pause_control.can_move:
 		# Dash na direção do mouse
 		if Input.is_action_just_pressed("dash") and _can_perform_dash():
 			perform_dash(look_direction)
@@ -746,7 +609,7 @@ func _spawn_projectile(spawn_position: Vector2, angle: float, projectile_damage:
 	if projectile_vfx_color.a > 0.0:
 		bullet.set_meta("vfx_color", projectile_vfx_color)
 	if can_hit_player:
-		bullet.add_to_group("EnemyProjectile")
+		bullet.add_to_group(Global.GROUP_ENEMY_PROJECTILE)
 	elif unstable_arm_projectiles_enabled:
 		_configure_unstable_projectile(bullet)
 	get_tree().root.add_child(bullet)
@@ -845,10 +708,10 @@ func take_damage(amount: float, attacker_position: Vector2 = Vector2.ZERO, knock
 	await get_tree().create_timer(0.2, false).timeout
 	is_invulnerable = false
 
-func die():
+func die() -> void:
 	_finish_current_run()
 	# aparencia.play("death")
-	for musica in get_tree().get_nodes_in_group("Music"):
+	for musica in get_tree().get_nodes_in_group(Global.GROUP_MUSIC):
 		musica.stop()
 	get_tree().paused = true
 	# $Lose.play()
@@ -856,9 +719,9 @@ func die():
 	if game_over:
 		game_over.visible = true
 
-func win():
+func win() -> void:
 	_finish_current_run()
-	for musica in get_tree().get_nodes_in_group("Music"):
+	for musica in get_tree().get_nodes_in_group(Global.GROUP_MUSIC):
 		musica.stop()
 	get_tree().paused = true
 	# $Win.play()
@@ -888,7 +751,7 @@ func _on_hitbox_area_entered(area: Area2D) -> void:
 	if parent == null:
 		return
 
-	if parent.is_in_group("Enemy"): 
+	if parent.is_in_group(Global.GROUP_ENEMY):
 		if not enemies_in_contact.has(parent):
 			enemies_in_contact.append(parent)
 		
@@ -929,7 +792,7 @@ func _get_contact_knockback_multiplier(enemy: Node) -> float:
 	return 1.0
 
 func is_active_ability_id(option_id: String) -> bool:
-	return ACTIVE_ABILITY_DATA.has(option_id)
+	return Global.ACTIVE_ABILITY_DATA.has(option_id)
 
 func learn_active_ability(option_id: String) -> bool:
 	if not is_active_ability_id(option_id):
@@ -962,15 +825,15 @@ func get_active_slot_cooldown(slot: String) -> float:
 	return float(active_ability_cooldown_remaining.get(slot, 0.0))
 
 func get_active_ability_cooldown(option_id: String) -> float:
-	var data = ACTIVE_ABILITY_DATA.get(option_id, {})
+	var data = Global.ACTIVE_ABILITY_DATA.get(option_id, {})
 	return float(data.get("cooldown", 0.0))
 
 func get_active_ability_name(option_id: String) -> String:
-	var data = ACTIVE_ABILITY_DATA.get(option_id, {})
+	var data = Global.ACTIVE_ABILITY_DATA.get(option_id, {})
 	return str(data.get("name", option_id))
 
 func get_active_ability_description(option_id: String) -> String:
-	var data = ACTIVE_ABILITY_DATA.get(option_id, {})
+	var data = Global.ACTIVE_ABILITY_DATA.get(option_id, {})
 	return str(data.get("description", option_id))
 
 func get_equipped_passive_summaries() -> Array:
@@ -978,13 +841,13 @@ func get_equipped_passive_summaries() -> Array:
 	for passive_id in get_rare_passive_options():
 		passive_ids.append(passive_id)
 
-	for passive_id in SIN_PASSIVE_IDS:
+	for passive_id in Global.SIN_PASSIVE_IDS:
 		if _is_passive_enabled(passive_id):
 			passive_ids.append(passive_id)
 
 	var summaries: Array = []
-	if current_arm_id != "" and STARTING_ARM_DATA.has(current_arm_id):
-		var arm_data: Dictionary = STARTING_ARM_DATA[current_arm_id]
+	if current_arm_id != "" and Global.STARTING_ARM_DATA.has(current_arm_id):
+		var arm_data: Dictionary = Global.STARTING_ARM_DATA[current_arm_id]
 		summaries.append({
 			"id": current_arm_id,
 			"name": str(arm_data["name"]),
@@ -1001,16 +864,16 @@ func get_equipped_passive_summaries() -> Array:
 	return summaries
 
 func get_passive_effect_name(passive_id: String) -> String:
-	var data = PASSIVE_STATUS_DATA.get(passive_id, {})
+	var data = Global.PASSIVE_STATUS_DATA.get(passive_id, {})
 	return str(data.get("name", passive_id))
 
 func get_passive_effect_description(passive_id: String) -> String:
-	var data = PASSIVE_STATUS_DATA.get(passive_id, {})
+	var data = Global.PASSIVE_STATUS_DATA.get(passive_id, {})
 	return str(data.get("description", passive_id))
 
 func _is_passive_enabled(passive_id: String) -> bool:
-	if SIN_PASSIVE_FLAGS.has(passive_id):
-		return bool(get(SIN_PASSIVE_FLAGS[passive_id]))
+	if Global.SIN_PASSIVE_FLAGS.has(passive_id):
+		return bool(get(Global.SIN_PASSIVE_FLAGS[passive_id]))
 
 	return has_rare_passive(passive_id)
 
@@ -1085,7 +948,7 @@ func use_active_ability(slot: String) -> void:
 	emit_signal("stats_updated")
 
 func _activate_active_ability(ability_id: String) -> void:
-	var method_name = str(ACTIVE_ABILITY_DATA.get(ability_id, {}).get("method", ""))
+	var method_name = str(Global.ACTIVE_ABILITY_DATA.get(ability_id, {}).get("method", ""))
 	if method_name != "" and has_method(method_name):
 		call(method_name)
 
@@ -1102,6 +965,7 @@ func on_enemy_killed(_enemy: Node) -> void:
 	if gluttony_heal_kill_enabled and is_instance_valid(_enemy):
 		_spawn_heal_motes(_enemy.global_position, max_health * 0.01, 5)
 
+## Grants an immediate level-up choice without changing the wave XP target.
 func grant_bonus_level_up(context: String = "normal", boss_pecado: int = 0) -> void:
 	if upando:
 		return
@@ -1123,7 +987,7 @@ func activate_sloth_field() -> void:
 	_set_dash_speed_modifier("sloth_field", 0.75)
 
 	while elapsed < 5.0:
-		for enemy in get_tree().get_nodes_in_group("Enemy"):
+		for enemy in get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
 			if not is_instance_valid(enemy) or enemy.get("speed") == null:
 				continue
 
@@ -1150,8 +1014,8 @@ func activate_sloth_field() -> void:
 			enemy.remove_meta("sloth_field_active")
 
 func activate_gluttony_devour() -> void:
-	var nearby_enemies = get_tree().get_nodes_in_group("Enemy")
-	nearby_enemies = nearby_enemies.filter(func(enemy): return is_instance_valid(enemy) and not enemy.is_in_group("Boss") and _is_position_inside_iso_aoe(enemy.global_position, global_position, DEVOUR_RADIUS))
+	var nearby_enemies = get_tree().get_nodes_in_group(Global.GROUP_ENEMY)
+	nearby_enemies = nearby_enemies.filter(func(enemy): return is_instance_valid(enemy) and not enemy.is_in_group(Global.GROUP_BOSS) and _is_position_inside_iso_aoe(enemy.global_position, global_position, DEVOUR_RADIUS))
 	nearby_enemies.sort_custom(func(a, b): return global_position.distance_squared_to(a.global_position) < global_position.distance_squared_to(b.global_position))
 
 	var devoured_count = min(2, nearby_enemies.size())
@@ -1205,14 +1069,14 @@ func activate_greed_treasure_rain() -> void:
 func _trigger_recoil_explosion() -> void:
 	_spawn_burst_particles(global_position, Color(1.0, 0.52, 0.12, 0.95), 34, 0.3, 210.0)
 	_spawn_ring_vfx(global_position, SHOCKWAVE_RADIUS, Color(1.0, 0.55, 0.12, 0.44), 0.28)
-	for enemy in get_tree().get_nodes_in_group("Enemy"):
+	for enemy in get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
 		if is_instance_valid(enemy) and enemy.has_method("take_damage") and _is_position_inside_iso_aoe(enemy.global_position, global_position, SHOCKWAVE_RADIUS):
 			enemy.take_damage(_get_shockwave_damage())
 
 func _trigger_offensive_dash_explosion() -> void:
 	_spawn_burst_particles(global_position, Color(0.25, 0.95, 1.0, 0.9), 36, 0.32, 190.0)
 	_spawn_ring_vfx(global_position, SHOCKWAVE_RADIUS, Color(0.42, 0.95, 1.0, 0.44), 0.3)
-	for enemy in get_tree().get_nodes_in_group("Enemy"):
+	for enemy in get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
 		if is_instance_valid(enemy) and enemy.has_method("take_damage") and _is_position_inside_iso_aoe(enemy.global_position, global_position, SHOCKWAVE_RADIUS):
 			enemy.take_damage(_get_shockwave_dash_damage())
 
@@ -1222,7 +1086,7 @@ func _get_shockwave_dash_damage() -> float:
 	return attack_damage * SHOCKWAVE_DASH_DAMAGE_MULTIPLIER
 
 func _apply_sloth_slow_aura() -> void:
-	for enemy in get_tree().get_nodes_in_group("Enemy"):
+	for enemy in get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
 		if not is_instance_valid(enemy) or enemy.get("speed") == null:
 			continue
 
@@ -1258,13 +1122,13 @@ func _get_ground_area_vfx_parent() -> Node:
 	if scene == null:
 		return _get_vfx_parent()
 
-	var layer = scene.get_node_or_null(GROUND_AREA_VFX_LAYER_NAME)
+	var layer = scene.get_node_or_null(Global.GROUND_AREA_VFX_LAYER_NAME)
 	if layer == null:
 		layer = Node2D.new()
-		layer.name = GROUND_AREA_VFX_LAYER_NAME
+		layer.name = Global.GROUND_AREA_VFX_LAYER_NAME
 		scene.add_child(layer)
 
-	layer.z_index = GROUND_AREA_VFX_Z_INDEX
+	layer.z_index = Global.GROUND_AREA_VFX_Z_INDEX
 	layer.z_as_relative = false
 	var player_node = scene.get_node_or_null("Player")
 	if player_node != null and layer.get_parent() == scene and layer.get_index() > player_node.get_index():
@@ -1599,6 +1463,7 @@ func gain_xp(amount: int) -> void:
 		upando = true
 		level_up()
 
+## Resets XP so the current wave awards exactly one level-up when cleared.
 func start_wave_xp_goal(enemy_count: int, context: String = "normal", boss_pecado: int = 0) -> void:
 	current_xp = 0
 	xp_to_next_level = max(enemy_count, 1)
@@ -1606,6 +1471,7 @@ func start_wave_xp_goal(enemy_count: int, context: String = "normal", boss_pecad
 	level_up_boss_pecado = boss_pecado
 	emit_signal("xp_updated", current_xp, xp_to_next_level)
 
+## Emits a level-up event; the HUD popup owns the final upgrade selection.
 func level_up() -> void:
 	level += 1
 	current_xp -= xp_to_next_level

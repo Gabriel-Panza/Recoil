@@ -1,8 +1,9 @@
 extends Node2D
 
-var player_path: NodePath = "/root/GameScene/Player"
+const PLAYER_PATH: NodePath = "/root/GameScene/Player"
+const CAMERA_PATH: NodePath = "/root/GameScene/Player/Camera2D"
+
 var player
-var camera_path: NodePath = "/root/GameScene/Player/Camera2D"
 var camera
 
 @onready var boxStats = $HBoxContainer
@@ -14,7 +15,6 @@ var active_skill_r_label: Label
 var passive_status_label: Label
 var skill_status_top_background: TextureRect
 var skill_status_list_background: TextureRect
-const RARE_OPTION_IDS = ["Shield_Protection", "Recoil_Explosion", "Double_Dash", "Offensive_Dash"]
 const SKILL_STATUS_TOP_TEXTURE = preload("res://Sprites/Menu/hud_skills_and_passives.png")
 const SKILL_STATUS_LIST_TEXTURE = preload("res://Sprites/Menu/hud_list_of_passives.png")
 const SKILL_STATUS_POSITION = Vector2(10.0, 86.0)
@@ -28,8 +28,8 @@ const SKILL_STATUS_BACKGROUND_ALPHA = 0.72
 const SKILL_STATUS_LABEL_ALPHA = 0.88
 
 func _ready() -> void:
-	player = get_node_or_null(player_path)
-	camera = get_node_or_null(camera_path)
+	player = get_node_or_null(PLAYER_PATH)
+	camera = get_node_or_null(CAMERA_PATH)
 	_setup_skill_status_background()
 	_setup_active_skill_hud_labels()
 	_setup_passive_status_label()
@@ -228,7 +228,7 @@ func _on_level_updated(level, current_xp, xp_to_next_level) -> void:
 	$ProgressBar.max_value = xp_to_next_level
 	level_up_popup.show_popup(player.level_up_context, player.level_up_boss_pecado)
 
-func _apply_effect(option):
+func _apply_effect(option: String) -> void:
 	if player.has_method("is_active_ability_id") and player.is_active_ability_id(option):
 		if not player.learn_active_ability(option):
 			_show_active_discard_popup(option)
@@ -291,7 +291,7 @@ func _apply_effect(option):
 	_finish_effect_application()
 
 func _is_rare_option(option: String) -> bool:
-	return option in RARE_OPTION_IDS
+	return option in Global.RARE_OPTION_IDS
 
 func _equip_rare_option(option: String) -> void:
 	var already_equipped = player.has_rare_passive(option) if player.has_method("has_rare_passive") else player.current_rare_option == option

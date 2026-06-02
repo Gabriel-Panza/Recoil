@@ -28,45 +28,45 @@ func mover(_delta: float) -> void:
 		bump_cooldown -= _delta
 	
 	if is_dashing:
-		# Estado de Ataque (Dash)
+		# Estado de ataque (dash).
 		velocity = dash_direction * dash_speed
 		state_timer -= _delta
 		
-		# Verifica impacto
+		# Verifica impacto.
 		if state_timer <= 0 or get_slide_collision_count() > 0:
 			is_dashing = false
 			state_timer = 0.0
 			velocity = -dash_direction * (dash_speed * 0.6)
 	else:
-		# Estado de Órbita (Rodeando)
+		# Estado de orbita.
 		state_timer += _delta
 		var dist_to_player = global_position.distance_to(player.global_position)
 		
-		# >>> ALTERAÇÃO AQUI: Se bateu na quina enquanto tenta rodear, dá meia volta!
+		# Inverte a orbita quando encosta na parede durante o rodeio.
 		if get_slide_collision_count() > 0 and bump_cooldown <= 0:
 			orbit_direction *= -1
-			bump_cooldown = 0.5 # Fica meio segundo sem poder virar de novo para escapar da parede
+			bump_cooldown = 0.5
 		
-		# Calcula o vetor perpendicular para fazer a curva
+		# Calcula o vetor perpendicular para fazer a curva.
 		var tangent = dir_to_player.rotated(PI/2 * orbit_direction)
 		
-		# Ajuste para manter a distância ideal
+		# Ajusta a distancia para manter a orbita.
 		var distance_correction = 0.0
 		if dist_to_player > orbit_distance + 20:
-			distance_correction = 1.0 # Se afastou, puxa pra perto
+			distance_correction = 1.0
 		elif dist_to_player < orbit_distance - 20:
-			distance_correction = -1.0 # Se aproximou, joga pra longe
+			distance_correction = -1.0
 			
 		var move_dir = (tangent + (dir_to_player * distance_correction)).normalized()
 		velocity = move_dir * speed
 		
-		# Hora do bote!
+		# Prepara o dash.
 		if state_timer >= time_to_dash:
 			is_dashing = true
 			state_timer = dash_duration
-			dash_direction = dir_to_player # Trava a mira na direção atual do player
+			dash_direction = dir_to_player
 
-	# Espelha o sprite baseado para onde ele está indo
+	# Espelha o sprite pela direcao atual.
 	if aparencia and velocity.x != 0:
 		aparencia.flip_h = velocity.x < 0
 		
