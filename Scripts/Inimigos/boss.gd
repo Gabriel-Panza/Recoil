@@ -34,15 +34,19 @@ const SLOTH_SUMMON_SPAWN_INTERVAL: float = 1.25
 const SLOTH_ZONE_TELEGRAPH_DURATION: float = 0.55
 const SLOTH_ZONE_SPAWN_INTERVAL: float = 1.15
 const SLOTH_SLOW_ZONE_LIFETIME: float = 15.0
+const SLOTH_BOSS_PLAYER_DASH_SPEED_MULTIPLIER: float = 0.5
+const SLOTH_BOSS_PLAYER_VELOCITY_MULTIPLIER: float = 0.75
+const SLOTH_BOSS_ENEMY_SLOW_EFFECT_RATIO: float = 0.2
+const ENEMY_ATTACK_ACTIVE_COLOR_DARKENING: float = 0.3
 const GLUTTONY_FOOD_SPAWN_INTERVAL: float = 1.75
 const GLUTTONY_STRESS_DURATION_PHASE_1: float = 7.5
 const GLUTTONY_STRESS_DURATION_PHASE_2: float = 10.0
 const ENVY_CLONE_MAX_HEALTH: float = 180.0
-const ENVY_PINCER_TELEGRAPH_DURATION: float = 0.32
-const ENVY_SWAP_TELEGRAPH_DURATION: float = 0.42
+const ENVY_PINCER_TELEGRAPH_DURATION: float = 0.35
+const ENVY_SWAP_TELEGRAPH_DURATION: float = 0.5
 const GREED_TREASURE_RADIUS: float = 16.0
 const MAX_BOSS_CIRCLE_VFX_RADIUS: float = 180.0
-const ISO_AOE_VISUAL_Y_SCALE: float = 0.68
+const ISO_AOE_VISUAL_Y_SCALE: float = 0.7
 const GROUND_AREA_VFX_LAYER_NAME: String = "GroundAreaVFX"
 const GROUND_AREA_VFX_Z_INDEX: int = 1
 const CHARACTER_RENDER_Z_INDEX: int = 10
@@ -447,6 +451,7 @@ func _update_sloth_slow_zones(delta: float) -> void:
 		return
 
 	var is_inside_any_zone = false
+	var enemies_inside_zone: Array = []
 	for zone in active_slow_zones.duplicate():
 		if not is_instance_valid(zone):
 			active_slow_zones.erase(zone)
@@ -459,13 +464,42 @@ func _update_sloth_slow_zones(delta: float) -> void:
 			continue
 		if _is_point_inside_iso_aoe(player.global_position, zone.global_position, float(zone.get_meta("radius", SLOTH_SLOW_ZONE_RADIUS))):
 			is_inside_any_zone = true
+		for enemy in get_tree().get_nodes_in_group("Enemy"):
+			if not _can_sloth_zone_slow_enemy(enemy):
+				continue
+			if _is_point_inside_iso_aoe(enemy.global_position, zone.global_position, float(zone.get_meta("radius", SLOTH_SLOW_ZONE_RADIUS))):
+				if enemy not in enemies_inside_zone:
+					enemies_inside_zone.append(enemy)
 
 	if is_inside_any_zone:
 		if player.has_method("_set_dash_speed_modifier"):
-			player.call("_set_dash_speed_modifier", "sloth_boss_zone", 0.62)
-		player.velocity *= 0.95
+			player.call("_set_dash_speed_modifier", "sloth_boss_zone", SLOTH_BOSS_PLAYER_DASH_SPEED_MULTIPLIER)
+		player.velocity *= SLOTH_BOSS_PLAYER_VELOCITY_MULTIPLIER
 	elif player.has_method("_clear_dash_speed_modifier"):
 		player.call("_clear_dash_speed_modifier", "sloth_boss_zone")
+
+	_update_sloth_zone_enemy_slow(enemies_inside_zone)
+
+func _can_sloth_zone_slow_enemy(enemy: Node) -> bool:
+	return is_instance_valid(enemy) and enemy != self and not enemy.is_in_group("Boss") and enemy.get("speed") != null
+
+func _update_sloth_zone_enemy_slow(enemies_inside_zone: Array) -> void:
+	var player_slow_amount = 1.0 - SLOTH_BOSS_PLAYER_DASH_SPEED_MULTIPLIER
+	var enemy_speed_multiplier = 1.0 - player_slow_amount * SLOTH_BOSS_ENEMY_SLOW_EFFECT_RATIO
+
+	for enemy in get_tree().get_nodes_in_group("Enemy"):
+		if not _can_sloth_zone_slow_enemy(enemy):
+			continue
+		if enemy in enemies_inside_zone:
+			if not enemy.has_meta("sloth_boss_zone_base_speed"):
+				enemy.set_meta("sloth_boss_zone_base_speed", float(enemy.get("speed")))
+			enemy.set("speed", float(enemy.get_meta("sloth_boss_zone_base_speed")) * enemy_speed_multiplier)
+			enemy.set_meta("sloth_boss_zone_active", true)
+		elif enemy.has_meta("sloth_boss_zone_active"):
+			if enemy.has_meta("sloth_boss_zone_base_speed"):
+				enemy.set("speed", float(enemy.get_meta("sloth_boss_zone_base_speed")))
+				enemy.remove_meta("sloth_boss_zone_base_speed")
+			enemy.remove_meta("sloth_boss_zone_active")
 
 func _start_gluttony_food_wave(amount: int) -> void:
 	is_performing_action = true
@@ -1359,6 +1393,17 @@ func _cleanup_boss_objects() -> void:
 		envy_clone = null
 	if player and player.has_method("_clear_dash_speed_modifier"):
 		player.call("_clear_dash_speed_modifier", "sloth_boss_zone")
+	_restore_sloth_zone_enemy_speeds()
+
+func _restore_sloth_zone_enemy_speeds() -> void:
+	for enemy in get_tree().get_nodes_in_group("Enemy"):
+		if not is_instance_valid(enemy):
+			continue
+		if enemy.has_meta("sloth_boss_zone_base_speed"):
+			enemy.set("speed", float(enemy.get_meta("sloth_boss_zone_base_speed")))
+			enemy.remove_meta("sloth_boss_zone_base_speed")
+		if enemy.has_meta("sloth_boss_zone_active"):
+			enemy.remove_meta("sloth_boss_zone_active")
 
 func _register_boss_summon(enemy: Node) -> void:
 	if enemy == null:
@@ -1472,7 +1517,7 @@ func _spawn_enemy_projectile(spawn_position: Vector2, projectile_direction: Vect
 	projectile.global_position = spawn_position
 	projectile.direction = projectile_direction.normalized()
 	projectile.damage = projectile_damage
-	projectile.set_meta("vfx_color", color)
+	projectile.set_meta("vfx_color", _get_active_attack_color(color))
 	_get_vfx_parent().add_child(projectile)
 	projectile.speed = projectile_speed
 	return projectile
@@ -1492,7 +1537,7 @@ func _create_damaging_area(area_position: Vector2, size: Vector2, area_rotation:
 	area.collision_mask = PLAYER_LAYER_MASK
 	area.set_meta("damage", area_damage)
 	_add_rect_collision(area, size)
-	_add_rect_visual(area, size, color, 0)
+	_add_rect_visual(area, size, _get_active_attack_color(color), 0)
 
 	area.body_entered.connect(Callable(self, "_on_damaging_area_body_entered").bind(area))
 	_get_ground_area_vfx_parent().add_child(area)
@@ -1559,6 +1604,10 @@ func _make_stylebox(color: Color) -> StyleBoxFlat:
 
 func _with_alpha(color: Color, alpha: float) -> Color:
 	return Color(color.r, color.g, color.b, alpha)
+
+func _get_active_attack_color(color: Color) -> Color:
+	var multiplier = 1.0 - ENEMY_ATTACK_ACTIVE_COLOR_DARKENING
+	return Color(color.r * multiplier, color.g * multiplier, color.b * multiplier, color.a)
 
 func _get_boss_color() -> Color:
 	match current_state:

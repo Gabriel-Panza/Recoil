@@ -14,6 +14,7 @@ var player
 # Lista de espera de colisões deste frame
 var hit_queue: Array = []
 var pierced_targets: Array = []
+const ENEMY_ATTACK_ACTIVE_COLOR_DARKENING: float = 0.3
 
 func _ready():
 	player = get_node_or_null(player_path)
@@ -169,7 +170,7 @@ func _configure_projectile_vfx() -> void:
 	if self.has_meta("vfx_color"):
 		particles.color = self.get_meta("vfx_color")
 	elif self.is_in_group("EnemyProjectile") and self.is_in_group("Projectile"):
-		particles.color = Color(1.0, 0.78, 0.08, 0.95)
+		particles.color = _get_active_attack_color(Color(1.0, 0.78, 0.08, 0.95))
 	elif self.is_in_group("Projectile"):
 		particles.color = Color(1.0, 0.52, 0.16, 0.85)
 
@@ -201,7 +202,11 @@ func _get_vfx_color() -> Color:
 	if self.has_meta("vfx_color"):
 		return self.get_meta("vfx_color")
 	if self.is_in_group("EnemyProjectile") and self.is_in_group("Projectile"):
-		return Color(1.0, 0.78, 0.08, 0.95)
+		return _get_active_attack_color(Color(1.0, 0.78, 0.08, 0.95))
 	if self.is_in_group("EnemyProjectile"):
-		return Color(1.0, 0.18, 0.1, 0.9)
+		return _get_active_attack_color(Color(1.0, 0.18, 0.1, 0.9))
 	return Color(1.0, 0.36, 0.12, 0.9)
+
+func _get_active_attack_color(color: Color) -> Color:
+	var multiplier = 1.0 - ENEMY_ATTACK_ACTIVE_COLOR_DARKENING
+	return Color(color.r * multiplier, color.g * multiplier, color.b * multiplier, color.a)
