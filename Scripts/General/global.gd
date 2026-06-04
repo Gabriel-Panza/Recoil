@@ -27,11 +27,11 @@ const STARTING_ARM_DATA = {
 		"name": "Braco rapido",
 		"description": "Tiros fracos, cadencia alta e recuo curto para controlar melhor o medico.",
 		"attack_damage": 30.0,
-		"base_fire_rate": 0.5,
+		"base_fire_rate": 0.45,
 		"min_fire_rate": 0.3,
-		"base_recoil_force": 400.0,
+		"base_recoil_force": 410.0,
 		"friction": 900.0,
-		"attack_speed_upgrade_multiplier": 0.35,
+		"attack_speed_upgrade_multiplier": 0.3,
 		"unstable_projectiles": false
 	},
 	"heavy": {
@@ -39,8 +39,8 @@ const STARTING_ARM_DATA = {
 		"description": "Tiros lentos com dano alto e recuo forte para reposicionamentos grandes.",
 		"attack_damage": 65.0,
 		"base_fire_rate": 1.5,
-		"min_fire_rate": 1.25,
-		"base_recoil_force": 750.0,
+		"min_fire_rate": 1.2,
+		"base_recoil_force": 760.0,
 		"friction": 600.0,
 		"attack_speed_upgrade_multiplier": 0.5,
 		"unstable_projectiles": false
@@ -49,9 +49,9 @@ const STARTING_ARM_DATA = {
 		"name": "Braco instavel",
 		"description": "Projeteis atravessam um alvo e ricocheteiam uma vez, mas voltam perigosos.",
 		"attack_damage": 30.0,
-		"base_fire_rate": 1.15,
-		"min_fire_rate": 0.65,
-		"base_recoil_force": 550.0,
+		"base_fire_rate": 1.1,
+		"min_fire_rate": 0.60,
+		"base_recoil_force": 560.0,
 		"friction": 750.0,
 		"attack_speed_upgrade_multiplier": 0.7,
 		"unstable_projectiles": true

@@ -17,28 +17,29 @@ const PROJECTILE_SCENE = preload("res://Cenas/Inimigos/enemyProjectile.tscn")
 const MELEE_ENEMY_SCENE = preload("res://Cenas/Inimigos/melee_enemy.tscn")
 const RANGED_ENEMY_SCENE = preload("res://Cenas/Inimigos/ranged_enemy.tscn")
 
-const WRATH_BOMB_RADIUS: float = 18.0
+const WRATH_BOMB_RADIUS: float = 20.0
 const WRATH_BOMB_EXPLOSION_RADIUS: float = 110.0
-const WRATH_BOMB_PUSH_SPEED: float = 560.0
-const WRATH_BOMB_DAMAGE: float = 38.0
+const WRATH_BOMB_PUSH_SPEED: float = 550.0
+const WRATH_BOMB_DAMAGE: float = 40.0
 const LUST_WALL_THICKNESS: float = 24.0
 const LUST_WALL_LENGTH: float = 260.0
 const LUST_BREAKABLE_WALL_HP: float = 110.0
-const SLOTH_SLOW_ZONE_RADIUS: float = 95.0
-const SLOTH_SUMMON_SPAWN_INTERVAL: float = 1.5
-const SLOTH_ZONE_TELEGRAPH_DURATION: float = 0.55
-const SLOTH_ZONE_SPAWN_INTERVAL: float = 1.15
+const SLOTH_SLOW_ZONE_RADIUS: float = 100.0
+const SLOTH_SUMMON_SPAWN_INTERVAL: float = 3.0
+const SLOTH_ZONE_TELEGRAPH_DURATION: float = 0.75
+const SLOTH_ZONE_SPAWN_INTERVAL: float = 1.5
 const SLOTH_SLOW_ZONE_LIFETIME: float = 15.0
 const SLOTH_BOSS_PLAYER_DASH_SPEED_MULTIPLIER: float = 0.25
 const SLOTH_BOSS_PLAYER_VELOCITY_MULTIPLIER: float = 0.5
 const SLOTH_BOSS_ENEMY_SLOW_EFFECT_RATIO: float = 0.1
-const GLUTTONY_FOOD_SPAWN_INTERVAL: float = 1.8
+const GLUTTONY_FOOD_SPAWN_INTERVAL: float = 1.75
 const GLUTTONY_STRESS_DURATION_PHASE_1: float = 7.5
 const GLUTTONY_STRESS_DURATION_PHASE_2: float = 10.0
 const ENVY_CLONE_MAX_HEALTH: float = 180.0
-const ENVY_PINCER_TELEGRAPH_DURATION: float = 0.35
-const ENVY_SWAP_TELEGRAPH_DURATION: float = 0.5
+const ENVY_PINCER_TELEGRAPH_DURATION: float = 0.75
+const ENVY_SWAP_TELEGRAPH_DURATION: float = 0.75
 const GREED_TREASURE_RADIUS: float = 16.0
+const MIN_TELEGRAPH_DURATION: float = 0.75
 const MAX_BOSS_CIRCLE_VFX_RADIUS: float = 180.0
 const ISO_AOE_VISUAL_Y_SCALE: float = 0.7
 const DEFAULT_BOSS_VISUAL_SCALE: Vector2 = Vector2(1.5, 1.5)
@@ -52,22 +53,28 @@ const GREED_COLOR: Color = Color(1.0, 0.78, 0.0, 1.0)
 const PRIDE_LIGHT_COLOR: Color = Color(1.0, 0.961, 0.765, 1.0)
 const PRIDE_FIRE_COLOR: Color = Color(1.0, 0.46, 0.14, 1.0)
 const PRIDE_EDGE_BEAM_WIDTH: float = 30.0
-const PRIDE_EDGE_BEAM_DELAY_PHASE_1: float = 0.72
-const PRIDE_EDGE_BEAM_DELAY_PHASE_2: float = 0.56
-const PRIDE_EDGE_BEAM_DURATION: float = 0.42
+const PRIDE_EDGE_BEAM_DELAY_PHASE_1: float = 0.75
+const PRIDE_EDGE_BEAM_DELAY_PHASE_2: float = 0.75
+const PRIDE_EDGE_BEAM_DURATION: float = 0.4
 const PRIDE_EDGE_CROSSBAR_LENGTH: float = 155.0
-const PRIDE_EDGE_CROSSBAR_OFFSET_RATIO: float = 0.62
+const PRIDE_EDGE_CROSSBAR_OFFSET_RATIO: float = 0.65
+const PRIDE_FIRE_ORB_DAMAGE_MULTIPLIER: float = 0.65
+const PRIDE_AIMED_FIREBALL_DAMAGE_MULTIPLIER: float = 0.65
+const PRIDE_EDGE_BEAM_DAMAGE_MULTIPLIER: float = 0.8
+const PRIDE_INVERTED_CROSS_DAMAGE_MULTIPLIER: float = 0.8
+const PRIDE_LIGHT_BEAM_DAMAGE_MULTIPLIER: float = 0.8
+const PRIDE_JUDGEMENT_BEAM_DAMAGE_MULTIPLIER: float = 0.8
 const BOSS_INDICATOR_LAYER: int = 75
 const BOSS_INDICATOR_PADDING: float = 35.0
 
 const BOSS_CONFIG = {
-	1: { "max_health": 600, "speed": 0.0, "damage": 35, "state": BossState.SLOTH, "animation": "pecado1" },
-	2: { "max_health": 750, "speed": 80.0, "damage": 45, "state": BossState.GLUTTONY, "animation": "pecado2", "visual_scale": Vector2(2.15, 2.15) },
-	3: { "max_health": 1000, "speed": 90.0, "damage": 45, "state": BossState.ENVY, "animation": "pecado3" },
-	4: { "max_health": 1200, "speed": 90.0, "damage": 50, "state": BossState.WRATH, "animation": "pecado4" },
-	5: { "max_health": 1400, "speed": 80.0, "damage": 45, "state": BossState.LUST, "animation": "pecado5" },
-	6: { "max_health": 1650, "speed": 85.0, "damage": 40, "state": BossState.GREED, "animation": "pecado6" },
-	7: { "max_health": 2000, "speed": 80.0, "damage": 50, "state": BossState.PRIDE, "animation": "pecado7" },
+	1: { "max_health": 400, "speed": 0.0, "damage": 40, "state": BossState.SLOTH, "animation": "pecado1" },
+	2: { "max_health": 700, "speed": 80.0, "damage": 45, "state": BossState.GLUTTONY, "animation": "pecado2", "visual_scale": Vector2(2.15, 2.15) },
+	3: { "max_health": 1000, "speed": 90.0, "damage": 50, "state": BossState.ENVY, "animation": "pecado3" },
+	4: { "max_health": 1200, "speed": 90.0, "damage": 60, "state": BossState.WRATH, "animation": "pecado4" },
+	5: { "max_health": 1400, "speed": 80.0, "damage": 50, "state": BossState.LUST, "animation": "pecado5" },
+	6: { "max_health": 1750, "speed": 85.0, "damage": 45, "state": BossState.GREED, "animation": "pecado6" },
+	7: { "max_health": 2000, "speed": 80.0, "damage": 80, "state": BossState.PRIDE, "animation": "pecado7" },
 }
 
 var current_health: int
@@ -97,6 +104,7 @@ var lust_invulnerability_cooldown: float = 4.0
 var lust_invulnerability_active: bool = false
 var envy_clone: Area2D
 var envy_clone_fire_cooldown: float = 0.8
+var envy_clone_shot_pending: bool = false
 var envy_boss_buff_remaining: float = 0.0
 var envy_clone_shot_pattern_index: int = 0
 var envy_clone_movement_locked: bool = false
@@ -304,21 +312,25 @@ func handle_pride(delta: float) -> void:
 
 	if phase == 1:
 		var roll = randf()
-		if roll < 0.35:
+		if roll < 0.30:
 			_start_pride_edge_bullet_hell(false)
-		elif roll < 0.62:
+		elif roll < 0.52:
 			_start_pride_fire_orbs(false)
-		elif roll < 0.84:
+		elif roll < 0.70:
 			_start_pride_light_cross(false)
+		elif roll < 0.88:
+			_start_pride_inverted_cross_pattern(false)
 		else:
 			_start_pride_judgement()
 	else:
 		var roll = randf()
-		if roll < 0.46:
+		if roll < 0.35:
 			_start_pride_edge_bullet_hell(true)
-		elif roll < 0.68:
+		elif roll < 0.55:
 			_start_pride_fire_orbs(true)
-		elif roll < 0.87:
+		elif roll < 0.75:
+			_start_pride_inverted_cross_pattern(true)
+		elif roll < 0.90:
 			_start_pride_judgement()
 		else:
 			_start_pride_light_cross(true)
@@ -392,8 +404,8 @@ func _shrink_body_collision_shape() -> void:
 func _start_sloth_summon(amount: int) -> void:
 	is_performing_action = true
 	current_sub_state = BossSubState.TELEGRAPH
-	_spawn_action_charge_vfx(global_position, 90.0, SLOTH_COLOR, 0.5, 30)
-	await get_tree().create_timer(0.5, false).timeout
+	_spawn_action_charge_vfx(global_position, 90.0, SLOTH_COLOR, MIN_TELEGRAPH_DURATION, 30)
+	await get_tree().create_timer(MIN_TELEGRAPH_DURATION, false).timeout
 
 	current_sub_state = BossSubState.ATTACK
 	for i in range(amount):
@@ -411,8 +423,9 @@ func _start_sloth_slow_zones(amount: int) -> void:
 	current_sub_state = BossSubState.TELEGRAPH
 	for i in range(amount):
 		var zone_position = _get_random_arena_position_near_player(80.0, 280.0)
-		_spawn_circle_telegraph(zone_position, SLOTH_SLOW_ZONE_RADIUS, _with_alpha(SLOTH_COLOR, 0.24), SLOTH_ZONE_TELEGRAPH_DURATION)
+		var telegraph = _spawn_circle_telegraph(zone_position, SLOTH_SLOW_ZONE_RADIUS, _with_alpha(SLOTH_COLOR, 0.24), SLOTH_ZONE_TELEGRAPH_DURATION)
 		await get_tree().create_timer(SLOTH_ZONE_TELEGRAPH_DURATION, false).timeout
+		_queue_free_if_valid(telegraph)
 		_create_sloth_slow_zone(zone_position)
 		if i < amount - 1:
 			await get_tree().create_timer(SLOTH_ZONE_SPAWN_INTERVAL, false).timeout
@@ -423,7 +436,6 @@ func _start_sloth_slow_zones(amount: int) -> void:
 func _create_sloth_slow_zone(zone_position: Vector2) -> void:
 	var zone = Area2D.new()
 	zone.name = "SlothSlowZone"
-	zone.global_position = zone_position
 	zone.collision_layer = 0
 	zone.collision_mask = Global.PLAYER_LAYER_MASK
 	zone.set_meta("radius", SLOTH_SLOW_ZONE_RADIUS)
@@ -434,7 +446,7 @@ func _create_sloth_slow_zone(zone_position: Vector2) -> void:
 	_add_ring_visual(zone, SLOTH_SLOW_ZONE_RADIUS, _with_alpha(SLOTH_COLOR, 0.5), 2.0, 0)
 	_add_loop_particles(zone, "SlothZoneParticles", _with_alpha(SLOTH_COLOR, 0.34), 42, 1.0, 18.0, 72.0, 0)
 
-	_get_ground_area_vfx_parent().add_child(zone)
+	_add_child_at_global(_get_ground_area_vfx_parent(), zone, zone_position)
 	active_slow_zones.append(zone)
 
 func _update_sloth_slow_zones(delta: float) -> void:
@@ -495,8 +507,8 @@ func _update_sloth_zone_enemy_slow(enemies_inside_zone: Array) -> void:
 func _start_gluttony_food_wave(amount: int) -> void:
 	is_performing_action = true
 	current_sub_state = BossSubState.TELEGRAPH
-	_spawn_action_charge_vfx(global_position, 120.0, GLUTTONY_COLOR, 0.5, 34)
-	await get_tree().create_timer(0.5, false).timeout
+	_spawn_action_charge_vfx(global_position, 120.0, GLUTTONY_COLOR, MIN_TELEGRAPH_DURATION, 34)
+	await get_tree().create_timer(MIN_TELEGRAPH_DURATION, false).timeout
 
 	current_sub_state = BossSubState.ATTACK
 	for i in range(amount):
@@ -555,8 +567,8 @@ func _update_gluttony_stress(delta: float) -> void:
 func _start_gluttony_body_slam() -> void:
 	is_performing_action = true
 	current_sub_state = BossSubState.TELEGRAPH
-	_spawn_circle_telegraph(player.global_position, 115.0, _with_alpha(GLUTTONY_COLOR, 0.24), 0.75)
-	await get_tree().create_timer(0.75, false).timeout
+	_spawn_circle_telegraph(player.global_position, 115.0, _with_alpha(GLUTTONY_COLOR, 0.24), MIN_TELEGRAPH_DURATION)
+	await get_tree().create_timer(MIN_TELEGRAPH_DURATION, false).timeout
 
 	current_sub_state = BossSubState.ATTACK
 	var slam_position = player.global_position
@@ -570,8 +582,8 @@ func _start_gluttony_body_slam() -> void:
 func _start_envy_clone() -> void:
 	is_performing_action = true
 	current_sub_state = BossSubState.TELEGRAPH
-	_spawn_action_charge_vfx(global_position, 70.0, ENVY_COLOR, 0.5, 28)
-	await get_tree().create_timer(0.5, false).timeout
+	_spawn_action_charge_vfx(global_position, 70.0, ENVY_COLOR, MIN_TELEGRAPH_DURATION, 28)
+	await get_tree().create_timer(MIN_TELEGRAPH_DURATION, false).timeout
 	_create_envy_clone()
 	_finish_action(1.25)
 
@@ -581,7 +593,7 @@ func _create_envy_clone() -> void:
 
 	envy_clone = Area2D.new()
 	envy_clone.name = "EnvyMirrorClone"
-	envy_clone.global_position = _clamp_to_current_arena(global_position * 2.0 - player.global_position, 26.0)
+	var clone_position = _clamp_to_current_arena(global_position * 2.0 - player.global_position, 26.0)
 	envy_clone.collision_layer = Global.ENEMY_LAYER_MASK
 	envy_clone.collision_mask = 0
 	envy_clone.set_meta("projectile_special_owner", self)
@@ -595,7 +607,7 @@ func _create_envy_clone() -> void:
 	_add_loop_particles(envy_clone, "EnvyCloneParticles", _with_alpha(ENVY_COLOR, 0.42), 30, 0.65, 12.0, 62.0, 14)
 	_add_small_health_bar(envy_clone, 42.0, Vector2(-21.0, -34.0))
 
-	_get_vfx_parent().add_child(envy_clone)
+	_add_child_at_global(_get_vfx_parent(), envy_clone, clone_position)
 
 func _update_envy_clone(delta: float) -> void:
 	if not is_instance_valid(envy_clone) or player == null:
@@ -604,14 +616,27 @@ func _update_envy_clone(delta: float) -> void:
 	if envy_clone_movement_locked:
 		return
 
+	if envy_clone_shot_pending:
+		return
+
 	var mirror_target = global_position * 2.0 - player.global_position
 	envy_clone.global_position = envy_clone.global_position.lerp(_clamp_to_current_arena(mirror_target, 28.0), 0.07)
 	envy_clone_fire_cooldown = max(envy_clone_fire_cooldown - delta, 0.0)
 	if envy_clone_fire_cooldown <= 0.0:
-		envy_clone_fire_cooldown = _get_envy_clone_fire_cooldown()
 		var direction = _get_envy_clone_shot_direction(envy_clone.global_position)
-		_spawn_line_telegraph(envy_clone.global_position, envy_clone.global_position + direction * 160.0, ENVY_COLOR, 0.12, 1.6)
-		_fire_envy_clone_weapon(envy_clone.global_position, direction)
+		_start_envy_clone_weapon_telegraph(envy_clone.global_position, direction)
+
+func _start_envy_clone_weapon_telegraph(spawn_position: Vector2, shot_direction: Vector2) -> void:
+	envy_clone_shot_pending = true
+	var telegraph_duration = MIN_TELEGRAPH_DURATION
+	_spawn_line_telegraph(spawn_position, spawn_position + shot_direction * 160.0, ENVY_COLOR, telegraph_duration, 1.6)
+	await get_tree().create_timer(telegraph_duration, false).timeout
+
+	envy_clone_shot_pending = false
+	envy_clone_fire_cooldown = _get_envy_clone_fire_cooldown()
+	if is_dead or player == null or not is_instance_valid(envy_clone):
+		return
+	_fire_envy_clone_weapon(spawn_position, shot_direction)
 
 func _get_envy_clone_shot_direction(from_position: Vector2) -> Vector2:
 	var direct_direction = from_position.direction_to(player.global_position)
@@ -756,10 +781,11 @@ func _start_envy_position_swap() -> void:
 func _start_envy_boss_shot() -> void:
 	is_performing_action = true
 	current_sub_state = BossSubState.ATTACK
+	var telegraph_duration = MIN_TELEGRAPH_DURATION
 	for i in range(3):
 		var direction = global_position.direction_to(player.global_position).rotated(deg_to_rad((i - 1) * 14.0))
-		_spawn_line_telegraph(global_position, global_position + direction * 180.0, ENVY_COLOR, 0.25, 2.0)
-	await get_tree().create_timer(0.25, false).timeout
+		_spawn_line_telegraph(global_position, global_position + direction * 180.0, ENVY_COLOR, telegraph_duration, 2.0)
+	await get_tree().create_timer(telegraph_duration, false).timeout
 	for i in range(3):
 		var direction = global_position.direction_to(player.global_position).rotated(deg_to_rad((i - 1) * 14.0))
 		_spawn_enemy_projectile(global_position, direction, float(damage) * 0.75, _with_alpha(ENVY_COLOR, 0.9), 460.0)
@@ -772,14 +798,18 @@ func _update_envy_buff(delta: float) -> void:
 func _start_wrath_bomb_volley(amount: int, fuse_time: float) -> void:
 	is_performing_action = true
 	current_sub_state = BossSubState.TELEGRAPH
-	_spawn_action_charge_vfx(global_position, 80.0, WRATH_COLOR, 0.75, 34)
-	await get_tree().create_timer(0.75, false).timeout
+	_spawn_action_charge_vfx(global_position, 80.0, WRATH_COLOR, MIN_TELEGRAPH_DURATION, 34)
+	await get_tree().create_timer(MIN_TELEGRAPH_DURATION, false).timeout
 
 	current_sub_state = BossSubState.ATTACK
 	for i in range(amount):
 		var target = player.global_position + Vector2(randf_range(-90.0, 90.0), randf_range(-70.0, 70.0))
 		var bomb_position = global_position + Vector2(randf_range(-18.0, 18.0), randf_range(-18.0, 18.0))
-		_spawn_line_telegraph(bomb_position, target, WRATH_COLOR, 0.18, 2.0)
+		var telegraph_duration = MIN_TELEGRAPH_DURATION
+		_spawn_line_telegraph(bomb_position, target, WRATH_COLOR, telegraph_duration, 2.0)
+		await get_tree().create_timer(telegraph_duration, false).timeout
+		if is_dead or player == null:
+			return
 		_create_wrath_bomb(bomb_position, target, fuse_time)
 		await get_tree().create_timer(1.2 if phase == 1 else 0.9, false).timeout
 
@@ -788,7 +818,6 @@ func _start_wrath_bomb_volley(amount: int, fuse_time: float) -> void:
 func _create_wrath_bomb(from_position: Vector2, target_position: Vector2, fuse_time: float) -> void:
 	var bomb = Area2D.new()
 	bomb.name = "WrathBomb"
-	bomb.global_position = from_position
 	bomb.collision_layer = Global.ENEMY_LAYER_MASK
 	bomb.collision_mask = Global.WALL_LAYER_MASK | Global.PLAYER_LAYER_MASK
 	bomb.set_meta("projectile_special_owner", self)
@@ -803,7 +832,7 @@ func _create_wrath_bomb(from_position: Vector2, target_position: Vector2, fuse_t
 	_add_loop_particles(bomb, "WrathBombFuse", _with_alpha(WRATH_COLOR, 0.65), 18, 0.38, 12.0, 56.0, 14)
 
 	bomb.body_entered.connect(Callable(self, "_on_wrath_bomb_body_entered").bind(bomb))
-	_get_vfx_parent().add_child(bomb)
+	_add_child_at_global(_get_vfx_parent(), bomb, from_position)
 	active_bombs.append(bomb)
 
 func _update_wrath_bombs(delta: float) -> void:
@@ -848,7 +877,7 @@ func _explode_wrath_bomb(bomb: Area2D, force_boss_damage: bool) -> void:
 	active_bombs.erase(bomb)
 	bomb.queue_free()
 	_spawn_burst_particles(explosion_position, _with_alpha(WRATH_COLOR, 0.92), 46, 0.38, 220.0)
-	_spawn_circle_telegraph(explosion_position, WRATH_BOMB_EXPLOSION_RADIUS, _with_alpha(WRATH_COLOR, 0.18), 0.16)
+	_spawn_circle_telegraph(explosion_position, WRATH_BOMB_EXPLOSION_RADIUS, _with_alpha(WRATH_COLOR, 0.18), MIN_TELEGRAPH_DURATION)
 	_spawn_ring_vfx(explosion_position, WRATH_BOMB_EXPLOSION_RADIUS, _with_alpha(WRATH_COLOR, 0.44), 0.28)
 
 	if player and _is_point_inside_iso_aoe(player.global_position, explosion_position, WRATH_BOMB_EXPLOSION_RADIUS):
@@ -862,13 +891,15 @@ func _start_lust_wall_pattern() -> void:
 	current_sub_state = BossSubState.TELEGRAPH
 	var wall_count = 3 if phase == 1 else 4
 	var wall_lifetime = 4.8 if phase == 1 else 6.2
+	var telegraph_duration = MIN_TELEGRAPH_DURATION
 	for i in range(wall_count):
 		var horizontal = (i % 2 == 0)
 		var size = Vector2(LUST_WALL_LENGTH, LUST_WALL_THICKNESS) if horizontal else Vector2(LUST_WALL_THICKNESS, LUST_WALL_LENGTH)
 		var position = _get_lust_wall_position(i, wall_count)
 		var breakable = randf() < (0.64 if phase == 1 else 0.54)
-		_spawn_rect_telegraph(position, size, 0.0, _with_alpha(LUST_COLOR, 0.24), 0.65)
-		await get_tree().create_timer(0.25, false).timeout
+		var telegraph = _spawn_rect_telegraph(position, size, 0.0, _with_alpha(LUST_COLOR, 0.24), telegraph_duration)
+		await get_tree().create_timer(telegraph_duration, false).timeout
+		_queue_free_if_valid(telegraph)
 		_create_lust_wall(position, size, breakable, wall_lifetime)
 
 	await get_tree().create_timer(0.55, false).timeout
@@ -885,7 +916,6 @@ func _get_lust_wall_position(index: int, wall_count: int) -> Vector2:
 func _create_lust_wall(wall_position: Vector2, size: Vector2, breakable: bool, lifetime: float) -> void:
 	var wall = StaticBody2D.new()
 	wall.name = "BreakableLustWall" if breakable else "LustWall"
-	wall.global_position = wall_position
 	wall.collision_layer = Global.WALL_LAYER_MASK
 	wall.collision_mask = 0
 	wall.set_meta("breakable", breakable)
@@ -912,7 +942,7 @@ func _create_lust_wall(wall_position: Vector2, size: Vector2, breakable: bool, l
 		_add_small_health_bar(wall, bar_width, Vector2(-bar_width * 0.5, -size.y * 0.5 - 14.0))
 		_add_breakable_wall_particles(wall, size)
 
-	_get_vfx_parent().add_child(wall)
+	_add_child_at_global(_get_vfx_parent(), wall, wall_position)
 	active_lust_walls.append(wall)
 	_trim_node_array(active_lust_walls, 7 if phase == 1 else 10)
 
@@ -961,17 +991,18 @@ func _start_lust_invulnerability() -> void:
 func _start_greed_treasure_drop(amount: int) -> void:
 	is_performing_action = true
 	current_sub_state = BossSubState.TELEGRAPH
+	var telegraph_duration = MIN_TELEGRAPH_DURATION
 	for i in range(amount):
 		var pos = _get_random_arena_position_near_player(80.0, 300.0)
-		_spawn_circle_telegraph(pos, GREED_TREASURE_RADIUS + 14.0, _with_alpha(GREED_COLOR, 0.24), 0.38)
-		await get_tree().create_timer(0.8, false).timeout
+		var telegraph = _spawn_circle_telegraph(pos, GREED_TREASURE_RADIUS + 14.0, _with_alpha(GREED_COLOR, 0.24), telegraph_duration)
+		await get_tree().create_timer(telegraph_duration, false).timeout
+		_queue_free_if_valid(telegraph)
 		_create_greed_treasure(pos)
 	_finish_action(1.1 if phase == 1 else 0.8)
 
 func _create_greed_treasure(treasure_position: Vector2) -> void:
 	var treasure = Area2D.new()
 	treasure.name = "GreedTreasure"
-	treasure.global_position = treasure_position
 	treasure.collision_layer = 0
 	treasure.collision_mask = Global.PLAYER_LAYER_MASK
 	treasure.set_meta("lifetime", 6.6)
@@ -981,7 +1012,7 @@ func _create_greed_treasure(treasure_position: Vector2) -> void:
 	_add_ring_visual(treasure, GREED_TREASURE_RADIUS + 4.0, _with_alpha(GREED_COLOR, 0.72), 1.6, 15)
 	_add_loop_particles(treasure, "GreedTreasureSparkles", _with_alpha(GREED_COLOR, 0.55), 20, 0.7, 8.0, 38.0, 16)
 	treasure.body_entered.connect(Callable(self, "_on_greed_treasure_body_entered").bind(treasure))
-	_get_vfx_parent().add_child(treasure)
+	_add_child_at_global(_get_vfx_parent(), treasure, treasure_position)
 	active_treasures.append(treasure)
 
 func _update_greed_treasures(delta: float) -> void:
@@ -1037,10 +1068,11 @@ func _start_greed_coin_rain() -> void:
 	current_sub_state = BossSubState.TELEGRAPH
 	var projectile_count = 8 + greed_money_stacks * 2
 	projectile_count = min(projectile_count, 26)
+	var warning_duration = MIN_TELEGRAPH_DURATION
 	for i in range(projectile_count):
 		var spawn_position = _get_arena_center() + Vector2(randf_range(-360.0, 360.0), -340.0 - randf_range(0.0, 120.0))
-		_spawn_falling_warning(Vector2(spawn_position.x, _get_arena_rect().position.y + 8.0), GREED_COLOR, 0.25)
-		await get_tree().create_timer(0.25, false).timeout
+		_spawn_falling_warning(Vector2(spawn_position.x, _get_arena_rect().position.y + 8.0), GREED_COLOR, warning_duration)
+		await get_tree().create_timer(warning_duration, false).timeout
 		_spawn_enemy_projectile(spawn_position, Vector2.DOWN, float(damage) * 0.72, _with_alpha(GREED_COLOR, 0.95), 520.0)
 		await get_tree().create_timer(0.3 if phase == 2 else 0.5, false).timeout
 	_finish_action(1.25 if phase == 1 else 0.75)
@@ -1074,13 +1106,21 @@ func _update_greed_tax(delta: float) -> void:
 
 func _start_pride_fire_orbs(overlap: bool) -> void:
 	is_performing_action = true
-	current_sub_state = BossSubState.ATTACK
+	current_sub_state = BossSubState.TELEGRAPH
 	var waves = 2 if not overlap else 3
 	for wave in range(waves):
 		var projectile_count = 10 if phase == 1 else 16
-		_spawn_action_charge_vfx(global_position, 64.0, PRIDE_FIRE_COLOR, 0.16, 14)
-		_spawn_radial_projectiles(projectile_count, float(damage) * 0.55, _with_alpha(PRIDE_FIRE_COLOR, 0.92), 390.0, float(wave) * 0.18)
+		var origin = global_position
+		var angle_offset = float(wave) * 0.18
+		_spawn_action_charge_vfx(origin, 64.0, PRIDE_FIRE_COLOR, MIN_TELEGRAPH_DURATION, 14)
+		_spawn_pride_radial_fire_telegraphs(origin, projectile_count, angle_offset, MIN_TELEGRAPH_DURATION)
+		await get_tree().create_timer(MIN_TELEGRAPH_DURATION, false).timeout
+		if is_dead or player == null:
+			return
+		current_sub_state = BossSubState.ATTACK
+		_spawn_radial_projectiles_from(origin, projectile_count, _get_pride_damage(PRIDE_FIRE_ORB_DAMAGE_MULTIPLIER), _with_alpha(PRIDE_FIRE_COLOR, 0.92), 390.0, angle_offset)
 		await get_tree().create_timer(2.0, false).timeout
+		current_sub_state = BossSubState.TELEGRAPH
 	if overlap:
 		_spawn_pride_light_beams(true)
 	_finish_action(1.5 if phase == 1 else 1.0)
@@ -1089,36 +1129,51 @@ func _start_pride_light_cross(overlap: bool) -> void:
 	is_performing_action = true
 	_spawn_pride_light_beams(overlap)
 	if overlap:
-		await get_tree().create_timer(0.55, false).timeout
-		_spawn_radial_projectiles(10, float(damage) * 0.45, _with_alpha(PRIDE_FIRE_COLOR, 0.9), 360.0)
+		await get_tree().create_timer(MIN_TELEGRAPH_DURATION, false).timeout
+		var origin = global_position
+		_spawn_pride_radial_fire_telegraphs(origin, 10, 0.0, MIN_TELEGRAPH_DURATION)
+		await get_tree().create_timer(MIN_TELEGRAPH_DURATION, false).timeout
+		if is_dead or player == null:
+			return
+		_spawn_radial_projectiles_from(origin, 10, _get_pride_damage(PRIDE_AIMED_FIREBALL_DAMAGE_MULTIPLIER), _with_alpha(PRIDE_FIRE_COLOR, 0.9), 360.0)
 	_finish_action(1.5 if phase == 1 else 0.9)
 
 func _start_pride_edge_bullet_hell(overlap: bool) -> void:
 	is_performing_action = true
 	current_sub_state = BossSubState.SPECIAL
-	var beam_count = 5 if phase == 1 else 8
 	var telegraph_delay = PRIDE_EDGE_BEAM_DELAY_PHASE_1 if phase == 1 else PRIDE_EDGE_BEAM_DELAY_PHASE_2
-	var beam_spacing = 0.44 if phase == 1 else 0.32
+	var batch_count = 3 if overlap else 2
+	var beams_per_batch = 3 if overlap else 2
+	var beam_spacing = 0.16 if overlap else 0.20
+	var batch_gap = 0.45 if overlap else 0.55
 	var beam_width = PRIDE_EDGE_BEAM_WIDTH if phase == 1 else PRIDE_EDGE_BEAM_WIDTH + 6.0
-	_spawn_action_charge_vfx(global_position, 72.0, PRIDE_LIGHT_COLOR, 0.36, 24)
+	_spawn_action_charge_vfx(global_position, 72.0, PRIDE_LIGHT_COLOR, MIN_TELEGRAPH_DURATION, 24)
+	await get_tree().create_timer(MIN_TELEGRAPH_DURATION, false).timeout
 
-	for i in range(beam_count):
+	for batch in range(batch_count):
 		if is_dead or player == null:
 			break
-		var start_position = _get_pride_edge_beam_start(i)
-		var target_position = player.global_position
-		if phase == 2 and player.get("velocity") != null:
-			target_position += player.velocity * 0.12
-		var direction = start_position.direction_to(_clamp_to_current_arena(target_position, 28.0))
-		if direction == Vector2.ZERO:
-			direction = start_position.direction_to(_get_arena_center())
-		_spawn_pride_inverted_cross_beam(start_position, direction, telegraph_delay, beam_width)
-		if overlap or i % 2 == 0:
-			_spawn_pride_aimed_fireballs(2 if phase == 1 else 3, 14.0 if phase == 1 else 22.0)
-		await get_tree().create_timer(beam_spacing, false).timeout
+		current_sub_state = BossSubState.TELEGRAPH
+		for beam_index in range(beams_per_batch):
+			var start_position = _get_pride_edge_beam_start(batch * beams_per_batch + beam_index)
+			var target_position = player.global_position
+			if phase == 2 and player.get("velocity") != null:
+				target_position += player.velocity * 0.12
+			var direction = start_position.direction_to(_clamp_to_current_arena(target_position, 28.0))
+			if direction == Vector2.ZERO:
+				direction = start_position.direction_to(_get_arena_center())
+			_spawn_pride_edge_beam(start_position, direction, telegraph_delay, beam_width)
+			if beam_index < beams_per_batch - 1:
+				await get_tree().create_timer(beam_spacing, false).timeout
 
-	await get_tree().create_timer(telegraph_delay + PRIDE_EDGE_BEAM_DURATION, false).timeout
-	_finish_action(1.05 if phase == 1 else 0.7)
+		await get_tree().create_timer(telegraph_delay + PRIDE_EDGE_BEAM_DURATION, false).timeout
+		if batch < batch_count - 1:
+			await get_tree().create_timer(batch_gap, false).timeout
+			current_sub_state = BossSubState.TELEGRAPH
+			await _start_pride_aimed_fireballs(2 if phase == 1 else 3, 14.0 if phase == 1 else 22.0)
+			await get_tree().create_timer(batch_gap, false).timeout
+
+	_finish_action(1.1 if phase == 1 else 0.85)
 
 func _get_pride_edge_beam_start(index: int) -> Vector2:
 	var rect = _get_arena_rect()
@@ -1133,6 +1188,63 @@ func _get_pride_edge_beam_start(index: int) -> Vector2:
 			return Vector2(rect.position.x + 8.0, lerp(rect.position.y, rect.end.y, t))
 		_:
 			return Vector2(rect.end.x - 8.0, lerp(rect.position.y, rect.end.y, t))
+
+func _spawn_pride_edge_beam(start_position: Vector2, beam_direction: Vector2, telegraph_delay: float, beam_width: float) -> void:
+	if beam_direction == Vector2.ZERO:
+		return
+
+	beam_direction = beam_direction.normalized()
+	var arena_rect = _get_arena_rect()
+	var beam_length = arena_rect.size.length() + 180.0
+	var beam_center = start_position + beam_direction * beam_length * 0.5
+	var beam_size = Vector2(beam_length, beam_width)
+	var rotation_angle = beam_direction.angle()
+	var telegraph_color = _with_alpha(PRIDE_LIGHT_COLOR, 0.22)
+
+	_spawn_pride_edge_origin_marker(start_position, telegraph_delay)
+	_spawn_rect_telegraph(beam_center, beam_size, rotation_angle, telegraph_color, telegraph_delay)
+	_create_pride_edge_beam_after_delay(beam_center, beam_size, rotation_angle, telegraph_delay)
+
+func _spawn_pride_edge_origin_marker(start_position: Vector2, duration: float) -> void:
+	var marker = Node2D.new()
+	_add_circle_visual(marker, 18.0, _with_alpha(PRIDE_LIGHT_COLOR, 0.16), 15)
+	_add_ring_visual(marker, 21.0, _with_alpha(PRIDE_LIGHT_COLOR, 0.82), 2.4, 16)
+	_add_loop_particles(marker, "PrideEdgeBeamOrigin", _with_alpha(PRIDE_LIGHT_COLOR, 0.5), 22, 0.55, 8.0, 42.0, 17)
+	_add_child_at_global(_get_ground_area_vfx_parent(), marker, start_position)
+	var timer = get_tree().create_timer(duration, false)
+	timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(marker))
+
+func _create_pride_edge_beam_after_delay(beam_center: Vector2, beam_size: Vector2, beam_rotation: float, delay: float) -> void:
+	await get_tree().create_timer(delay, false).timeout
+	if is_dead or not is_inside_tree():
+		return
+	var beam_damage = _get_pride_damage(PRIDE_EDGE_BEAM_DAMAGE_MULTIPLIER)
+	var beam_color = _with_alpha(PRIDE_LIGHT_COLOR, 0.4)
+	_create_damaging_area(beam_center, beam_size, beam_rotation, beam_damage, beam_color, PRIDE_EDGE_BEAM_DURATION)
+	_spawn_burst_particles(beam_center, _with_alpha(PRIDE_LIGHT_COLOR, 0.55), 8, 0.18, 80.0)
+
+func _start_pride_inverted_cross_pattern(overlap: bool) -> void:
+	is_performing_action = true
+	current_sub_state = BossSubState.TELEGRAPH
+	var cross_count = 1 if phase == 1 else 2
+	var telegraph_delay = MIN_TELEGRAPH_DURATION
+	var beam_width = PRIDE_EDGE_BEAM_WIDTH + (4.0 if phase == 2 else 0.0)
+	_spawn_action_charge_vfx(global_position, 86.0, PRIDE_LIGHT_COLOR, MIN_TELEGRAPH_DURATION, 26)
+	await get_tree().create_timer(MIN_TELEGRAPH_DURATION, false).timeout
+
+	for i in range(cross_count):
+		if is_dead or player == null:
+			return
+		var start_position = _get_pride_edge_beam_start(i)
+		var direction = start_position.direction_to(_clamp_to_current_arena(player.global_position, 28.0))
+		if direction == Vector2.ZERO:
+			direction = start_position.direction_to(_get_arena_center())
+		_spawn_pride_inverted_cross_beam(start_position, direction, telegraph_delay, beam_width)
+		await get_tree().create_timer(telegraph_delay + PRIDE_EDGE_BEAM_DURATION, false).timeout
+		if overlap and i < cross_count - 1:
+			await _start_pride_aimed_fireballs(2, 18.0)
+
+	_finish_action(1.2 if phase == 1 else 0.95)
 
 func _spawn_pride_inverted_cross_beam(start_position: Vector2, beam_direction: Vector2, telegraph_delay: float, beam_width: float) -> void:
 	if beam_direction == Vector2.ZERO:
@@ -1160,13 +1272,13 @@ func _create_pride_inverted_cross_beam_after_delay(main_center: Vector2, main_si
 	await get_tree().create_timer(delay, false).timeout
 	if is_dead or not is_inside_tree():
 		return
-	var beam_damage = float(damage) * (0.62 if phase == 1 else 0.72)
+	var beam_damage = _get_pride_damage(PRIDE_INVERTED_CROSS_DAMAGE_MULTIPLIER)
 	var beam_color = _with_alpha(PRIDE_LIGHT_COLOR, 0.36)
 	_create_damaging_area(main_center, main_size, main_rotation, beam_damage, beam_color, PRIDE_EDGE_BEAM_DURATION)
 	_create_damaging_area(crossbar_center, crossbar_size, crossbar_rotation, beam_damage, beam_color, PRIDE_EDGE_BEAM_DURATION)
 	_spawn_burst_particles(main_center, _with_alpha(PRIDE_LIGHT_COLOR, 0.55), 10, 0.18, 80.0)
 
-func _spawn_pride_aimed_fireballs(amount: int, spread_degrees: float) -> void:
+func _start_pride_aimed_fireballs(amount: int, spread_degrees: float) -> void:
 	if player == null:
 		return
 
@@ -1176,17 +1288,36 @@ func _spawn_pride_aimed_fireballs(amount: int, spread_degrees: float) -> void:
 	var base_angle = direction.angle()
 	var start_offset = -spread_degrees * 0.5
 	var step = spread_degrees / max(float(amount - 1), 1.0)
+	var shots: Array = []
 	for i in range(amount):
 		var angle_offset = start_offset + step * float(i)
 		var projectile_direction = Vector2.RIGHT.rotated(base_angle + deg_to_rad(angle_offset))
 		var spawn_position = global_position + projectile_direction * 34.0
-		var projectile = _spawn_enemy_projectile(spawn_position, projectile_direction, float(damage) * (0.38 if phase == 1 else 0.46), _with_alpha(PRIDE_FIRE_COLOR, 0.94), 395.0 if phase == 1 else 445.0)
+		shots.append({ "position": spawn_position, "direction": projectile_direction })
+		_spawn_line_telegraph(spawn_position, spawn_position + projectile_direction * 170.0, PRIDE_FIRE_COLOR, MIN_TELEGRAPH_DURATION, 1.8)
+
+	await get_tree().create_timer(MIN_TELEGRAPH_DURATION, false).timeout
+	if is_dead or player == null:
+		return
+
+	for shot in shots:
+		var projectile = _spawn_enemy_projectile(shot["position"], shot["direction"], _get_pride_damage(PRIDE_AIMED_FIREBALL_DAMAGE_MULTIPLIER), _with_alpha(PRIDE_FIRE_COLOR, 0.94), 395.0 if phase == 1 else 445.0)
 		projectile.scale *= 0.92
 
 func _spawn_radial_projectiles(projectile_count: int, projectile_damage: float, color: Color, projectile_speed: float, angle_offset: float = 0.0) -> void:
+	_spawn_radial_projectiles_from(global_position, projectile_count, projectile_damage, color, projectile_speed, angle_offset)
+
+func _spawn_radial_projectiles_from(origin: Vector2, projectile_count: int, projectile_damage: float, color: Color, projectile_speed: float, angle_offset: float = 0.0) -> void:
 	for i in range(projectile_count):
 		var angle = TAU * float(i) / float(projectile_count) + angle_offset
-		_spawn_enemy_projectile(global_position, Vector2(cos(angle), sin(angle)), projectile_damage, color, projectile_speed)
+		var direction = Vector2(cos(angle), sin(angle))
+		_spawn_enemy_projectile(origin + direction * 34.0, direction, projectile_damage, color, projectile_speed)
+
+func _spawn_pride_radial_fire_telegraphs(origin: Vector2, projectile_count: int, angle_offset: float, duration: float) -> void:
+	for i in range(projectile_count):
+		var angle = TAU * float(i) / float(projectile_count) + angle_offset
+		var direction = Vector2(cos(angle), sin(angle))
+		_spawn_line_telegraph(origin, origin + direction * 180.0, PRIDE_FIRE_COLOR, duration, 1.5)
 
 func _spawn_pride_light_beams(include_diagonals: bool) -> void:
 	var center = _get_arena_center()
@@ -1203,7 +1334,7 @@ func _spawn_pride_light_beams(include_diagonals: bool) -> void:
 func _create_pride_beams_after_delay(center: Vector2, beam_size: Vector2, rotations: Array, delay: float) -> void:
 	await get_tree().create_timer(delay, false).timeout
 	for rotation_angle in rotations:
-		_create_damaging_area(center, beam_size, rotation_angle, float(damage) * 0.8, _with_alpha(PRIDE_LIGHT_COLOR, 0.35), 0.5)
+		_create_damaging_area(center, beam_size, rotation_angle, _get_pride_damage(PRIDE_LIGHT_BEAM_DAMAGE_MULTIPLIER), _with_alpha(PRIDE_LIGHT_COLOR, 0.35), 0.5)
 
 func _start_pride_judgement() -> void:
 	is_performing_action = true
@@ -1243,7 +1374,7 @@ func _spawn_pride_judgement_wave(wave_index: int) -> void:
 
 func _spawn_pride_judgement_beam(beam_position: Vector2, beam_size: Vector2) -> void:
 	_spawn_rect_telegraph(beam_position, beam_size, 0.0, _with_alpha(PRIDE_LIGHT_COLOR, 0.23), 0.75)
-	_create_damaging_area_after_delay(beam_position, beam_size, 0.0, float(damage) * 0.72, _with_alpha(PRIDE_LIGHT_COLOR, 0.38), 0.75, 0.5)
+	_create_damaging_area_after_delay(beam_position, beam_size, 0.0, _get_pride_damage(PRIDE_JUDGEMENT_BEAM_DAMAGE_MULTIPLIER), _with_alpha(PRIDE_LIGHT_COLOR, 0.38), 0.75, 0.5)
 
 func _on_projectile_hit_special_area(area: Area2D, projectile: Area2D) -> void:
 	if not is_instance_valid(area):
@@ -1505,11 +1636,10 @@ func _finish_action(cooldown: float) -> void:
 
 func _spawn_enemy_projectile(spawn_position: Vector2, projectile_direction: Vector2, projectile_damage: float, color: Color, projectile_speed: float = 500.0) -> Area2D:
 	var projectile = PROJECTILE_SCENE.instantiate()
-	projectile.global_position = spawn_position
 	projectile.direction = projectile_direction.normalized()
 	projectile.damage = projectile_damage
 	projectile.set_meta("vfx_color", _get_active_attack_color(color))
-	_get_vfx_parent().add_child(projectile)
+	_add_child_at_global(_get_vfx_parent(), projectile, spawn_position)
 	projectile.speed = projectile_speed
 	return projectile
 
@@ -1522,8 +1652,6 @@ func _create_damaging_area_after_delay(area_position: Vector2, size: Vector2, ar
 func _create_damaging_area(area_position: Vector2, size: Vector2, area_rotation: float, area_damage: float, color: Color, duration: float) -> void:
 	var area = Area2D.new()
 	area.name = "BossDamagingArea"
-	area.global_position = area_position
-	area.rotation = area_rotation
 	area.collision_layer = 0
 	area.collision_mask = Global.PLAYER_LAYER_MASK
 	area.set_meta("damage", area_damage)
@@ -1531,7 +1659,7 @@ func _create_damaging_area(area_position: Vector2, size: Vector2, area_rotation:
 	_add_rect_visual(area, size, _get_active_attack_color(color), 0)
 
 	area.body_entered.connect(Callable(self, "_on_damaging_area_body_entered").bind(area))
-	_get_ground_area_vfx_parent().add_child(area)
+	_add_child_at_global(_get_ground_area_vfx_parent(), area, area_position, area_rotation)
 	if player and _is_point_inside_rotated_rect(player.global_position, area_position, size, area_rotation):
 		player.take_damage(area_damage, area_position)
 	var cleanup_timer = get_tree().create_timer(duration, false)
@@ -1595,6 +1723,9 @@ func _make_stylebox(color: Color) -> StyleBoxFlat:
 
 func _with_alpha(color: Color, alpha: float) -> Color:
 	return Color(color.r, color.g, color.b, alpha)
+
+func _get_pride_damage(multiplier: float) -> float:
+	return max(float(roundi(float(damage) * multiplier / 5.0) * 5), 5.0)
 
 func _get_active_attack_color(color: Color) -> Color:
 	var multiplier = 1.0 - Global.ENEMY_ATTACK_ACTIVE_COLOR_DARKENING
@@ -1678,6 +1809,12 @@ func _get_vfx_parent() -> Node:
 	if get_tree().current_scene:
 		return get_tree().current_scene
 	return get_tree().root
+
+func _add_child_at_global(parent: Node, child: Node2D, child_position: Vector2, child_rotation = null) -> void:
+	parent.add_child(child)
+	child.global_position = child_position
+	if child_rotation != null:
+		child.global_rotation = float(child_rotation)
 
 func _get_ground_area_vfx_parent() -> Node:
 	var scene = get_tree().current_scene
@@ -1774,30 +1911,30 @@ func _spawn_action_charge_vfx(center: Vector2, radius: float, color: Color, dura
 	_spawn_circle_telegraph(center, radius, _with_alpha(color, 0.18), duration)
 	_spawn_burst_particles(center, _with_alpha(color, 0.62), particle_amount, min(duration, 0.45), radius * 1.35)
 
-func _spawn_line_telegraph(from_position: Vector2, to_position: Vector2, color: Color, duration: float, width: float = 3.0) -> void:
+func _spawn_line_telegraph(from_position: Vector2, to_position: Vector2, color: Color, duration: float, width: float = 3.0) -> Node2D:
 	var telegraph = Node2D.new()
-	telegraph.global_position = from_position
 	var line = Line2D.new()
 	line.width = width
 	line.default_color = _with_alpha(color, 0.45)
 	line.points = PackedVector2Array([Vector2.ZERO, to_position - from_position])
 	telegraph.add_child(line)
-	_get_ground_area_vfx_parent().add_child(telegraph)
+	_add_child_at_global(_get_ground_area_vfx_parent(), telegraph, from_position)
 	var timer = get_tree().create_timer(duration, false)
 	timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(telegraph))
+	return telegraph
 
-func _spawn_falling_warning(spawn_position: Vector2, color: Color, duration: float) -> void:
+func _spawn_falling_warning(spawn_position: Vector2, color: Color, duration: float) -> Node2D:
 	var warning = Node2D.new()
-	warning.global_position = spawn_position
 	var line = Line2D.new()
 	line.width = 2.5
 	line.default_color = _with_alpha(color, 0.55)
 	line.points = PackedVector2Array([Vector2.ZERO, Vector2(0.0, MAX_BOSS_CIRCLE_VFX_RADIUS)])
 	warning.add_child(line)
 	_add_ring_visual(warning, 11.0, _with_alpha(color, 0.72), 2.0, 0)
-	_get_ground_area_vfx_parent().add_child(warning)
+	_add_child_at_global(_get_ground_area_vfx_parent(), warning, spawn_position)
 	var timer = get_tree().create_timer(duration, false)
 	timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(warning))
+	return warning
 
 func _add_loop_particles(parent: Node, particle_name: String, color: Color, amount: int, lifetime: float, min_velocity: float, max_velocity: float, visual_z_index: int) -> CPUParticles2D:
 	var particles = CPUParticles2D.new()
@@ -1829,10 +1966,9 @@ func _spawn_marker_on_node(target: Node2D, radius: float, color: Color, duration
 	tween.tween_property(marker, "modulate:a", 0.0, duration * 0.5)
 	tween.tween_callback(Callable(self, "_queue_free_if_valid").bind(marker))
 
-func _spawn_circle_telegraph(center: Vector2, radius: float, color: Color, duration: float) -> void:
+func _spawn_circle_telegraph(center: Vector2, radius: float, color: Color, duration: float) -> Node2D:
 	radius = min(radius, MAX_BOSS_CIRCLE_VFX_RADIUS)
 	var telegraph = Node2D.new()
-	telegraph.global_position = center
 	var fill = Polygon2D.new()
 	fill.polygon = _build_iso_ellipse_points(radius, false)
 	fill.color = color
@@ -1842,35 +1978,35 @@ func _spawn_circle_telegraph(center: Vector2, radius: float, color: Color, durat
 	ring.default_color = Color(color.r, color.g, color.b, min(color.a + 0.24, 1.0))
 	ring.points = _build_iso_ellipse_points(radius, true)
 	telegraph.add_child(ring)
-	_get_ground_area_vfx_parent().add_child(telegraph)
+	_add_child_at_global(_get_ground_area_vfx_parent(), telegraph, center)
 	var timer = get_tree().create_timer(duration, false)
 	timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(telegraph))
+	return telegraph
 
-func _spawn_rect_telegraph(center: Vector2, size: Vector2, rect_rotation: float, color: Color, duration: float) -> void:
+func _spawn_rect_telegraph(center: Vector2, size: Vector2, rect_rotation: float, color: Color, duration: float) -> Node2D:
 	var telegraph = Node2D.new()
-	telegraph.global_position = center
-	telegraph.rotation = rect_rotation
 	var fill = Polygon2D.new()
 	fill.polygon = _build_rect_points(size)
 	fill.color = color
 	telegraph.add_child(fill)
-	_get_ground_area_vfx_parent().add_child(telegraph)
+	_add_child_at_global(_get_ground_area_vfx_parent(), telegraph, center, rect_rotation)
 	var timer = get_tree().create_timer(duration, false)
 	timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(telegraph))
+	return telegraph
 
-func _spawn_ring_vfx(center: Vector2, radius: float, color: Color, duration: float) -> void:
+func _spawn_ring_vfx(center: Vector2, radius: float, color: Color, duration: float) -> Node2D:
 	radius = min(radius, MAX_BOSS_CIRCLE_VFX_RADIUS)
 	var node = Node2D.new()
-	node.global_position = center
 	var ring = Line2D.new()
 	ring.width = 3.0
 	ring.default_color = color
 	ring.points = _build_iso_ellipse_points(radius, true)
 	node.add_child(ring)
-	_get_ground_area_vfx_parent().add_child(node)
+	_add_child_at_global(_get_ground_area_vfx_parent(), node, center)
 	var tween = create_tween().bind_node(node)
 	tween.tween_property(node, "modulate:a", 0.0, duration)
 	tween.tween_callback(Callable(self, "_queue_free_if_valid").bind(node))
+	return node
 
 func _spawn_attached_aura(radius: float, color: Color, duration: float) -> void:
 	radius = min(radius, MAX_BOSS_CIRCLE_VFX_RADIUS)
@@ -1893,7 +2029,6 @@ func _spawn_attached_aura(radius: float, color: Color, duration: float) -> void:
 
 func _spawn_burst_particles(spawn_position: Vector2, color: Color, amount: int = 22, lifetime: float = 0.28, velocity_amount: float = 120.0) -> void:
 	var particles = CPUParticles2D.new()
-	particles.global_position = spawn_position
 	particles.amount = amount
 	particles.one_shot = true
 	particles.explosiveness = 1.0
@@ -1905,7 +2040,7 @@ func _spawn_burst_particles(spawn_position: Vector2, color: Color, amount: int =
 	particles.initial_velocity_max = velocity_amount
 	particles.color = color
 	particles.z_index = 35
-	_get_vfx_parent().add_child(particles)
+	_add_child_at_global(_get_vfx_parent(), particles, spawn_position)
 	particles.emitting = true
 	var timer = get_tree().create_timer(lifetime + 0.2, false)
 	timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(particles))
