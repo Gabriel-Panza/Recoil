@@ -21,6 +21,8 @@ const MOVEMENT_FORCE_CAP_BUFFER: float = 100.0
 const WALL_BOUNCE_MIN_SPEED: float = 75.0
 const WALL_BOUNCE_MULTIPLIER: float = 0.75
 const WALL_BOUNCE_PUSH_OUT: float = 4.0
+const ARENA_FORCE_CLAMP_PADDING: float = 2.0
+const ARENA_FORCE_CLAMP_MIN_MARGIN: float = 6.0
 const ISO_AOE_VISUAL_Y_SCALE: float = 0.65
 
 # --- DASH ---
@@ -28,18 +30,28 @@ const ISO_AOE_VISUAL_Y_SCALE: float = 0.65
 @export var dash_duration: float = 0.2
 @export var dash_cooldown: float = 5.0
 var base_dash_speed: float = 600.0
+var base_dash_cooldown: float = 5.0
+var dash_cooldown_reduction_bonus: float = 0.0
 var dash_speed_modifiers: Dictionary = {}
 const MAX_ABILITY_AREA_RADIUS: float = 180.0
-const DEVOUR_RADIUS: float = MAX_ABILITY_AREA_RADIUS
+const DEVOUR_RADIUS: float = MAX_ABILITY_AREA_RADIUS + 30
 const SLOW_AURA_RADIUS: float = MAX_ABILITY_AREA_RADIUS
-const SHOCKWAVE_RADIUS: float = MAX_ABILITY_AREA_RADIUS
+const SHOCKWAVE_RADIUS: float = MAX_ABILITY_AREA_RADIUS - 30
 const SHOCKWAVE_DAMAGE_MULTIPLIER: float = 0.35
 const SHOCKWAVE_DASH_DAMAGE_MULTIPLIER: float = 0.75
+const EXPLOSIVE_KNOCKBACK_IMMUNITY_DURATION: float = 0.35
+const EXPLOSIVE_SHOCKWAVE_COLOR: Color = Color(0.56, 0.34, 0.15, 0.5)
+const EXPLOSIVE_SHOCKWAVE_PARTICLE_COLOR: Color = Color(0.68, 0.42, 0.18, 0.95)
+const DASH_COOLDOWN_REDUCTION_STEP: float = 0.05
+const MAX_DASH_COOLDOWN_REDUCTION: float = 0.4
+const THORN_CLOTHES_DAMAGE_RETURN_MULTIPLIER: float = 0.4
+const DAMAGE_FEEDBACK_COLOR: Color = Color(1.0, 0.08, 0.08, 1.0)
+const HEAL_FEEDBACK_COLOR: Color = Color(0.18, 1.0, 0.32, 1.0)
 const WRATH_OVERHEAT_SHOT_INTERVAL: int = 4
 const MIRROR_SHOT_DAMAGE_MULTIPLIER: float = 0.5
 const MAX_PROJECTILE_SIZE_MULTIPLIER: float = 2.0
 const MIN_PROJECTILE_SIZE_MULTIPLIER: float = 0.5
-const MAX_HEAL_AFTER_WAVE_BONUS: float = 0.18
+const MAX_HEAL_AFTER_WAVE_BONUS: float = 0.15
 
 # --- TIRO ---
 @export var pistol_bullet_scene: PackedScene
@@ -74,6 +86,7 @@ var shield_cooldown_remaining: float = 0.0
 var shield_vfx: Node2D
 var recoil_explosion_enabled: bool = false
 var offensive_dash_enabled: bool = false
+var thorn_clothes_enabled: bool = false
 var max_dash_charges: int = 1
 var double_dash_charges: int = 1
 var sloth_slow_aura_enabled: bool = false
@@ -96,6 +109,8 @@ var contact_damage_timer: Timer
 
 # --- Sprites ---
 var aparencia
+var health_feedback_tween: Tween
+var health_feedback_base_modulate: Color = Color.WHITE
 
 # Variáveis de XP e Nível
 @export var level: int = 1
@@ -114,6 +129,7 @@ var can_shoot: bool = true
 var can_dash: bool = true
 var is_dashing: bool = false
 var movement_force_combo_lock_remaining: float = 0.0
+var knockback_immunity_remaining: float = 0.0
 
 # --- TIMERS ---
 var shoot_timer: Timer
@@ -139,7 +155,11 @@ func _ready() -> void:
 	base_recoil_force = recoil_force
 	_recalculate_recoil_force()
 	base_dash_speed = dash_speed
+	base_dash_cooldown = dash_cooldown
+	_recalculate_dash_cooldown()
 	aparencia = get_node_or_null("Aparencia")
+	if aparencia:
+		health_feedback_base_modulate = aparencia.modulate
 	pause_control = get_node_or_null(PAUSE_CONTROL_PATH)
 	game_over = get_node_or_null(GAME_OVER_PATH)
 	game_win = get_node_or_null(GAME_WIN_PATH)
@@ -267,6 +287,37 @@ func get_projectile_size_multiplier() -> float:
 func get_projectile_size_percent() -> float:
 	return get_projectile_size_multiplier() * 100.0
 
+func add_dash_cooldown_reduction_bonus(amount: float = DASH_COOLDOWN_REDUCTION_STEP) -> void:
+	if not can_upgrade_dash_cooldown_reduction():
+		return
+
+	dash_cooldown_reduction_bonus = min(dash_cooldown_reduction_bonus + amount, MAX_DASH_COOLDOWN_REDUCTION)
+	_recalculate_dash_cooldown()
+	emit_signal("stats_updated")
+
+func can_upgrade_dash_cooldown_reduction() -> bool:
+	return dash_cooldown_reduction_bonus < MAX_DASH_COOLDOWN_REDUCTION - 0.0001
+
+func get_dash_cooldown_reduction_percent() -> float:
+	return dash_cooldown_reduction_bonus * 100.0
+
+func get_max_dash_cooldown_reduction_percent() -> float:
+	return MAX_DASH_COOLDOWN_REDUCTION * 100.0
+
+func get_dash_cooldown() -> float:
+	return dash_cooldown
+
+func get_base_dash_cooldown() -> float:
+	return base_dash_cooldown
+
+func _recalculate_dash_cooldown() -> void:
+	var previous_dash_cooldown = dash_cooldown
+	var reduction = clamp(dash_cooldown_reduction_bonus, 0.0, MAX_DASH_COOLDOWN_REDUCTION)
+	dash_cooldown = max(base_dash_cooldown * (1.0 - reduction), 0.05)
+	if is_instance_valid(dash_cd_timer) and not dash_cd_timer.is_stopped() and previous_dash_cooldown > 0.0:
+		var recharge_progress = clamp(1.0 - dash_cd_timer.time_left / previous_dash_cooldown, 0.0, 1.0)
+		dash_cd_timer.start(max(dash_cooldown * (1.0 - recharge_progress), 0.01))
+
 func add_heal_after_wave_bonus(amount: float) -> void:
 	if not can_upgrade_heal_after_wave():
 		return
@@ -313,6 +364,14 @@ func is_shield_ready() -> bool:
 
 func get_shield_cooldown_remaining() -> float:
 	return shield_cooldown_remaining
+
+func enable_thorn_clothes() -> void:
+	thorn_clothes_enabled = true
+	emit_signal("stats_updated")
+
+func disable_thorn_clothes() -> void:
+	thorn_clothes_enabled = false
+	emit_signal("stats_updated")
 
 func _update_shield_protection(delta: float) -> void:
 	if not shield_protection_enabled:
@@ -382,6 +441,13 @@ func _update_movement_force_combo_lock(delta: float) -> void:
 	if movement_force_combo_lock_remaining > 0.0:
 		movement_force_combo_lock_remaining = max(movement_force_combo_lock_remaining - delta, 0.0)
 
+func _update_knockback_immunity(delta: float) -> void:
+	if knockback_immunity_remaining > 0.0:
+		knockback_immunity_remaining = max(knockback_immunity_remaining - delta, 0.0)
+
+func _grant_knockback_immunity(duration: float) -> void:
+	knockback_immunity_remaining = max(knockback_immunity_remaining, duration)
+
 func _apply_recoil_impulse(direction: Vector2) -> void:
 	if direction == Vector2.ZERO:
 		return
@@ -396,7 +462,7 @@ func _apply_recoil_impulse(direction: Vector2) -> void:
 	velocity = velocity.limit_length(_get_movement_force_speed_cap())
 
 func _apply_knockback(attacker_position: Vector2, force_multiplier: float = 1.0) -> void:
-	if is_dashing:
+	if is_dashing or knockback_immunity_remaining > 0.0:
 		return
 
 	var knockback_direction = attacker_position.direction_to(global_position)
@@ -457,6 +523,7 @@ func _is_wall_collision(collision: KinematicCollision2D) -> bool:
 func _take_direct_damage(amount: float) -> void:
 	current_health -= int(round(amount))
 	emit_signal("hp_updated", current_health, max_health)
+	_play_damage_feedback()
 	if current_health <= 0:
 		die()
 
@@ -464,6 +531,7 @@ func _physics_process(delta: float) -> void:
 	_update_active_ability_cooldowns(delta)
 	_update_shield_protection(delta)
 	_update_movement_force_combo_lock(delta)
+	_update_knockback_immunity(delta)
 
 	var mouse_pos = get_global_mouse_position()
 	var look_direction = global_position.direction_to(mouse_pos)
@@ -498,6 +566,7 @@ func _physics_process(delta: float) -> void:
 	var velocity_before_slide = velocity
 	move_and_slide()
 	_apply_wall_bounce(velocity_before_slide)
+	_force_clamp_to_current_arena()
 
 func shoot(direction: Vector2) -> void:
 	if not pistol_bullet_scene:
@@ -612,7 +681,13 @@ func _spawn_projectile(spawn_position: Vector2, angle: float, projectile_damage:
 		bullet.add_to_group(Global.GROUP_ENEMY_PROJECTILE)
 	elif unstable_arm_projectiles_enabled:
 		_configure_unstable_projectile(bullet)
-	get_tree().root.add_child(bullet)
+
+	var projectile_parent = _get_vfx_parent()
+	if projectile_parent == null:
+		bullet.queue_free()
+		return null
+
+	projectile_parent.add_child(bullet)
 	return bullet
 
 func _configure_unstable_projectile(bullet: Node) -> void:
@@ -629,6 +704,8 @@ func perform_dash(direction: Vector2) -> void:
 		return
 
 	is_dashing = true
+	if offensive_dash_enabled:
+		_grant_knockback_immunity(EXPLOSIVE_KNOCKBACK_IMMUNITY_DURATION)
 	if max_dash_charges > 1:
 		_spawn_burst_particles(global_position, Color(0.35, 0.7, 1.0, 0.9), 22, 0.28, 160.0)
 	
@@ -676,7 +753,7 @@ func _consume_dash_charge() -> bool:
 	emit_signal("stats_updated")
 	return true
 
-func take_damage(amount: float, attacker_position: Vector2 = Vector2.ZERO, knockback_multiplier: float = 1.0) -> void:
+func take_damage(amount: float, attacker_position: Vector2 = Vector2.ZERO, knockback_multiplier: float = 1.0, contact_source: Node = null) -> void:
 	if is_invulnerable: 
 		return
 
@@ -691,19 +768,17 @@ func take_damage(amount: float, attacker_position: Vector2 = Vector2.ZERO, knock
 	if attacker_position != Vector2.ZERO:
 		_apply_knockback(attacker_position, knockback_multiplier)
 
-	current_health -= int(round(amount * damage_taken_multiplier))
+	var damage_taken = int(round(amount * damage_taken_multiplier))
+	current_health -= damage_taken
 	emit_signal("hp_updated", current_health, max_health)
+	_return_thorn_contact_damage(contact_source, damage_taken)
+	_play_damage_feedback()
 	
 	if current_health <= 0:
 		die()
 		return
 
 	is_invulnerable = true
-	
-	# Tween para demonstrar que tomou dano
-	var tween = create_tween()
-	tween.tween_property(aparencia, "modulate", Color.RED, 0.1)
-	tween.tween_property(aparencia, "modulate", Color.WHITE, 0.1)
 	
 	await get_tree().create_timer(0.2, false).timeout
 	is_invulnerable = false
@@ -729,9 +804,16 @@ func win() -> void:
 		game_win.visible = true
 
 func _finish_current_run() -> void:
-	var game_scene = get_tree().current_scene
+	var tree = get_tree()
+	if tree == null:
+		return
+
+	var game_scene = tree.current_scene
 	if game_scene and game_scene.has_method("finish_run"):
-		game_scene.finish_run()
+		if game_scene.finish_run():
+			return
+
+	Global.finish_current_run()
 
 func _on_shoot_timer_timeout() -> void:
 	can_shoot = true
@@ -756,7 +838,7 @@ func _on_hitbox_area_entered(area: Area2D) -> void:
 			enemies_in_contact.append(parent)
 		
 		if contact_damage_timer.is_stopped():
-			take_damage(_get_contact_damage(parent), parent.global_position, _get_contact_knockback_multiplier(parent))
+			take_damage(_get_contact_damage(parent), parent.global_position, _get_contact_knockback_multiplier(parent), parent)
 			contact_damage_timer.start()
 
 func _on_hitbox_area_exited(area: Area2D) -> void:
@@ -775,9 +857,17 @@ func _on_contact_damage_timer_timeout() -> void:
 	
 	if not enemies_in_contact.is_empty():
 		var prime_enemy = enemies_in_contact[0]
-		take_damage(_get_contact_damage(prime_enemy), prime_enemy.global_position, _get_contact_knockback_multiplier(prime_enemy))
+		take_damage(_get_contact_damage(prime_enemy), prime_enemy.global_position, _get_contact_knockback_multiplier(prime_enemy), prime_enemy)
 	else:
 		contact_damage_timer.stop()
+
+func _return_thorn_contact_damage(contact_source: Node, damage_taken: int) -> void:
+	if not thorn_clothes_enabled or damage_taken <= 0:
+		return
+	if not is_instance_valid(contact_source) or not contact_source.has_method("take_damage"):
+		return
+
+	contact_source.take_damage(float(damage_taken) * THORN_CLOTHES_DAMAGE_RETURN_MULTIPLIER)
 
 func _get_contact_damage(enemy: Node) -> float:
 	if enemy and enemy.get("damage") != null:
@@ -958,8 +1048,34 @@ func _update_active_ability_cooldowns(delta: float) -> void:
 			active_ability_cooldown_remaining[slot] = max(active_ability_cooldown_remaining[slot] - delta, 0.0)
 
 func heal(amount: float) -> void:
+	var previous_health = current_health
 	current_health = int(min(current_health + amount, max_health))
 	emit_signal("hp_updated", current_health, max_health)
+	if current_health > previous_health:
+		_play_heal_feedback()
+
+func _play_damage_feedback() -> void:
+	_play_health_feedback(DAMAGE_FEEDBACK_COLOR)
+
+func _play_heal_feedback() -> void:
+	_play_health_feedback(HEAL_FEEDBACK_COLOR)
+
+func _play_health_feedback(color: Color) -> void:
+	if not aparencia:
+		return
+	if health_feedback_tween != null:
+		health_feedback_tween.kill()
+		health_feedback_tween = null
+
+	aparencia.modulate = health_feedback_base_modulate
+	health_feedback_tween = create_tween().bind_node(aparencia)
+	health_feedback_tween.tween_property(aparencia, "modulate", color, 0.08)
+	health_feedback_tween.tween_property(aparencia, "modulate", health_feedback_base_modulate, 0.12)
+	health_feedback_tween.tween_callback(Callable(self, "_clear_health_feedback_tween").bind(health_feedback_tween))
+
+func _clear_health_feedback_tween(tween: Tween) -> void:
+	if health_feedback_tween == tween:
+		health_feedback_tween = null
 
 func on_enemy_killed(_enemy: Node) -> void:
 	if gluttony_heal_kill_enabled and is_instance_valid(_enemy):
@@ -1067,15 +1183,16 @@ func activate_greed_treasure_rain() -> void:
 		await get_tree().create_timer(0.06, false).timeout
 
 func _trigger_recoil_explosion() -> void:
-	_spawn_burst_particles(global_position, Color(1.0, 0.52, 0.12, 0.95), 34, 0.3, 210.0)
-	_spawn_ring_vfx(global_position, SHOCKWAVE_RADIUS, Color(1.0, 0.55, 0.12, 0.44), 0.28)
+	_grant_knockback_immunity(EXPLOSIVE_KNOCKBACK_IMMUNITY_DURATION)
+	_spawn_burst_particles(global_position, EXPLOSIVE_SHOCKWAVE_PARTICLE_COLOR, 34, 0.3, 210.0)
+	_spawn_ring_vfx(global_position, SHOCKWAVE_RADIUS, EXPLOSIVE_SHOCKWAVE_COLOR, 0.28)
 	for enemy in get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
 		if is_instance_valid(enemy) and enemy.has_method("take_damage") and _is_position_inside_iso_aoe(enemy.global_position, global_position, SHOCKWAVE_RADIUS):
 			enemy.take_damage(_get_shockwave_damage())
 
 func _trigger_offensive_dash_explosion() -> void:
-	_spawn_burst_particles(global_position, Color(0.25, 0.95, 1.0, 0.9), 36, 0.32, 190.0)
-	_spawn_ring_vfx(global_position, SHOCKWAVE_RADIUS, Color(0.42, 0.95, 1.0, 0.44), 0.3)
+	_spawn_burst_particles(global_position, EXPLOSIVE_SHOCKWAVE_PARTICLE_COLOR, 36, 0.32, 190.0)
+	_spawn_ring_vfx(global_position, SHOCKWAVE_RADIUS, EXPLOSIVE_SHOCKWAVE_COLOR, 0.3)
 	for enemy in get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
 		if is_instance_valid(enemy) and enemy.has_method("take_damage") and _is_position_inside_iso_aoe(enemy.global_position, global_position, SHOCKWAVE_RADIUS):
 			enemy.take_damage(_get_shockwave_dash_damage())
@@ -1112,13 +1229,68 @@ func _is_position_inside_iso_aoe(point: Vector2, center: Vector2, radius: float)
 	var normalized_y = local_position.y / y_radius
 	return normalized_x * normalized_x + normalized_y * normalized_y <= 1.0
 
+func _force_clamp_to_current_arena() -> void:
+	var scene = _get_current_game_scene()
+	if scene == null or not scene.has_method("clamp_position_to_current_arena"):
+		return
+
+	var previous_position = global_position
+	var clamp_margin = _get_arena_force_clamp_margin()
+	var clamped_position: Vector2 = scene.call("clamp_position_to_current_arena", previous_position, clamp_margin)
+	if previous_position.distance_squared_to(clamped_position) <= 0.01:
+		return
+
+	global_position = clamped_position
+	_remove_outward_arena_velocity(previous_position, clamped_position)
+
+func _get_current_game_scene() -> Node:
+	var tree = get_tree()
+	if tree == null or not is_instance_valid(tree.current_scene):
+		return null
+	return tree.current_scene
+
+func _get_arena_force_clamp_margin() -> float:
+	var collision = get_node_or_null("CollisionShape2D")
+	if collision == null or not (collision is CollisionShape2D) or collision.shape == null:
+		return ARENA_FORCE_CLAMP_MIN_MARGIN
+
+	var shape = collision.shape
+	var radius = ARENA_FORCE_CLAMP_MIN_MARGIN
+	if shape is CapsuleShape2D:
+		radius = max(shape.radius, shape.height * 0.5)
+	elif shape is CircleShape2D:
+		radius = shape.radius
+	elif shape is RectangleShape2D:
+		radius = shape.size.length() * 0.5
+
+	return max(radius + ARENA_FORCE_CLAMP_PADDING, ARENA_FORCE_CLAMP_MIN_MARGIN)
+
+func _remove_outward_arena_velocity(previous_position: Vector2, clamped_position: Vector2) -> void:
+	var correction = previous_position - clamped_position
+	if correction.length_squared() <= 0.001:
+		return
+
+	var outward_direction = correction.normalized()
+	var outward_speed = velocity.dot(outward_direction)
+	if outward_speed > 0.0:
+		velocity -= outward_direction * outward_speed
+
 func _get_vfx_parent() -> Node:
-	if get_tree().current_scene:
-		return get_tree().current_scene
-	return get_tree().root
+	var tree = get_tree()
+	if tree == null:
+		return null
+	if is_instance_valid(tree.current_scene):
+		return tree.current_scene
+	if is_instance_valid(tree.root):
+		return tree.root
+	return null
 
 func _get_ground_area_vfx_parent() -> Node:
-	var scene = get_tree().current_scene
+	var tree = get_tree()
+	if tree == null:
+		return null
+
+	var scene = tree.current_scene
 	if scene == null:
 		return _get_vfx_parent()
 
@@ -1150,10 +1322,18 @@ func _spawn_burst_particles(spawn_position: Vector2, color: Color, amount: int =
 	particles.initial_velocity_max = velocity
 	particles.color = color
 	particles.z_index = 30
-	_get_vfx_parent().add_child(particles)
+	var parent = _get_vfx_parent()
+	if parent == null:
+		particles.queue_free()
+		return
+
+	parent.add_child(particles)
 	particles.emitting = true
 
-	var cleanup_timer = get_tree().create_timer(lifetime + 0.25, false)
+	var tree = get_tree()
+	if tree == null:
+		return
+	var cleanup_timer = tree.create_timer(lifetime + 0.25, false)
 	cleanup_timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(particles))
 
 func _spawn_field_vfx(center: Vector2, radius: float, color: Color, duration: float) -> void:
@@ -1168,12 +1348,20 @@ func _spawn_field_vfx(center: Vector2, radius: float, color: Color, duration: fl
 	particles.gravity = Vector2.ZERO
 	particles.initial_velocity_min = radius * 0.05
 	particles.initial_velocity_max = radius * 0.24
-	particles.color = color
-	_get_ground_area_vfx_parent().add_child(particles)
+	particles.color = _get_area_aura_vfx_color(color)
+	var parent = _get_ground_area_vfx_parent()
+	if parent == null:
+		particles.queue_free()
+		return
+
+	parent.add_child(particles)
 	particles.global_position = center
 	particles.emitting = true
 
-	var cleanup_timer = get_tree().create_timer(duration, false)
+	var tree = get_tree()
+	if tree == null:
+		return
+	var cleanup_timer = tree.create_timer(duration, false)
 	cleanup_timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(particles))
 
 func _spawn_attached_aura(radius: float, color: Color, duration: float) -> void:
@@ -1192,18 +1380,26 @@ func _spawn_attached_aura(radius: float, color: Color, duration: float) -> void:
 	particles.gravity = Vector2.ZERO
 	particles.initial_velocity_min = radius * 0.1
 	particles.initial_velocity_max = radius * 0.45
-	particles.color = color
+	particles.color = _get_area_aura_vfx_color(color)
 	aura.add_child(particles)
 	particles.emitting = true
 
-	var cleanup_timer = get_tree().create_timer(duration, false)
+	var tree = get_tree()
+	if tree == null:
+		return
+	var cleanup_timer = tree.create_timer(duration, false)
 	cleanup_timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(aura))
 
 func _spawn_ring_vfx(center: Vector2, radius: float, color: Color, duration: float) -> void:
 	radius = min(radius, MAX_ABILITY_AREA_RADIUS)
 	var ring_vfx = Node2D.new()
 	ring_vfx.name = "FilledRingVFX"
-	_get_ground_area_vfx_parent().add_child(ring_vfx)
+	var parent = _get_ground_area_vfx_parent()
+	if parent == null:
+		ring_vfx.queue_free()
+		return
+
+	parent.add_child(ring_vfx)
 	ring_vfx.global_position = center
 	_add_ring_to_node(ring_vfx, radius, color, 3.0)
 
@@ -1213,11 +1409,12 @@ func _spawn_ring_vfx(center: Vector2, radius: float, color: Color, duration: flo
 
 func _add_ring_to_node(parent: Node, radius: float, color: Color, width: float) -> Line2D:
 	radius = min(radius, MAX_ABILITY_AREA_RADIUS)
-	_add_circle_fill_to_node(parent, radius, color)
+	var vfx_color = _get_area_aura_vfx_color(color)
+	_add_circle_fill_to_node(parent, radius, vfx_color)
 
 	var ring = Line2D.new()
 	ring.width = width
-	ring.default_color = color
+	ring.default_color = vfx_color
 	ring.points = _build_iso_ellipse_points(radius, true)
 	parent.add_child(ring)
 	return ring
@@ -1309,8 +1506,9 @@ func _build_ring_points(ring: Line2D, radius: float) -> void:
 
 func _add_circular_ring_to_node(parent: Node, radius: float, color: Color, width: float) -> Line2D:
 	radius = min(radius, MAX_ABILITY_AREA_RADIUS)
+	var vfx_color = _get_area_aura_vfx_color(color)
 	var fill = Polygon2D.new()
-	var fill_color = color
+	var fill_color = vfx_color
 	fill_color.a *= 0.1
 	fill.color = fill_color
 	fill.polygon = _build_circle_points(radius, false)
@@ -1318,10 +1516,14 @@ func _add_circular_ring_to_node(parent: Node, radius: float, color: Color, width
 
 	var ring = Line2D.new()
 	ring.width = width
-	ring.default_color = color
+	ring.default_color = vfx_color
 	ring.points = _build_circle_points(radius, true)
 	parent.add_child(ring)
 	return ring
+
+func _get_area_aura_vfx_color(color: Color) -> Color:
+	var multiplier = 1.0 - Global.AREA_AURA_VFX_DARKENING
+	return Color(color.r * multiplier, color.g * multiplier, color.b * multiplier, color.a)
 
 func _build_circle_points(radius: float, closed: bool) -> PackedVector2Array:
 	var points = PackedVector2Array()
@@ -1369,7 +1571,12 @@ func _spawn_heal_mote(from_position: Vector2, heal_amount: float, curve_offset: 
 	])
 	mote.color = Color(0.25, 1.0, 0.45, 0.95)
 	mote.z_index = 40
-	_get_vfx_parent().add_child(mote)
+	var parent = _get_vfx_parent()
+	if parent == null:
+		mote.queue_free()
+		return
+
+	parent.add_child(mote)
 	mote.global_position = from_position
 
 	var tween = create_tween()
@@ -1419,7 +1626,7 @@ func _ensure_sloth_slow_aura_vfx() -> void:
 	particles.gravity = Vector2.ZERO
 	particles.initial_velocity_min = 45.0
 	particles.initial_velocity_max = 120.0
-	particles.color = Color(0.25, 0.95, 1.0, 0.3)
+	particles.color = _get_area_aura_vfx_color(Color(0.25, 0.95, 1.0, 0.3))
 	sloth_aura_vfx.add_child(particles)
 	particles.emitting = true
 
@@ -1442,12 +1649,15 @@ func _spawn_clone_vfx(duration: float) -> void:
 	particles.gravity = Vector2.ZERO
 	particles.initial_velocity_min = 25.0
 	particles.initial_velocity_max = 80.0
-	particles.color = Color(0.42, 0.95, 1.0, 0.52)
+	particles.color = _get_area_aura_vfx_color(Color(0.42, 0.95, 1.0, 0.52))
 	particles.z_index = 26
 	envy_clone_vfx.add_child(particles)
 	particles.emitting = true
 
-	var cleanup_timer = get_tree().create_timer(duration, false)
+	var tree = get_tree()
+	if tree == null:
+		return
+	var cleanup_timer = tree.create_timer(duration, false)
 	cleanup_timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(envy_clone_vfx))
 
 func _queue_free_if_valid(node: Node) -> void:

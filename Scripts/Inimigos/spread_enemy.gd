@@ -34,4 +34,10 @@ func _fire_projectiles() -> void:
 		projectile.direction = Vector2(cos(final_angle), sin(final_angle))
 		projectile.damage = damage * 0.8
 
-		get_tree().current_scene.add_child(projectile)
+		var tree = get_tree()
+		var parent = tree.current_scene if tree != null and tree.current_scene else null
+		if parent == null:
+			projectile.queue_free()
+			continue
+
+		parent.add_child(projectile)

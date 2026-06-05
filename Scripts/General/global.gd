@@ -21,15 +21,16 @@ const CHARACTER_RENDER_Z_INDEX: int = 10
 const GROUND_AREA_VFX_LAYER_NAME: String = "GroundAreaVFX"
 const GROUND_AREA_VFX_Z_INDEX: int = 1
 const ENEMY_ATTACK_ACTIVE_COLOR_DARKENING: float = 0.3
+const AREA_AURA_VFX_DARKENING: float = 0.12
 
 const STARTING_ARM_DATA = {
 	"fast": {
 		"name": "Braco rapido",
 		"description": "Tiros fracos, cadencia alta e recuo curto para controlar melhor o medico.",
-		"attack_damage": 30.0,
-		"base_fire_rate": 0.45,
+		"attack_damage": 35.0,
+		"base_fire_rate": 0.5,
 		"min_fire_rate": 0.3,
-		"base_recoil_force": 410.0,
+		"base_recoil_force": 415.0,
 		"friction": 900.0,
 		"attack_speed_upgrade_multiplier": 0.3,
 		"unstable_projectiles": false
@@ -37,10 +38,10 @@ const STARTING_ARM_DATA = {
 	"heavy": {
 		"name": "Braco pesado",
 		"description": "Tiros lentos com dano alto e recuo forte para reposicionamentos grandes.",
-		"attack_damage": 65.0,
-		"base_fire_rate": 1.5,
-		"min_fire_rate": 1.2,
-		"base_recoil_force": 760.0,
+		"attack_damage": 66.0,
+		"base_fire_rate": 2.0,
+		"min_fire_rate": 1.35,
+		"base_recoil_force": 755.0,
 		"friction": 600.0,
 		"attack_speed_upgrade_multiplier": 0.5,
 		"unstable_projectiles": false
@@ -48,10 +49,10 @@ const STARTING_ARM_DATA = {
 	"unstable": {
 		"name": "Braco instavel",
 		"description": "Projeteis atravessam um alvo e ricocheteiam uma vez, mas voltam perigosos.",
-		"attack_damage": 30.0,
+		"attack_damage": 40.0,
 		"base_fire_rate": 1.1,
 		"min_fire_rate": 0.60,
-		"base_recoil_force": 560.0,
+		"base_recoil_force": 585.0,
 		"friction": 750.0,
 		"attack_speed_upgrade_multiplier": 0.7,
 		"unstable_projectiles": true
@@ -85,13 +86,14 @@ const PASSIVE_UPGRADE_OPTIONS = [
 	{ "id": "option_3", "text": "Attack (+15%)", "description": "Increases the damage dealt by your bullets and damage-based effects.", "rarity": "passive_common" },
 	{ "id": "option_4", "text": "Atk-Speed (+5%)", "description": "+5% attack speed before the chosen arm's tuning. Does not appear for the fast arm; heavy and unstable arms each have their own safe cooldown floor.", "rarity": "passive_common" },
 	{ "id": "option_5", "text": "Bullet Size (+5%)", "description": "+5% bullet size for friendly projectiles. Bonus is additive and stops at 200% bullet size.", "rarity": "passive_common" },
-	{ "id": "option_6", "text": "Heal After Wave (+3%)", "description": "Heal 3% max health after each enemy wave. This upgrade stops appearing at 18%.", "rarity": "passive_common" }
+	{ "id": "option_6", "text": "Heal After Wave (+3%)", "description": "Heal 3% max health after each enemy wave. This upgrade stops appearing at 15%.", "rarity": "passive_common" },
+	{ "id": "option_7", "text": "Dash Cooldown (-5%)", "description": "Reduces dash recharge cooldown by 5%. This upgrade is uncommon and stops appearing at 40%.", "rarity": "passive_common" }
 ]
 
 const CURSED_PASSIVE_OPTIONS = [
 	{ "id": "glass_canon", "text": "Attack (+50%), Health (-25%)", "description": "Greatly increases damage, but lowers your maximum health. Strong if you can avoid hits.", "rarity": "passive_cursed" },
-	{ "id": "tanky", "text": "Health (+25%), Attack (-50%)", "description": "Greatly increases survivability, but lowers your damage output.", "rarity": "passive_cursed" },
-	{ "id": "deadly_slow", "text": "Recoil Force (-25%), Attack (+75%)", "description": "Greatly increases damage, but weakens your recoil movement by cutting pushback force.", "rarity": "passive_cursed" },
+	{ "id": "tanky", "text": "Health (+40%), Attack (-40%)", "description": "Greatly increases survivability, but lowers your damage output.", "rarity": "passive_cursed" },
+	{ "id": "deadly_slow", "text": "Recoil Force (-25%), Attack (+60%)", "description": "Greatly increases damage, but weakens your recoil movement by cutting pushback force.", "rarity": "passive_cursed" },
 	{ "id": "fast_but_small", "text": "Bullet Size (-30%), Atk-Speed (+30%)", "description": "Adds +30% attack speed before the chosen arm's tuning, but reduces bullet size by 30%. Bullet size cannot drop below 50%.", "rarity": "passive_cursed" }
 ]
 
@@ -99,7 +101,8 @@ const RARE_PASSIVE_OPTIONS = [
 	{ "id": "Shield_Protection", "text": "Gain a one-hit shield", "description": "Grants a shield that blocks the next damage instance. You can equip up to two rare passives.", "rarity": "passive_rare" },
 	{ "id": "Recoil_Explosion", "text": "Your recoil creates a small shockwave", "description": "Every shot creates a 180px shockwave that deals 35% of your attack damage. You can equip up to two rare passives.", "rarity": "passive_rare" },
 	{ "id": "Double_Dash", "text": "You have two charges of dash", "description": "Gives you two dash charges. Each spent charge recharges one at a time. You can equip up to two rare passives.", "rarity": "passive_rare" },
-	{ "id": "Offensive_Dash", "text": "Offensive Dash", "description": "Dashing blocks damage and releases a 180px shockwave at the end of the dash, dealing 75% of your attack damage. You can equip up to two rare passives.", "rarity": "passive_rare" }
+	{ "id": "Offensive_Dash", "text": "Offensive Dash", "description": "Dashing blocks damage and releases a 180px shockwave at the end of the dash, dealing 75% of your attack damage. You can equip up to two rare passives.", "rarity": "passive_rare" },
+	{ "id": "Thorn_Clothes", "text": "Thorn Clothes", "description": "Reflects 40% of contact damage taken back to the enemy that touched you. Ranged damage does not trigger it. You can equip up to two rare passives.", "rarity": "passive_rare" }
 ]
 
 const BOSS_REWARD_OPTIONS = [
@@ -182,6 +185,10 @@ const PASSIVE_STATUS_DATA = {
 		"name": "Offensive Dash",
 		"description": "Dashing blocks damage and releases a 180px shockwave for 75% attack damage."
 	},
+	"Thorn_Clothes": {
+		"name": "Thorn Clothes",
+		"description": "Reflects 40% of contact damage taken back to the enemy."
+	},
 	"sloth_slow_aura": {
 		"name": "Slow Aura",
 		"description": "Enemies within 180px move at 70% speed."
@@ -208,7 +215,7 @@ const PASSIVE_STATUS_DATA = {
 	},
 }
 
-const RARE_OPTION_IDS = ["Shield_Protection", "Recoil_Explosion", "Double_Dash", "Offensive_Dash"]
+const RARE_OPTION_IDS = ["Shield_Protection", "Recoil_Explosion", "Double_Dash", "Offensive_Dash", "Thorn_Clothes"]
 const SIN_PASSIVE_IDS = [
 	"sloth_slow_aura",
 	"gluttony_heal_kill",
@@ -248,16 +255,25 @@ func start_run_timer() -> void:
 	current_run_saved = false
 
 ## Saves the active run once, using the current pecado progress and elapsed time.
-func finish_current_run() -> void:
-	if current_run_saved or run_start_msec < 0:
-		return
+func finish_current_run() -> bool:
+	if current_run_saved:
+		return true
 
-	var elapsed_seconds = float(Time.get_ticks_msec() - run_start_msec) / 1000.0
-	save_run(clampi(pecado - 1, 0, 7), elapsed_seconds)
+	var elapsed_seconds = 0.0
+	if run_start_msec >= 0:
+		elapsed_seconds = float(Time.get_ticks_msec() - run_start_msec) / 1000.0
+	else:
+		push_warning("Ranking run finished without an active timer. Saving with 00:00 elapsed time.")
+
+	if not save_run(clampi(pecado - 1, 0, 7), elapsed_seconds):
+		return false
+
 	current_run_saved = true
+	run_start_msec = -1
+	return true
 
 ## Stores one completed run in the local ranking file.
-func save_run(pecados_derrotados: int, tempo_segundos: float) -> void:
+func save_run(pecados_derrotados: int, tempo_segundos: float) -> bool:
 	var ranking_data = _load_ranking_data()
 	var runs: Array = ranking_data.get("runs", [])
 
@@ -272,7 +288,7 @@ func save_run(pecados_derrotados: int, tempo_segundos: float) -> void:
 	runs.append(run_data)
 	ranking_data["runs"] = runs
 	ranking_data["executable_signature"] = _get_executable_signature()
-	_save_ranking_data(ranking_data)
+	return _save_ranking_data(ranking_data)
 
 ## Returns ranking entries sorted by defeated sins, then by fastest time.
 func get_ranked_runs() -> Array:
@@ -327,12 +343,26 @@ func _load_ranking_data() -> Dictionary:
 
 	return ranking_data
 
-func _save_ranking_data(ranking_data: Dictionary) -> void:
+func _save_ranking_data(ranking_data: Dictionary) -> bool:
+	_ensure_user_data_dir_exists()
 	var file = FileAccess.open(RANKING_PATH, FileAccess.WRITE)
 	if file == null:
-		return
+		var open_error = FileAccess.get_open_error()
+		push_error("Failed to open ranking file for writing at %s: %s" % [ProjectSettings.globalize_path(RANKING_PATH), error_string(open_error)])
+		return false
 
 	file.store_string(JSON.stringify(ranking_data, "\t"))
+	file.flush()
+	return true
+
+func _ensure_user_data_dir_exists() -> void:
+	var user_data_dir = OS.get_user_data_dir()
+	if user_data_dir == "":
+		return
+
+	var result = DirAccess.make_dir_recursive_absolute(user_data_dir)
+	if result != OK:
+		push_warning("Could not ensure user data directory exists at %s: %s" % [user_data_dir, error_string(result)])
 
 func _reset_ranking_if_executable_changed() -> void:
 	if not FileAccess.file_exists(RANKING_PATH):

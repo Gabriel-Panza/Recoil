@@ -128,7 +128,8 @@ func _is_wall_body(body: Node) -> bool:
 	return (body.collision_layer & Global.WALL_LAYER_MASK) != 0
 
 func _get_arena_bounce_normal() -> Vector2:
-	var scene = get_tree().current_scene
+	var tree = get_tree()
+	var scene = tree.current_scene if tree != null else null
 	if scene != null and scene.has_method("_get_current_arena_bounds"):
 		var arena_bounds: Rect2 = scene.call("_get_current_arena_bounds")
 		if arena_bounds.size != Vector2.ZERO:
@@ -146,7 +147,12 @@ func _get_arena_bounce_normal() -> Vector2:
 	return Vector2.UP if direction.y > 0.0 else Vector2.DOWN
 
 func _on_screen_exited() -> void:
-	await get_tree().create_timer(0.75, false).timeout
+	var tree = get_tree()
+	if tree == null:
+		queue_free()
+		return
+
+	await tree.create_timer(0.5, false).timeout
 	queue_free()
 
 func _configure_projectile_vfx() -> void:
@@ -183,11 +189,20 @@ func _spawn_hit_particles(hit_position: Vector2) -> void:
 	burst.color = _get_vfx_color()
 	burst.z_index = 35
 
-	var vfx_parent = get_tree().current_scene if get_tree().current_scene else get_tree().root
+	var tree = get_tree()
+	if tree == null:
+		burst.queue_free()
+		return
+
+	var vfx_parent = tree.current_scene if tree.current_scene else tree.root
+	if vfx_parent == null:
+		burst.queue_free()
+		return
+
 	vfx_parent.add_child(burst)
 	burst.emitting = true
 
-	var cleanup_timer = get_tree().create_timer(burst.lifetime + 0.2, false)
+	var cleanup_timer = tree.create_timer(burst.lifetime + 0.2, false)
 	cleanup_timer.timeout.connect(Callable(burst, "queue_free"))
 
 func _get_vfx_color() -> Color:

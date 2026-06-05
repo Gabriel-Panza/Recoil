@@ -15,26 +15,32 @@ const PECADO_SPRITE_ROW_BY_ID = {
 	6: 1,
 	7: 0,
 }
+const DAMAGE_FEEDBACK_COLOR: Color = Color(1.0, 0.08, 0.08, 1.0)
+const HEAL_FEEDBACK_COLOR: Color = Color(0.18, 1.0, 0.32, 1.0)
 
 var current_health: int
 var player: Node2D
 var health_bar: ProgressBar
 var is_dead: bool = false
+var health_feedback_tween: Tween
+var health_feedback_base_modulate: Color = Color.WHITE
 @onready var aparencia = get_node_or_null("AnimatedAppearence")
 
 func _ready() -> void:
 	z_index = Global.CHARACTER_RENDER_Z_INDEX
 	z_as_relative = false
 	current_health = max_health
+	if aparencia:
+		health_feedback_base_modulate = aparencia.modulate
 	player = get_tree().get_first_node_in_group(Global.GROUP_PLAYER)
 	var player_arm_id = str(player.get("current_arm_id")) if player != null and player.get("current_arm_id") != null else ""
 	match player_arm_id:
 		"fast":
 			speed = 140
 		"heavy":
-			speed = 125
+			speed = 127
 		"unstable":
-			speed = 130
+			speed = 132
 	add_to_group(Global.GROUP_ENEMY)
 	_setup_enemy_body_collision()
 	call_deferred("_setup_health_bar")
@@ -136,14 +142,43 @@ func take_damage(amount: float) -> void:
 
 	current_health -= int(round(amount))
 	_update_health_bar()
+	_play_damage_feedback()
 	if current_health <= 0:
 		die()
 		return
 
-	# Tween para demonstrar que tomou dano
-	var tween = create_tween()
-	tween.tween_property(aparencia, "modulate", Color.RED, 0.1)
-	tween.tween_property(aparencia, "modulate", Color.WHITE, 0.1)
+func heal(amount: float) -> void:
+	if is_dead or amount <= 0.0:
+		return
+
+	var previous_health = current_health
+	current_health = int(min(current_health + amount, max_health))
+	_update_health_bar()
+	if current_health > previous_health:
+		_play_heal_feedback()
+
+func _play_damage_feedback() -> void:
+	_play_health_feedback(DAMAGE_FEEDBACK_COLOR)
+
+func _play_heal_feedback() -> void:
+	_play_health_feedback(HEAL_FEEDBACK_COLOR)
+
+func _play_health_feedback(color: Color) -> void:
+	if not aparencia:
+		return
+	if health_feedback_tween != null:
+		health_feedback_tween.kill()
+		health_feedback_tween = null
+
+	aparencia.modulate = health_feedback_base_modulate
+	health_feedback_tween = create_tween().bind_node(aparencia)
+	health_feedback_tween.tween_property(aparencia, "modulate", color, 0.08)
+	health_feedback_tween.tween_property(aparencia, "modulate", health_feedback_base_modulate, 0.12)
+	health_feedback_tween.tween_callback(Callable(self, "_clear_health_feedback_tween").bind(health_feedback_tween))
+
+func _clear_health_feedback_tween(tween: Tween) -> void:
+	if health_feedback_tween == tween:
+		health_feedback_tween = null
 
 func die() -> void:
 	if is_dead:

@@ -66,6 +66,8 @@ const PRIDE_LIGHT_BEAM_DAMAGE_MULTIPLIER: float = 0.8
 const PRIDE_JUDGEMENT_BEAM_DAMAGE_MULTIPLIER: float = 0.8
 const BOSS_INDICATOR_LAYER: int = 75
 const BOSS_INDICATOR_PADDING: float = 35.0
+const DAMAGE_FEEDBACK_COLOR: Color = Color(1.0, 0.08, 0.08, 1.0)
+const HEAL_FEEDBACK_COLOR: Color = Color(0.18, 1.0, 0.32, 1.0)
 
 const BOSS_CONFIG = {
 	1: { "max_health": 400, "speed": 0.0, "damage": 40, "state": BossState.SLOTH, "animation": "pecado1" },
@@ -81,6 +83,8 @@ var current_health: int
 var player: Node2D
 var aparencia
 var health_bar: ProgressBar
+var health_feedback_tween: Tween
+var health_feedback_base_modulate: Color = Color.WHITE
 var is_dead: bool = false
 var is_enraged: bool = false
 var is_invulnerable: bool = false
@@ -128,6 +132,7 @@ func _ready() -> void:
 	_setup_enemy_body_collision()
 	aparencia = $AparenciaAnimada
 	aparencia.scale *= 3
+	health_feedback_base_modulate = aparencia.modulate
 	_configure_boss_for_current_sin()
 	_setup_boss_edge_indicator()
 	current_health = max_health
@@ -410,7 +415,12 @@ func _start_sloth_summon(amount: int) -> void:
 	current_sub_state = BossSubState.ATTACK
 	for i in range(amount):
 		var enemy = MELEE_ENEMY_SCENE.instantiate()
-		_get_vfx_parent().add_child(enemy)
+		var parent = _get_vfx_parent()
+		if parent == null:
+			enemy.queue_free()
+			return
+
+		parent.add_child(enemy)
 		enemy.global_position = _get_random_arena_position_near_player(160.0, 300.0)
 		_register_boss_summon(enemy)
 		if i < amount - 1:
@@ -518,7 +528,12 @@ func _start_gluttony_food_wave(amount: int) -> void:
 
 func _spawn_gluttony_food() -> void:
 	var food = MELEE_ENEMY_SCENE.instantiate()
-	_get_vfx_parent().add_child(food)
+	var parent = _get_vfx_parent()
+	if parent == null:
+		food.queue_free()
+		return
+
+	parent.add_child(food)
 	food.global_position = _get_random_arena_edge_position()
 	food.player = self
 	food.speed = 155.0 if phase == 1 else 190.0
@@ -544,8 +559,7 @@ func _update_gluttony_foods(_delta: float) -> void:
 			food.set_meta("gluttony_delivered", true)
 			gluttony_foods.erase(food)
 			var heal_amount = max_health * (0.18 if phase == 1 else 0.11)
-			current_health = int(min(current_health + heal_amount, max_health))
-			_update_health_bar()
+			heal(heal_amount)
 			_spawn_heal_particles(food.global_position)
 			food.queue_free()
 
@@ -1055,7 +1069,10 @@ func _apply_temporary_player_attack_boost(multiplier: float, duration: float) ->
 	if player == null:
 		return
 	player.temporary_attack_multiplier = max(player.temporary_attack_multiplier, multiplier)
-	await get_tree().create_timer(duration, false).timeout
+	var tree = get_tree()
+	if tree == null:
+		return
+	await tree.create_timer(duration, false).timeout
 	if is_instance_valid(player) and player.temporary_attack_multiplier <= multiplier + 0.01:
 		player.temporary_attack_multiplier = 1.0
 
@@ -1210,8 +1227,13 @@ func _spawn_pride_edge_origin_marker(start_position: Vector2, duration: float) -
 	_add_circle_visual(marker, 18.0, _with_alpha(PRIDE_LIGHT_COLOR, 0.16), 15)
 	_add_ring_visual(marker, 21.0, _with_alpha(PRIDE_LIGHT_COLOR, 0.82), 2.4, 16)
 	_add_loop_particles(marker, "PrideEdgeBeamOrigin", _with_alpha(PRIDE_LIGHT_COLOR, 0.5), 22, 0.55, 8.0, 42.0, 17)
-	_add_child_at_global(_get_ground_area_vfx_parent(), marker, start_position)
-	var timer = get_tree().create_timer(duration, false)
+	if not _add_child_at_global(_get_ground_area_vfx_parent(), marker, start_position):
+		return
+
+	var tree = get_tree()
+	if tree == null:
+		return
+	var timer = tree.create_timer(duration, false)
 	timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(marker))
 
 func _create_pride_edge_beam_after_delay(beam_center: Vector2, beam_size: Vector2, beam_rotation: float, delay: float) -> void:
@@ -1302,7 +1324,8 @@ func _start_pride_aimed_fireballs(amount: int, spread_degrees: float) -> void:
 
 	for shot in shots:
 		var projectile = _spawn_enemy_projectile(shot["position"], shot["direction"], _get_pride_damage(PRIDE_AIMED_FIREBALL_DAMAGE_MULTIPLIER), _with_alpha(PRIDE_FIRE_COLOR, 0.94), 395.0 if phase == 1 else 445.0)
-		projectile.scale *= 0.92
+		if projectile != null:
+			projectile.scale *= 0.92
 
 func _spawn_radial_projectiles(projectile_count: int, projectile_damage: float, color: Color, projectile_speed: float, angle_offset: float = 0.0) -> void:
 	_spawn_radial_projectiles_from(global_position, projectile_count, projectile_damage, color, projectile_speed, angle_offset)
@@ -1444,12 +1467,12 @@ func take_damage(amount: float) -> void:
 	var final_amount = amount * _get_damage_taken_multiplier()
 	current_health -= int(round(final_amount))
 	_update_health_bar()
+	_flash_damage()
 	if current_health <= 0:
 		die()
 		return
 
 	_try_activate_enrage()
-	_flash_damage()
 
 func take_self_damage(amount: float) -> void:
 	if is_dead:
@@ -1465,6 +1488,16 @@ func _get_damage_taken_multiplier() -> float:
 		return 1.0 + float(gluttony_stress_timers.size()) * (0.11 if phase == 1 else 0.17)
 	return 1.0
 
+func heal(amount: float) -> void:
+	if is_dead or amount <= 0.0:
+		return
+
+	var previous_health = current_health
+	current_health = int(min(current_health + amount, max_health))
+	_update_health_bar()
+	if current_health > previous_health:
+		_flash_heal()
+
 func _try_activate_enrage() -> void:
 	if is_enraged:
 		return
@@ -1475,11 +1508,27 @@ func _try_activate_enrage() -> void:
 		set_meta("base_speed", float(get_meta("base_speed")) * ENRAGE_STAT_MULTIPLIER)
 
 func _flash_damage() -> void:
+	_play_health_feedback(DAMAGE_FEEDBACK_COLOR)
+
+func _flash_heal() -> void:
+	_play_health_feedback(HEAL_FEEDBACK_COLOR)
+
+func _play_health_feedback(color: Color) -> void:
 	if not aparencia:
 		return
-	var tween = create_tween()
-	tween.tween_property(aparencia, "modulate", Color.RED, 0.1)
-	tween.tween_property(aparencia, "modulate", Color.WHITE, 0.1)
+	if health_feedback_tween != null:
+		health_feedback_tween.kill()
+		health_feedback_tween = null
+
+	aparencia.modulate = health_feedback_base_modulate
+	health_feedback_tween = create_tween().bind_node(aparencia)
+	health_feedback_tween.tween_property(aparencia, "modulate", color, 0.08)
+	health_feedback_tween.tween_property(aparencia, "modulate", health_feedback_base_modulate, 0.12)
+	health_feedback_tween.tween_callback(Callable(self, "_clear_health_feedback_tween").bind(health_feedback_tween))
+
+func _clear_health_feedback_tween(tween: Tween) -> void:
+	if health_feedback_tween == tween:
+		health_feedback_tween = null
 
 func die() -> void:
 	if is_dead:
@@ -1639,7 +1688,8 @@ func _spawn_enemy_projectile(spawn_position: Vector2, projectile_direction: Vect
 	projectile.direction = projectile_direction.normalized()
 	projectile.damage = projectile_damage
 	projectile.set_meta("vfx_color", _get_active_attack_color(color))
-	_add_child_at_global(_get_vfx_parent(), projectile, spawn_position)
+	if not _add_child_at_global(_get_vfx_parent(), projectile, spawn_position):
+		return null
 	projectile.speed = projectile_speed
 	return projectile
 
@@ -1659,10 +1709,14 @@ func _create_damaging_area(area_position: Vector2, size: Vector2, area_rotation:
 	_add_rect_visual(area, size, _get_active_attack_color(color), 0)
 
 	area.body_entered.connect(Callable(self, "_on_damaging_area_body_entered").bind(area))
-	_add_child_at_global(_get_ground_area_vfx_parent(), area, area_position, area_rotation)
+	if not _add_child_at_global(_get_ground_area_vfx_parent(), area, area_position, area_rotation):
+		return
 	if player and _is_point_inside_rotated_rect(player.global_position, area_position, size, area_rotation):
 		player.take_damage(area_damage, area_position)
-	var cleanup_timer = get_tree().create_timer(duration, false)
+	var tree = get_tree()
+	if tree == null:
+		return
+	var cleanup_timer = tree.create_timer(duration, false)
 	cleanup_timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(area))
 
 func _on_damaging_area_body_entered(body: Node, area: Area2D) -> void:
@@ -1731,6 +1785,10 @@ func _get_active_attack_color(color: Color) -> Color:
 	var multiplier = 1.0 - Global.ENEMY_ATTACK_ACTIVE_COLOR_DARKENING
 	return Color(color.r * multiplier, color.g * multiplier, color.b * multiplier, color.a)
 
+func _get_area_aura_vfx_color(color: Color) -> Color:
+	var multiplier = 1.0 - Global.AREA_AURA_VFX_DARKENING
+	return Color(color.r * multiplier, color.g * multiplier, color.b * multiplier, color.a)
+
 func _get_boss_color() -> Color:
 	match current_state:
 		BossState.SLOTH:
@@ -1767,7 +1825,7 @@ func _add_circle_visual(parent: Node, radius: float, color: Color, visual_z_inde
 	var visual = Polygon2D.new()
 	radius = min(radius, MAX_BOSS_CIRCLE_VFX_RADIUS)
 	visual.polygon = _build_iso_ellipse_points(radius, false)
-	visual.color = color
+	visual.color = _get_area_aura_vfx_color(color)
 	visual.z_index = visual_z_index
 	parent.add_child(visual)
 	return visual
@@ -1775,7 +1833,7 @@ func _add_circle_visual(parent: Node, radius: float, color: Color, visual_z_inde
 func _add_rect_visual(parent: Node, size: Vector2, color: Color, visual_z_index: int) -> Polygon2D:
 	var visual = Polygon2D.new()
 	visual.polygon = _build_rect_points(size)
-	visual.color = color
+	visual.color = _get_area_aura_vfx_color(color)
 	visual.z_index = visual_z_index
 	parent.add_child(visual)
 	return visual
@@ -1784,7 +1842,7 @@ func _add_ring_visual(parent: Node, radius: float, color: Color, width: float, v
 	var ring = Line2D.new()
 	radius = min(radius, MAX_BOSS_CIRCLE_VFX_RADIUS)
 	ring.width = width
-	ring.default_color = color
+	ring.default_color = _get_area_aura_vfx_color(color)
 	ring.points = _build_iso_ellipse_points(radius, true)
 	ring.z_index = visual_z_index
 	parent.add_child(ring)
@@ -1806,18 +1864,33 @@ func _play_boss_animation(animation_name: String) -> void:
 		aparencia.play(animation_name)
 
 func _get_vfx_parent() -> Node:
-	if get_tree().current_scene:
-		return get_tree().current_scene
-	return get_tree().root
+	var tree = get_tree()
+	if tree == null:
+		return null
+	if is_instance_valid(tree.current_scene):
+		return tree.current_scene
+	if is_instance_valid(tree.root):
+		return tree.root
+	return null
 
-func _add_child_at_global(parent: Node, child: Node2D, child_position: Vector2, child_rotation = null) -> void:
+func _add_child_at_global(parent: Node, child: Node2D, child_position: Vector2, child_rotation = null) -> bool:
+	if parent == null or not is_instance_valid(parent):
+		if is_instance_valid(child):
+			child.queue_free()
+		return false
+
 	parent.add_child(child)
 	child.global_position = child_position
 	if child_rotation != null:
 		child.global_rotation = float(child_rotation)
+	return true
 
 func _get_ground_area_vfx_parent() -> Node:
-	var scene = get_tree().current_scene
+	var tree = get_tree()
+	if tree == null:
+		return null
+
+	var scene = tree.current_scene
 	if scene == null:
 		return _get_vfx_parent()
 
@@ -1836,13 +1909,15 @@ func _get_ground_area_vfx_parent() -> Node:
 	return layer
 
 func _get_arena_center() -> Vector2:
-	var scene = get_tree().current_scene
+	var tree = get_tree()
+	var scene = tree.current_scene if tree != null else null
 	if scene and scene.has_method("_get_current_arena_center"):
 		return scene.call("_get_current_arena_center")
 	return global_position
 
 func _get_arena_rect() -> Rect2:
-	var scene = get_tree().current_scene
+	var tree = get_tree()
+	var scene = tree.current_scene if tree != null else null
 	if scene and scene.has_method("_get_current_arena_collision_polygon"):
 		var collision_polygon = scene.call("_get_current_arena_collision_polygon")
 		if collision_polygon:
@@ -1856,7 +1931,8 @@ func _get_arena_rect() -> Rect2:
 	return Rect2(_get_arena_center() - Vector2(420.0, 260.0), Vector2(840.0, 520.0))
 
 func _is_inside_current_arena(point: Vector2, margin: float = 0.0) -> bool:
-	var scene = get_tree().current_scene
+	var tree = get_tree()
+	var scene = tree.current_scene if tree != null else null
 	if scene and scene.has_method("_is_position_safe_in_current_arena"):
 		return scene.call("_is_position_safe_in_current_arena", point, margin)
 	return _get_arena_rect().grow(-margin).has_point(point)
@@ -1870,7 +1946,8 @@ func _is_point_inside_iso_aoe(point: Vector2, center: Vector2, radius: float) ->
 	return normalized_x * normalized_x + normalized_y * normalized_y <= 1.0
 
 func _clamp_to_current_arena(point: Vector2, margin: float = 0.0) -> Vector2:
-	var scene = get_tree().current_scene
+	var tree = get_tree()
+	var scene = tree.current_scene if tree != null else null
 	if scene and scene.has_method("clamp_position_to_current_arena"):
 		return scene.call("clamp_position_to_current_arena", point, margin)
 	var rect = _get_arena_rect().grow(-margin)
@@ -1918,8 +1995,13 @@ func _spawn_line_telegraph(from_position: Vector2, to_position: Vector2, color: 
 	line.default_color = _with_alpha(color, 0.45)
 	line.points = PackedVector2Array([Vector2.ZERO, to_position - from_position])
 	telegraph.add_child(line)
-	_add_child_at_global(_get_ground_area_vfx_parent(), telegraph, from_position)
-	var timer = get_tree().create_timer(duration, false)
+	if not _add_child_at_global(_get_ground_area_vfx_parent(), telegraph, from_position):
+		return telegraph
+
+	var tree = get_tree()
+	if tree == null:
+		return telegraph
+	var timer = tree.create_timer(duration, false)
 	timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(telegraph))
 	return telegraph
 
@@ -1931,8 +2013,13 @@ func _spawn_falling_warning(spawn_position: Vector2, color: Color, duration: flo
 	line.points = PackedVector2Array([Vector2.ZERO, Vector2(0.0, MAX_BOSS_CIRCLE_VFX_RADIUS)])
 	warning.add_child(line)
 	_add_ring_visual(warning, 11.0, _with_alpha(color, 0.72), 2.0, 0)
-	_add_child_at_global(_get_ground_area_vfx_parent(), warning, spawn_position)
-	var timer = get_tree().create_timer(duration, false)
+	if not _add_child_at_global(_get_ground_area_vfx_parent(), warning, spawn_position):
+		return warning
+
+	var tree = get_tree()
+	if tree == null:
+		return warning
+	var timer = tree.create_timer(duration, false)
 	timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(warning))
 	return warning
 
@@ -1946,7 +2033,7 @@ func _add_loop_particles(parent: Node, particle_name: String, color: Color, amou
 	particles.gravity = Vector2.ZERO
 	particles.initial_velocity_min = min_velocity
 	particles.initial_velocity_max = max_velocity
-	particles.color = color
+	particles.color = _get_area_aura_vfx_color(color)
 	particles.z_index = visual_z_index
 	parent.add_child(particles)
 	particles.emitting = true
@@ -1968,18 +2055,24 @@ func _spawn_marker_on_node(target: Node2D, radius: float, color: Color, duration
 
 func _spawn_circle_telegraph(center: Vector2, radius: float, color: Color, duration: float) -> Node2D:
 	radius = min(radius, MAX_BOSS_CIRCLE_VFX_RADIUS)
+	var vfx_color = _get_area_aura_vfx_color(color)
 	var telegraph = Node2D.new()
 	var fill = Polygon2D.new()
 	fill.polygon = _build_iso_ellipse_points(radius, false)
-	fill.color = color
+	fill.color = vfx_color
 	telegraph.add_child(fill)
 	var ring = Line2D.new()
 	ring.width = 2.0
-	ring.default_color = Color(color.r, color.g, color.b, min(color.a + 0.24, 1.0))
+	ring.default_color = Color(vfx_color.r, vfx_color.g, vfx_color.b, min(vfx_color.a + 0.24, 1.0))
 	ring.points = _build_iso_ellipse_points(radius, true)
 	telegraph.add_child(ring)
-	_add_child_at_global(_get_ground_area_vfx_parent(), telegraph, center)
-	var timer = get_tree().create_timer(duration, false)
+	if not _add_child_at_global(_get_ground_area_vfx_parent(), telegraph, center):
+		return telegraph
+
+	var tree = get_tree()
+	if tree == null:
+		return telegraph
+	var timer = tree.create_timer(duration, false)
 	timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(telegraph))
 	return telegraph
 
@@ -1987,22 +2080,30 @@ func _spawn_rect_telegraph(center: Vector2, size: Vector2, rect_rotation: float,
 	var telegraph = Node2D.new()
 	var fill = Polygon2D.new()
 	fill.polygon = _build_rect_points(size)
-	fill.color = color
+	fill.color = _get_area_aura_vfx_color(color)
 	telegraph.add_child(fill)
-	_add_child_at_global(_get_ground_area_vfx_parent(), telegraph, center, rect_rotation)
-	var timer = get_tree().create_timer(duration, false)
+	if not _add_child_at_global(_get_ground_area_vfx_parent(), telegraph, center, rect_rotation):
+		return telegraph
+
+	var tree = get_tree()
+	if tree == null:
+		return telegraph
+	var timer = tree.create_timer(duration, false)
 	timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(telegraph))
 	return telegraph
 
 func _spawn_ring_vfx(center: Vector2, radius: float, color: Color, duration: float) -> Node2D:
 	radius = min(radius, MAX_BOSS_CIRCLE_VFX_RADIUS)
+	var vfx_color = _get_area_aura_vfx_color(color)
 	var node = Node2D.new()
 	var ring = Line2D.new()
 	ring.width = 3.0
-	ring.default_color = color
+	ring.default_color = vfx_color
 	ring.points = _build_iso_ellipse_points(radius, true)
 	node.add_child(ring)
-	_add_child_at_global(_get_ground_area_vfx_parent(), node, center)
+	if not _add_child_at_global(_get_ground_area_vfx_parent(), node, center):
+		return node
+
 	var tween = create_tween().bind_node(node)
 	tween.tween_property(node, "modulate:a", 0.0, duration)
 	tween.tween_callback(Callable(self, "_queue_free_if_valid").bind(node))
@@ -2010,21 +2111,25 @@ func _spawn_ring_vfx(center: Vector2, radius: float, color: Color, duration: flo
 
 func _spawn_attached_aura(radius: float, color: Color, duration: float) -> void:
 	radius = min(radius, MAX_BOSS_CIRCLE_VFX_RADIUS)
+	var vfx_color = _get_area_aura_vfx_color(color)
 	var aura = Node2D.new()
 	add_child(aura)
 	move_child(aura, 0)
 	var fill = Polygon2D.new()
 	fill.polygon = _build_iso_ellipse_points(radius, false)
-	var fill_color = color
+	var fill_color = vfx_color
 	fill_color.a *= 0.16
 	fill.color = fill_color
 	aura.add_child(fill)
 	var ring = Line2D.new()
 	ring.width = 2.0
-	ring.default_color = color
+	ring.default_color = vfx_color
 	ring.points = _build_iso_ellipse_points(radius, true)
 	aura.add_child(ring)
-	var timer = get_tree().create_timer(duration, false)
+	var tree = get_tree()
+	if tree == null:
+		return
+	var timer = tree.create_timer(duration, false)
 	timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(aura))
 
 func _spawn_burst_particles(spawn_position: Vector2, color: Color, amount: int = 22, lifetime: float = 0.28, velocity_amount: float = 120.0) -> void:
@@ -2040,9 +2145,14 @@ func _spawn_burst_particles(spawn_position: Vector2, color: Color, amount: int =
 	particles.initial_velocity_max = velocity_amount
 	particles.color = color
 	particles.z_index = 35
-	_add_child_at_global(_get_vfx_parent(), particles, spawn_position)
+	if not _add_child_at_global(_get_vfx_parent(), particles, spawn_position):
+		return
+
 	particles.emitting = true
-	var timer = get_tree().create_timer(lifetime + 0.2, false)
+	var tree = get_tree()
+	if tree == null:
+		return
+	var timer = tree.create_timer(lifetime + 0.2, false)
 	timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(particles))
 
 func _spawn_heal_particles(spawn_position: Vector2) -> void:

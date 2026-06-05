@@ -1,5 +1,6 @@
 [gd_scene format=3 uid="uid://xywhrxgsjyey"]
 
+[ext_resource type="Texture2D" uid="uid://bimnjcjw2128v" path="res://Sprites/Menu/menu_recoil.jpg" id="2_disip"]
 [ext_resource type="Script" uid="uid://bre3maa3yjpb6" path="res://Scripts/HUDs/main_menu.gd" id="2_lhkw5"]
 [ext_resource type="Texture2D" uid="uid://dqwkp7u2muh1x" path="res://Sprites/Menu/Play_button_normal.png" id="2_xe10a"]
 [ext_resource type="Script" uid="uid://cbu5wg2uwwswg" path="res://Scripts/HUDs/h_slider.gd" id="3_7yn15"]
@@ -43,21 +44,24 @@ offset_bottom = 650.0
 
 [node name="Titulo" type="MarginContainer" parent="Menu" unique_id=1941741753]
 layout_mode = 0
-offset_left = 563.0
-offset_top = 62.00001
-offset_right = 603.0
-offset_bottom = 102.000015
+offset_left = 478.0
+offset_top = 94.0
+offset_right = 838.0
+offset_bottom = 158.0
 scale = Vector2(0.62, 0.62)
 
 [node name="Titulo" type="Sprite2D" parent="Menu/Titulo" unique_id=1359029706]
+position = Vector2(158.06447, 370.9677)
+scale = Vector2(3.3539069, 1.6803236)
+texture = ExtResource("2_disip")
 
 [node name="MarginContainer" type="MarginContainer" parent="Menu" unique_id=144147291]
 custom_minimum_size = Vector2(146, 40)
 layout_mode = 0
 offset_left = 478.0
-offset_top = 212.0
+offset_top = 235.0
 offset_right = 670.0
-offset_bottom = 271.0
+offset_bottom = 294.0
 
 [node name="PlayButton" type="TextureButton" parent="Menu/MarginContainer" unique_id=223760500]
 custom_minimum_size = Vector2(146, 40)
@@ -74,9 +78,9 @@ stretch_mode = 0
 custom_minimum_size = Vector2(146, 40)
 layout_mode = 0
 offset_left = 478.0
-offset_top = 295.0
+offset_top = 318.0
 offset_right = 670.0
-offset_bottom = 354.0
+offset_bottom = 377.0
 
 [node name="OptionsButton" type="TextureButton" parent="Menu/MarginContainer2" unique_id=1692633453]
 custom_minimum_size = Vector2(146, 40)
@@ -93,9 +97,9 @@ stretch_mode = 0
 custom_minimum_size = Vector2(146, 40)
 layout_mode = 0
 offset_left = 478.0
-offset_top = 384.0
+offset_top = 407.0
 offset_right = 670.0
-offset_bottom = 443.0
+offset_bottom = 466.0
 
 [node name="RankingButton" type="TextureButton" parent="Menu/MarginContainer3" unique_id=925690450]
 custom_minimum_size = Vector2(146, 40)
@@ -112,9 +116,9 @@ stretch_mode = 0
 custom_minimum_size = Vector2(146, 40)
 layout_mode = 0
 offset_left = 478.0
-offset_top = 468.0
+offset_top = 491.0
 offset_right = 670.0
-offset_bottom = 527.0
+offset_bottom = 550.0
 
 [node name="ExitButton" type="TextureButton" parent="Menu/MarginContainer4" unique_id=1527520183]
 custom_minimum_size = Vector2(146, 40)
@@ -132,9 +136,9 @@ process_mode = 3
 visible = false
 layout_mode = 0
 offset_left = 284.0
-offset_top = 110.0
+offset_top = 134.0
 offset_right = 340.0
-offset_bottom = 139.0
+offset_bottom = 163.0
 scale = Vector2(10, 14.852)
 theme_override_styles/panel = SubResource("StyleBoxFlat_7yn15")
 

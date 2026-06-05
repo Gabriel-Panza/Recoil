@@ -228,53 +228,63 @@ func _on_level_updated(level, current_xp, xp_to_next_level) -> void:
 	$ProgressBar.max_value = xp_to_next_level
 	level_up_popup.show_popup(player.level_up_context, player.level_up_boss_pecado)
 
-func _apply_effect(option: String) -> void:
-	if player.has_method("is_active_ability_id") and player.is_active_ability_id(option):
-		if not player.learn_active_ability(option):
-			_show_active_discard_popup(option)
+func _apply_effect(option) -> void:
+	var option_data = option if option is Dictionary else {}
+	var option_id = str(option_data.get("id", option))
+	var stat_multiplier = _get_option_stat_multiplier(option_data)
+
+	if player.has_method("is_active_ability_id") and player.is_active_ability_id(option_id):
+		if not player.learn_active_ability(option_id):
+			_show_active_discard_popup(option_id)
 		return
 
-	if _is_rare_option(option):
-		var can_equip_rare = player.can_equip_rare_passive(option) if player.has_method("can_equip_rare_passive") else player.current_rare_option == "" or player.current_rare_option == option
+	if _is_rare_option(option_id):
+		var can_equip_rare = player.can_equip_rare_passive(option_id) if player.has_method("can_equip_rare_passive") else player.current_rare_option == "" or player.current_rare_option == option_id
 		if not can_equip_rare:
 			var equipped_rares = player.get_rare_passive_options() if player.has_method("get_rare_passive_options") else [player.current_rare_option]
-			level_up_popup.show_rare_discard_popup(equipped_rares, option)
+			level_up_popup.show_rare_discard_popup(equipped_rares, option_id)
 			return
 
-		_equip_rare_option(option)
+		_equip_rare_option(option_id)
 		return
 
-	match option:
+	match option_id:
 		"option_1":
-			player.add_recoil_force_bonus(0.05)
+			player.add_recoil_force_bonus(0.05 * stat_multiplier)
 		"option_2":
-			player.current_health += player.current_health * 0.05
-			player.max_health += player.max_health * 0.05
+			var health_bonus = 0.05 * stat_multiplier
+			var health_gain = player.current_health * health_bonus
+			player.max_health += player.max_health * health_bonus
+			player.heal(health_gain)
 			_on_hp_updated(player.current_health, player.max_health)
 		"option_3":
-			player.attack_damage += player.attack_damage * 0.15
+			player.attack_damage += player.attack_damage * 0.15 * stat_multiplier
 		"option_4":
-			player.add_attack_speed_bonus(0.05)
+			player.add_attack_speed_bonus(0.05 * stat_multiplier)
 		"option_5":
-			player.add_projectile_size_bonus(0.05)
+			player.add_projectile_size_bonus(0.05 * stat_multiplier)
 		"option_6":
-			player.add_heal_after_wave_bonus(0.03)
+			player.add_heal_after_wave_bonus(0.03 * stat_multiplier)
+		"option_7":
+			player.add_dash_cooldown_reduction_bonus(0.05 * stat_multiplier)
 		"glass_canon":
-			player.attack_damage += player.attack_damage * 0.5
-			player.max_health = int(player.max_health * 0.75)
+			player.attack_damage += player.attack_damage * 0.5 * stat_multiplier
+			player.max_health = int(player.max_health * _get_remaining_stat_multiplier(0.25, stat_multiplier))
 			player.current_health = min(player.current_health, player.max_health)
 			_on_hp_updated(player.current_health, player.max_health)
 		"tanky":
-			player.max_health = int(player.max_health * 1.25)
-			player.current_health = int(min(player.current_health * 1.25, player.max_health))
-			player.attack_damage *= 0.5
+			var max_health_multiplier = 1.0 + 0.25 * stat_multiplier
+			var health_gain = player.current_health * (max_health_multiplier - 1.0)
+			player.max_health = int(player.max_health * max_health_multiplier)
+			player.heal(health_gain)
+			player.attack_damage *= _get_remaining_stat_multiplier(0.5, stat_multiplier)
 			_on_hp_updated(player.current_health, player.max_health)
 		"deadly_slow":
-			player.multiply_base_recoil_force(0.5)
-			player.attack_damage *= 2.0
+			player.multiply_base_recoil_force(_get_remaining_stat_multiplier(0.25, stat_multiplier))
+			player.attack_damage += player.attack_damage * 0.75 * stat_multiplier
 		"fast_but_small":
-			player.add_attack_speed_bonus(0.3)
-			player.add_projectile_size_bonus(-0.3)
+			player.add_attack_speed_bonus(0.3 * stat_multiplier)
+			player.add_projectile_size_bonus(-0.3 * stat_multiplier)
 		"sloth_slow_aura":
 			player.sloth_slow_aura_enabled = true
 		"gluttony_heal_kill":
@@ -289,6 +299,12 @@ func _apply_effect(option: String) -> void:
 			player.greed_cursed_level_enabled = true
 
 	_finish_effect_application()
+
+func _get_option_stat_multiplier(option_data: Dictionary) -> float:
+	return max(float(option_data.get("stat_multiplier", 1.0)), 0.0)
+
+func _get_remaining_stat_multiplier(base_penalty: float, stat_multiplier: float) -> float:
+	return max(1.0 - base_penalty * stat_multiplier, 0.01)
 
 func _is_rare_option(option: String) -> bool:
 	return option in Global.RARE_OPTION_IDS
@@ -322,6 +338,11 @@ func _apply_rare_effect(option: String) -> void:
 				player.double_dash_charges = player.max_dash_charges
 		"Offensive_Dash":
 			player.offensive_dash_enabled = true
+		"Thorn_Clothes":
+			if player.has_method("enable_thorn_clothes"):
+				player.enable_thorn_clothes()
+			else:
+				player.thorn_clothes_enabled = true
 
 func _remove_rare_effect(option: String) -> void:
 	match option:
@@ -340,6 +361,11 @@ func _remove_rare_effect(option: String) -> void:
 				player.double_dash_charges = min(player.double_dash_charges, player.max_dash_charges)
 		"Offensive_Dash":
 			player.offensive_dash_enabled = false
+		"Thorn_Clothes":
+			if player.has_method("disable_thorn_clothes"):
+				player.disable_thorn_clothes()
+			else:
+				player.thorn_clothes_enabled = false
 
 func _finish_effect_application() -> void:
 	if player.pause_control:

@@ -22,6 +22,7 @@ var attack_label: Label
 var atk_speed_label: Label
 var recoil_label: Label
 var heal_after_wave_label: Label
+var dash_cooldown_label: Label
 var active_skill_e_label: Label
 var active_skill_r_label: Label
 var game_over: Panel
@@ -39,6 +40,7 @@ func _ready() -> void:
 	atk_speed_label = get_node_or_null(ATK_SPEED_LABEL_PATH)
 	recoil_label = get_node_or_null(RECOIL_LABEL_PATH)
 	_setup_heal_after_wave_label()
+	_setup_dash_cooldown_label()
 	active_skill_e_label = get_node_or_null(ACTIVE_SKILL_E_LABEL_PATH)
 	active_skill_r_label = get_node_or_null(ACTIVE_SKILL_R_LABEL_PATH)
 	game_over = get_node_or_null(GAME_OVER_PATH)
@@ -69,6 +71,30 @@ func _setup_heal_after_wave_label() -> void:
 		stats_container.move_child(heal_after_wave_label, recoil_label.get_index() + 1)
 
 	heal_after_wave_label.visible = false
+
+func _setup_dash_cooldown_label() -> void:
+	if recoil_label == null:
+		return
+
+	var stats_container = recoil_label.get_parent()
+	if stats_container == null:
+		return
+
+	dash_cooldown_label = stats_container.get_node_or_null("DashCooldown")
+	if dash_cooldown_label == null:
+		dash_cooldown_label = Label.new()
+		dash_cooldown_label.name = "DashCooldown"
+		dash_cooldown_label.layout_mode = 2
+		dash_cooldown_label.mouse_filter = Control.MOUSE_FILTER_STOP
+		dash_cooldown_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		dash_cooldown_label.add_theme_color_override("font_color", Color(0.45, 0.74, 1.0, 1.0))
+		dash_cooldown_label.add_theme_constant_override("outline_size", 4)
+		dash_cooldown_label.add_theme_font_size_override("font_size", 20)
+		stats_container.add_child(dash_cooldown_label)
+		var insert_after = heal_after_wave_label if heal_after_wave_label != null else recoil_label
+		stats_container.move_child(dash_cooldown_label, insert_after.get_index() + 1)
+
+	dash_cooldown_label.visible = false
 	
 func _process(_delta: float) -> void:
 	update_status_labels()
@@ -119,12 +145,24 @@ func _on_h_slider_2_value_changed(value: float) -> void:
 		som.set_volume_db(value)
 
 func _on_retry_button_pressed() -> void:
+	_finish_current_run_if_end_screen_visible()
 	get_tree().paused = false
 	get_tree().reload_current_scene()
 
 func _on_menu_button_pressed() -> void:
+	_finish_current_run_if_end_screen_visible()
 	get_tree().paused = false
 	get_tree().change_scene_to_file("res://Cenas/HUDs/MainMenu.tscn")
+
+func _finish_current_run_if_end_screen_visible() -> void:
+	if not _is_end_screen_visible():
+		return
+
+	if game_scene and game_scene.has_method("finish_run"):
+		if game_scene.finish_run():
+			return
+
+	Global.finish_current_run()
 
 func update_status_labels() -> void:
 	if player:
@@ -156,6 +194,15 @@ func update_status_labels() -> void:
 				var max_heal_after_wave_percent = player.get_max_heal_after_wave_percent() if player.has_method("get_max_heal_after_wave_percent") else 15.0
 				heal_after_wave_label.text = "Heal/Wave: %.1f%%" % heal_after_wave_percent
 				heal_after_wave_label.tooltip_text = "Heals %.1f%% of max health after each enemy wave. Maximum: %.1f%%." % [heal_after_wave_percent, max_heal_after_wave_percent]
+		if dash_cooldown_label:
+			var dash_cooldown_reduction_percent = player.get_dash_cooldown_reduction_percent() if player.has_method("get_dash_cooldown_reduction_percent") else 0.0
+			dash_cooldown_label.visible = dash_cooldown_reduction_percent > 0.0
+			if dash_cooldown_label.visible:
+				var max_dash_cooldown_reduction_percent = player.get_max_dash_cooldown_reduction_percent() if player.has_method("get_max_dash_cooldown_reduction_percent") else 40.0
+				var base_dash_cooldown = player.get_base_dash_cooldown() if player.has_method("get_base_dash_cooldown") else 5.0
+				var current_dash_cooldown = player.get_dash_cooldown() if player.has_method("get_dash_cooldown") else player.dash_cooldown
+				dash_cooldown_label.text = "Dash CD: -%.1f%%" % dash_cooldown_reduction_percent
+				dash_cooldown_label.tooltip_text = "Reduces dash recharge cooldown by %.1f%%. Base cooldown: %.2fs. Current cooldown: %.2fs. Maximum reduction: %.1f%%." % [dash_cooldown_reduction_percent, base_dash_cooldown, current_dash_cooldown, max_dash_cooldown_reduction_percent]
 		_update_active_skill_labels()
 
 func _update_active_skill_labels() -> void:

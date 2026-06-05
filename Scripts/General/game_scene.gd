@@ -8,6 +8,8 @@ const FADE_DURATION: float = 0.4
 const ENEMY_ARENA_PLAYER_POSITION: Vector2 = Vector2(770, 414)
 const SPAWN_WALL_PADDING: float = 8.0
 const SPAWN_PLAYER_MIN_DISTANCE: float = 100.0
+const ARENA_CLAMP_BINARY_SEARCH_STEPS: int = 18
+const ARENA_CLAMP_EDGE_NUDGE_MULTIPLIERS = [1.0, 2.0, 4.0, 8.0]
 const WAVE_SPAWN_INTERVAL: float = 0.75
 const CAMERA_LIMIT_MARGIN: int = 50
 const ARENA_TILESET_TEXTURE = preload("res://Sprites/tileset_hell.png")
@@ -119,12 +121,15 @@ func _ready() -> void:
 	Global.start_run_timer()
 	start_next_wave()
 
-func finish_run() -> void:
+func finish_run() -> bool:
 	if run_finished:
-		return
+		return true
+
+	if not Global.finish_current_run():
+		return false
 
 	run_finished = true
-	Global.finish_current_run()
+	return true
 
 func _show_starting_arm_selection() -> void:
 	if $Player == null or not $Player.has_method("apply_starting_arm"):
@@ -566,6 +571,17 @@ func clamp_position_to_current_arena(global_pos: Vector2, safety_margin: float =
 	if _is_position_safe_in_current_arena(global_pos, safety_margin):
 		return global_pos
 
+	var collision_polygon = _get_current_arena_collision_polygon()
+	if collision_polygon == null or collision_polygon.polygon.is_empty():
+		return global_pos
+
+	var global_points = _get_arena_global_polygon_points(collision_polygon)
+	var safe_candidates = []
+	_append_safe_arena_edge_candidates(safe_candidates, global_pos, global_points, safety_margin)
+	_append_safe_arena_anchor_candidates(safe_candidates, global_pos, safety_margin)
+	if not safe_candidates.is_empty():
+		return _get_closest_arena_candidate(global_pos, safe_candidates)
+
 	var center = _get_current_arena_center()
 	if not _is_position_safe_in_current_arena(center, safety_margin):
 		center = current_arena.global_position
@@ -576,7 +592,7 @@ func clamp_position_to_current_arena(global_pos: Vector2, safety_margin: float =
 	var best_position = center
 	var low = 0.0
 	var high = 1.0
-	for i in range(18):
+	for i in range(ARENA_CLAMP_BINARY_SEARCH_STEPS):
 		var mid = (low + high) * 0.5
 		var candidate = center.lerp(global_pos, mid)
 		if _is_position_safe_in_current_arena(candidate, safety_margin):
@@ -586,6 +602,85 @@ func clamp_position_to_current_arena(global_pos: Vector2, safety_margin: float =
 			high = mid
 
 	return best_position
+
+func _get_arena_global_polygon_points(collision_polygon: CollisionPolygon2D) -> Array:
+	var global_points = []
+	for point in collision_polygon.polygon:
+		global_points.append(collision_polygon.to_global(point))
+	return global_points
+
+func _append_safe_arena_edge_candidates(candidates: Array, global_pos: Vector2, global_points: Array, safety_margin: float) -> void:
+	var point_count = global_points.size()
+	if point_count < 2:
+		return
+
+	var base_nudge = max(safety_margin + 1.0, 1.0)
+	for i in range(point_count):
+		var segment_start: Vector2 = global_points[i]
+		var segment_end: Vector2 = global_points[(i + 1) % point_count]
+		var edge = segment_end - segment_start
+		if edge.length_squared() <= 0.001:
+			continue
+
+		var closest_point = _get_closest_point_on_segment(global_pos, segment_start, segment_end)
+		var normal = Vector2(-edge.y, edge.x).normalized()
+		_try_add_safe_arena_candidate(candidates, closest_point, safety_margin)
+		for direction in [normal, -normal]:
+			for multiplier in ARENA_CLAMP_EDGE_NUDGE_MULTIPLIERS:
+				_try_add_safe_arena_candidate(candidates, closest_point + direction * base_nudge * float(multiplier), safety_margin)
+
+func _append_safe_arena_anchor_candidates(candidates: Array, global_pos: Vector2, safety_margin: float) -> void:
+	var anchors = [
+		_get_current_arena_center(),
+		current_arena.global_position
+	]
+
+	for anchor in anchors:
+		if not _is_position_safe_in_current_arena(anchor, 0.0):
+			continue
+		_try_add_safe_arena_candidate(candidates, anchor, safety_margin)
+		_try_add_safe_arena_ray_candidate(candidates, anchor, global_pos, safety_margin)
+
+func _try_add_safe_arena_ray_candidate(candidates: Array, safe_anchor: Vector2, target_pos: Vector2, safety_margin: float) -> void:
+	var best_position = safe_anchor
+	var found_safe_position = _is_position_safe_in_current_arena(safe_anchor, safety_margin)
+	var low = 0.0
+	var high = 1.0
+	for i in range(ARENA_CLAMP_BINARY_SEARCH_STEPS):
+		var mid = (low + high) * 0.5
+		var candidate = safe_anchor.lerp(target_pos, mid)
+		if _is_position_safe_in_current_arena(candidate, safety_margin):
+			best_position = candidate
+			found_safe_position = true
+			low = mid
+		else:
+			high = mid
+
+	if found_safe_position:
+		_try_add_safe_arena_candidate(candidates, best_position, safety_margin)
+
+func _try_add_safe_arena_candidate(candidates: Array, candidate: Vector2, safety_margin: float) -> void:
+	if _is_position_safe_in_current_arena(candidate, safety_margin):
+		candidates.append(candidate)
+
+func _get_closest_arena_candidate(global_pos: Vector2, candidates: Array) -> Vector2:
+	var closest_position: Vector2 = candidates[0]
+	var closest_distance = global_pos.distance_squared_to(closest_position)
+	for candidate in candidates:
+		var distance = global_pos.distance_squared_to(candidate)
+		if distance < closest_distance:
+			closest_distance = distance
+			closest_position = candidate
+	return closest_position
+
+func _get_closest_point_on_segment(point: Vector2, segment_start: Vector2, segment_end: Vector2) -> Vector2:
+	var segment = segment_end - segment_start
+	var segment_length_squared = segment.length_squared()
+	if segment_length_squared <= 0.001:
+		return segment_start
+
+	var t = clamp((point - segment_start).dot(segment) / segment_length_squared, 0.0, 1.0)
+	return segment_start + segment * t
 
 func _is_position_safe_in_current_arena(global_pos: Vector2, safety_margin: float = 0.0) -> bool:
 	if not _is_position_inside_current_arena(global_pos):
