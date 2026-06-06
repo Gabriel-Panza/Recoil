@@ -38,14 +38,13 @@ func mover(_delta: float) -> void:
 
 	if distance_to_player > attack_range:
 		var direction = global_position.direction_to(player.global_position)
-		velocity = direction * speed
+		_move_with_obstacle_avoidance(direction, speed, _delta)
 	elif distance_to_player < stop_distance:
 		var direction = player.global_position.direction_to(global_position)
-		velocity = direction * speed
+		_move_with_obstacle_avoidance(direction, speed, _delta)
 	else:
-		velocity = Vector2.ZERO
-
-	move_and_slide()
+		velocity = _get_idle_soft_separation_velocity(speed)
+		move_and_slide()
 
 func handle_shooting(delta: float) -> void:
 	var distance_to_player = global_position.distance_to(player.global_position)

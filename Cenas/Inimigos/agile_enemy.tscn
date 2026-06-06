@@ -83,11 +83,11 @@ animations = [{
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_w1xt7"]
 radius = 15.0
-height = 50.0
+height = 36.0
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_erstm"]
 radius = 17.0
-height = 54.0
+height = 40.0
 
 [node name="AgileEnemy" type="CharacterBody2D" unique_id=371555087]
 collision_layer = 4
@@ -95,7 +95,7 @@ script = ExtResource("1_ju8yt")
 
 [node name="AnimatedAppearence" type="AnimatedSprite2D" parent="." unique_id=2027991643]
 position = Vector2(-4.2500005, 7.1054274e-15)
-scale = Vector2(0.8508771, 0.99999994)
+scale = Vector2(0.75, 0.75)
 sprite_frames = SubResource("SpriteFrames_wkwyb")
 autoplay = "default"
 

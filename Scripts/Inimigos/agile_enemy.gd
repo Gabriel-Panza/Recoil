@@ -6,6 +6,11 @@ class_name AgileEnemy
 @export var time_to_dash: float = 3.5 
 @export var dash_duration: float = 0.75 
 
+const AGILE_SPRITESHEET: String = "res://Sprites/demonho_agile.png"
+const AGILE_FRAME_SIZE: Vector2i = Vector2i(26, 21)
+const AGILE_FRAMES_PER_ROW: int = 1
+const AGILE_FRAME_SPACING: Vector2i = Vector2i(0, 1)
+
 var state_timer: float = 0.0
 var is_dashing: bool = false
 var dash_direction: Vector2 = Vector2.ZERO
@@ -20,6 +25,8 @@ func _ready() -> void:
 	max_health = 50 + ((Global.pecado - 1) * 25)
 	current_health = max_health
 	speed *= 1.67
+	_configure_enemy_sprite_sheet(AGILE_SPRITESHEET, AGILE_FRAME_SIZE, AGILE_FRAMES_PER_ROW, ["walk"], {}, 6.0, Vector2(1.45, 1.45), AGILE_FRAME_SPACING)
+	_play_pecado_animation()
 
 func mover(_delta: float) -> void:
 	var dir_to_player = global_position.direction_to(player.global_position)
@@ -58,7 +65,7 @@ func mover(_delta: float) -> void:
 			distance_correction = -1.0
 			
 		var move_dir = (tangent + (dir_to_player * distance_correction)).normalized()
-		velocity = move_dir * speed
+		velocity = _get_obstacle_aware_velocity(move_dir, speed, _delta)
 		
 		# Prepara o dash.
 		if state_timer >= time_to_dash:
