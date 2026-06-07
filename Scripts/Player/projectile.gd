@@ -130,6 +130,11 @@ func _is_wall_body(body: Node) -> bool:
 func _get_arena_bounce_normal() -> Vector2:
 	var tree = get_tree()
 	var scene = tree.current_scene if tree != null else null
+	if scene != null and scene.has_method("_get_current_arena_edge_normal"):
+		var edge_normal = scene.call("_get_current_arena_edge_normal", global_position)
+		if edge_normal is Vector2 and edge_normal != Vector2.ZERO:
+			return edge_normal
+
 	if scene != null and scene.has_method("_get_current_arena_bounds"):
 		var arena_bounds: Rect2 = scene.call("_get_current_arena_bounds")
 		if arena_bounds.size != Vector2.ZERO:

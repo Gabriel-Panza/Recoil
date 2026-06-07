@@ -2,7 +2,7 @@ extends RangedEnemy
 class_name SpreadEnemy
 
 @export var bullets_per_shot: int = 5
-@export var spread_angle: float = 10.0
+@export var spread_angle: float = 12.0
 
 const SPREAD_SPRITESHEET: String = "res://Sprites/demonho_spread.png"
 const SPREAD_FRAME_SIZE: Vector2i = Vector2i(36, 36)
@@ -12,7 +12,7 @@ const SPREAD_STATES: Array = ["walk", "charge", "shoot"]
 func _ready() -> void:
 	super()
 
-	max_health = 80 + ((Global.pecado - 1) * 20)
+	max_health = 80 + ((Global.pecado - 1) * 25)
 	current_health = max_health
 	_configure_enemy_sprite_sheet(SPREAD_SPRITESHEET, SPREAD_FRAME_SIZE, SPREAD_FRAMES_PER_ROW, SPREAD_STATES, {}, 7.0, Vector2(1.18, 1.18))
 	_play_pecado_animation("walk")

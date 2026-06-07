@@ -39,6 +39,7 @@ func _ready() -> void:
 	level_up_popup.connect("option_selected", Callable(self, "_apply_effect"))
 	level_up_popup.connect("active_discard_selected", Callable(self, "_on_active_discard_selected"))
 	level_up_popup.connect("rare_discard_selected", Callable(self, "_on_rare_discard_selected"))
+	level_up_popup.connect("boss_passive_discard_selected", Callable(self, "_on_boss_passive_discard_selected"))
 	
 	if player and camera:
 		hud_offset = global_position - camera.global_position
@@ -117,7 +118,7 @@ func _setup_passive_status_label() -> void:
 	passive_status_label.size = Vector2(SKILL_STATUS_LIST_WIDTH - 20.0, SKILL_STATUS_LIST_MIN_HEIGHT)
 	passive_status_label.z_index = 0
 	passive_status_label.mouse_filter = Control.MOUSE_FILTER_STOP
-	passive_status_label.add_theme_color_override("font_color", Color(1.0, 0.58, 0.16, 1.0))
+	passive_status_label.add_theme_color_override("font_color", Color(1.0, 1.0, 0.3, 1.0))
 	passive_status_label.add_theme_constant_override("outline_size", 3)
 	passive_status_label.add_theme_font_size_override("font_size", 13)
 	passive_status_label.text = "- None"
@@ -132,7 +133,7 @@ func _create_active_skill_hud_label(label_name: String, label_position: Vector2)
 	label.size = Vector2(SKILL_STATUS_LIST_WIDTH - 56.0, 20.0)
 	label.z_index = 0
 	label.mouse_filter = Control.MOUSE_FILTER_STOP
-	label.add_theme_color_override("font_color", Color(1.0, 1.0, 0.35, 1.0))
+	label.add_theme_color_override("font_color", Color(1.0, 1.0, 0.3, 1.0))
 	label.add_theme_constant_override("outline_size", 3)
 	label.add_theme_font_size_override("font_size", 14)
 	label.text = "None"
@@ -161,29 +162,48 @@ func _update_passive_status_label() -> void:
 	if passive_status_label == null or player == null:
 		return
 
-	var summaries: Array = []
-	if player.has_method("get_equipped_passive_summaries"):
-		summaries = player.get_equipped_passive_summaries()
+	var boss_summaries: Array = []
+	if player.has_method("get_equipped_boss_passive_summaries"):
+		boss_summaries = player.get_equipped_boss_passive_summaries()
 
+	var rare_summaries: Array = []
+	if player.has_method("get_equipped_rare_passive_summaries"):
+		rare_summaries = player.get_equipped_rare_passive_summaries()
+
+	var passive_lines := PackedStringArray([
+		"BOSS PASSIVES:",
+		_get_special_passive_slot_text(boss_summaries, 0),
+		_get_special_passive_slot_text(boss_summaries, 1),
+		"RARE PASSIVES:",
+		_get_special_passive_slot_text(rare_summaries, 0),
+		_get_special_passive_slot_text(rare_summaries, 1)
+	])
+	var tooltip_lines := PackedStringArray()
+	_append_passive_tooltip_lines(tooltip_lines, "Boss Passives", boss_summaries)
+	_append_passive_tooltip_lines(tooltip_lines, "Rare Passives", rare_summaries)
+
+	passive_status_label.text = "\n".join(passive_lines)
+	passive_status_label.tooltip_text = "\n".join(tooltip_lines) if not tooltip_lines.is_empty() else "No special passives equipped"
+	_update_skill_status_background(passive_lines.size())
+
+func _get_special_passive_slot_text(summaries: Array, slot_index: int) -> String:
+	if slot_index >= summaries.size():
+		return "- None"
+
+	var summary = summaries[slot_index]
+	return "- %s" % str(summary.get("name", "Passive"))
+
+func _append_passive_tooltip_lines(tooltip_lines: PackedStringArray, section_name: String, summaries: Array) -> void:
 	if summaries.is_empty():
-		passive_status_label.text = "- None"
-		passive_status_label.tooltip_text = "No passive skills equipped"
-		_update_skill_status_background(1)
+		tooltip_lines.append("%s: None" % section_name)
 		return
 
-	var passive_lines := PackedStringArray()
-	var tooltip_lines := PackedStringArray()
 	for summary in summaries:
 		var passive_name = str(summary.get("name", "Passive"))
-		passive_lines.append("- %s" % passive_name)
 		tooltip_lines.append("%s: %s" % [
 			passive_name,
 			str(summary.get("description", ""))
 		])
-
-	passive_status_label.text = "\n".join(passive_lines)
-	passive_status_label.tooltip_text = "\n".join(tooltip_lines)
-	_update_skill_status_background(passive_lines.size())
 
 func _update_skill_status_background(line_count: int) -> void:
 	if skill_status_list_background == null or passive_status_label == null:
@@ -236,6 +256,16 @@ func _apply_effect(option) -> void:
 	if player.has_method("is_active_ability_id") and player.is_active_ability_id(option_id):
 		if not player.learn_active_ability(option_id):
 			_show_active_discard_popup(option_id)
+		return
+
+	if _is_boss_passive_option(option_id):
+		var can_equip_boss_passive = player.can_equip_boss_passive(option_id) if player.has_method("can_equip_boss_passive") else true
+		if not can_equip_boss_passive:
+			var equipped_boss_passives = player.get_boss_passive_options() if player.has_method("get_boss_passive_options") else []
+			level_up_popup.show_boss_passive_discard_popup(equipped_boss_passives, option_id)
+			return
+
+		_equip_boss_passive_option(option_id)
 		return
 
 	if _is_rare_option(option_id):
@@ -308,6 +338,49 @@ func _get_remaining_stat_multiplier(base_penalty: float, stat_multiplier: float)
 
 func _is_rare_option(option: String) -> bool:
 	return option in Global.RARE_OPTION_IDS
+
+func _is_boss_passive_option(option: String) -> bool:
+	return option in Global.SIN_PASSIVE_IDS
+
+func _equip_boss_passive_option(option: String) -> void:
+	var already_equipped = player.has_boss_passive(option) if player.has_method("has_boss_passive") else false
+
+	if player.has_method("equip_boss_passive_id"):
+		player.equip_boss_passive_id(option)
+
+	if not already_equipped:
+		_apply_boss_passive_effect(option)
+	_finish_effect_application()
+
+func _apply_boss_passive_effect(option: String) -> void:
+	match option:
+		"sloth_slow_aura":
+			player.sloth_slow_aura_enabled = true
+		"gluttony_heal_kill":
+			player.gluttony_heal_kill_enabled = true
+		"envy_mirror_shot":
+			player.envy_mirror_shot_enabled = true
+		"wrath_overheat":
+			player.wrath_overheat_enabled = true
+		"lust_for_vengeance":
+			player.lust_for_vengeance_enabled = true
+		"greed_cursed_level":
+			player.greed_cursed_level_enabled = true
+
+func _remove_boss_passive_effect(option: String) -> void:
+	match option:
+		"sloth_slow_aura":
+			player.sloth_slow_aura_enabled = false
+		"gluttony_heal_kill":
+			player.gluttony_heal_kill_enabled = false
+		"envy_mirror_shot":
+			player.envy_mirror_shot_enabled = false
+		"wrath_overheat":
+			player.wrath_overheat_enabled = false
+		"lust_for_vengeance":
+			player.lust_for_vengeance_enabled = false
+		"greed_cursed_level":
+			player.greed_cursed_level_enabled = false
 
 func _equip_rare_option(option: String) -> void:
 	var already_equipped = player.has_rare_passive(option) if player.has_method("has_rare_passive") else player.current_rare_option == option
@@ -390,6 +463,16 @@ func _on_rare_discard_selected(discarded_option: String, old_option: String, new
 	else:
 		player.current_rare_option = new_option
 	_apply_rare_effect(new_option)
+	_finish_effect_application()
+
+func _on_boss_passive_discard_selected(discarded_option: String, old_option: String, new_option: String) -> void:
+	if discarded_option == new_option:
+		return
+
+	_remove_boss_passive_effect(discarded_option)
+	if player.has_method("replace_boss_passive_id"):
+		player.replace_boss_passive_id(discarded_option, new_option)
+	_apply_boss_passive_effect(new_option)
 	_finish_effect_application()
 
 func _show_active_discard_popup(option: String) -> void:

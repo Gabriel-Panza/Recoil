@@ -29,13 +29,15 @@ const SLOTH_SUMMON_SPAWN_INTERVAL: float = 3.0
 const SLOTH_ZONE_TELEGRAPH_DURATION: float = 0.75
 const SLOTH_ZONE_SPAWN_INTERVAL: float = 1.5
 const SLOTH_SLOW_ZONE_LIFETIME: float = 15.0
-const SLOTH_BOSS_PLAYER_DASH_SPEED_MULTIPLIER: float = 0.25
-const SLOTH_BOSS_PLAYER_VELOCITY_MULTIPLIER: float = 0.5
+const SLOTH_BOSS_PLAYER_DASH_SPEED_MULTIPLIER: float = 0.45
+const SLOTH_BOSS_PLAYER_VELOCITY_MULTIPLIER: float = 0.75
+const SLOTH_BOSS_ZONE_DPS: float = 2.0
 const SLOTH_BOSS_ENEMY_SLOW_EFFECT_RATIO: float = 0.1
 const GLUTTONY_FOOD_SPAWN_INTERVAL: float = 1.75
 const GLUTTONY_STRESS_DURATION_PHASE_1: float = 7.5
 const GLUTTONY_STRESS_DURATION_PHASE_2: float = 10.0
 const ENVY_CLONE_MAX_HEALTH: float = 180.0
+const ENVY_CLONE_VISUAL_MODULATE: Color = Color(0.55, 0.95, 1.0, 0.56)
 const ENVY_PINCER_TELEGRAPH_DURATION: float = 0.75
 const ENVY_SWAP_TELEGRAPH_DURATION: float = 0.75
 const GREED_TREASURE_RADIUS: float = 16.0
@@ -100,6 +102,7 @@ var is_performing_action: bool = false
 
 var active_bombs: Array = []
 var active_slow_zones: Array = []
+var sloth_boss_zone_damage_accumulator: float = 0.0
 var boss_summons: Array = []
 var gluttony_foods: Array = []
 var gluttony_stress_timers: Array = []
@@ -488,10 +491,24 @@ func _update_sloth_slow_zones(delta: float) -> void:
 		if player.has_method("_set_dash_speed_modifier"):
 			player.call("_set_dash_speed_modifier", "sloth_boss_zone", SLOTH_BOSS_PLAYER_DASH_SPEED_MULTIPLIER)
 		player.velocity *= SLOTH_BOSS_PLAYER_VELOCITY_MULTIPLIER
+		_apply_sloth_zone_player_dot(delta)
 	elif player.has_method("_clear_dash_speed_modifier"):
 		player.call("_clear_dash_speed_modifier", "sloth_boss_zone")
 
 	_update_sloth_zone_enemy_slow(enemies_inside_zone)
+
+func _apply_sloth_zone_player_dot(delta: float) -> void:
+	if player == null:
+		return
+
+	sloth_boss_zone_damage_accumulator += SLOTH_BOSS_ZONE_DPS * delta
+	var whole_damage = floori(sloth_boss_zone_damage_accumulator)
+	if whole_damage <= 0:
+		return
+
+	sloth_boss_zone_damage_accumulator -= float(whole_damage)
+	if player.has_method("take_damage"):
+		player.take_damage(float(whole_damage), global_position, 0.0)
 
 func _can_sloth_zone_slow_enemy(enemy: Node) -> bool:
 	return is_instance_valid(enemy) and enemy != self and not enemy.is_in_group(Global.GROUP_BOSS) and enemy.get("speed") != null
@@ -616,17 +633,71 @@ func _create_envy_clone() -> void:
 	envy_clone.set_meta("max_health", ENVY_CLONE_MAX_HEALTH)
 
 	_add_circle_collision(envy_clone, 22.0)
-	_add_circle_visual(envy_clone, 22.0, _with_alpha(ENVY_COLOR, 0.32), 12)
+	_add_player_mirror_clone_visual(envy_clone)
 	_add_ring_visual(envy_clone, 24.0, _with_alpha(ENVY_COLOR, 0.78), 2.0, 13)
 	_add_loop_particles(envy_clone, "EnvyCloneParticles", _with_alpha(ENVY_COLOR, 0.42), 30, 0.65, 12.0, 62.0, 14)
 	_add_small_health_bar(envy_clone, 42.0, Vector2(-21.0, -34.0))
 
 	_add_child_at_global(_get_vfx_parent(), envy_clone, clone_position)
 
+func _add_player_mirror_clone_visual(parent: Node) -> void:
+	if player == null:
+		return
+
+	var player_visual_source = player.get_node_or_null("Aparencia")
+	if player_visual_source == null:
+		return
+
+	var visual = player_visual_source.duplicate()
+	visual.name = "MirroredPlayerCopy"
+	if visual is CanvasItem:
+		(visual as CanvasItem).modulate = ENVY_CLONE_VISUAL_MODULATE
+		(visual as CanvasItem).z_index = 12
+	if visual is Node2D and player_visual_source is Node2D:
+		(visual as Node2D).position = (player_visual_source as Node2D).position
+		(visual as Node2D).scale = (player_visual_source as Node2D).scale
+	if visual is AnimatedSprite2D and player_visual_source is AnimatedSprite2D:
+		var clone_visual = visual as AnimatedSprite2D
+		var player_visual = player_visual_source as AnimatedSprite2D
+		clone_visual.animation = player_visual.animation
+		clone_visual.frame = player_visual.frame
+		clone_visual.flip_h = not player_visual.flip_h
+		clone_visual.play()
+
+	parent.add_child(visual)
+
+func _sync_envy_clone_player_visual() -> void:
+	if player == null or not is_instance_valid(envy_clone):
+		return
+
+	var visual = envy_clone.get_node_or_null("MirroredPlayerCopy")
+	var player_visual_source = player.get_node_or_null("Aparencia")
+	if visual is CanvasItem:
+		(visual as CanvasItem).modulate = ENVY_CLONE_VISUAL_MODULATE
+	if visual is AnimatedSprite2D and player_visual_source is AnimatedSprite2D:
+		var clone_visual = visual as AnimatedSprite2D
+		var player_visual = player_visual_source as AnimatedSprite2D
+		clone_visual.animation = player_visual.animation
+		clone_visual.frame = player_visual.frame
+		clone_visual.flip_h = not player_visual.flip_h
+		if player_visual.is_playing() and not clone_visual.is_playing():
+			clone_visual.play()
+
+func _aim_envy_clone_visual(direction: Vector2) -> void:
+	if not is_instance_valid(envy_clone) or direction == Vector2.ZERO:
+		return
+
+	var visual = envy_clone.get_node_or_null("MirroredPlayerCopy")
+	if visual is AnimatedSprite2D:
+		var clone_visual = visual as AnimatedSprite2D
+		clone_visual.flip_h = direction.x < 0.0
+		clone_visual.play()
+
 func _update_envy_clone(delta: float) -> void:
 	if not is_instance_valid(envy_clone) or player == null:
 		return
 
+	_sync_envy_clone_player_visual()
 	if envy_clone_movement_locked:
 		return
 
@@ -643,6 +714,7 @@ func _update_envy_clone(delta: float) -> void:
 func _start_envy_clone_weapon_telegraph(spawn_position: Vector2, shot_direction: Vector2) -> void:
 	envy_clone_shot_pending = true
 	var telegraph_duration = MIN_TELEGRAPH_DURATION
+	_aim_envy_clone_visual(shot_direction)
 	_spawn_line_telegraph(spawn_position, spawn_position + shot_direction * 160.0, ENVY_COLOR, telegraph_duration, 1.6)
 	await get_tree().create_timer(telegraph_duration, false).timeout
 
@@ -1087,8 +1159,9 @@ func _start_greed_coin_rain() -> void:
 	projectile_count = min(projectile_count, 26)
 	var warning_duration = MIN_TELEGRAPH_DURATION
 	for i in range(projectile_count):
-		var spawn_position = _get_arena_center() + Vector2(randf_range(-360.0, 360.0), -340.0 - randf_range(0.0, 120.0))
-		_spawn_falling_warning(Vector2(spawn_position.x, _get_arena_rect().position.y + 8.0), GREED_COLOR, warning_duration)
+		var target_position = _get_random_arena_position_anywhere(32.0)
+		var spawn_position = target_position + Vector2(0.0, -340.0 - randf_range(0.0, 120.0))
+		_spawn_falling_warning(target_position, GREED_COLOR, warning_duration)
 		await get_tree().create_timer(warning_duration, false).timeout
 		_spawn_enemy_projectile(spawn_position, Vector2.DOWN, float(damage) * 0.72, _with_alpha(GREED_COLOR, 0.95), 520.0)
 		await get_tree().create_timer(0.3 if phase == 2 else 0.5, false).timeout
@@ -1193,18 +1266,7 @@ func _start_pride_edge_bullet_hell(overlap: bool) -> void:
 	_finish_action(1.1 if phase == 1 else 0.85)
 
 func _get_pride_edge_beam_start(index: int) -> Vector2:
-	var rect = _get_arena_rect()
-	var side = (index + randi()) % 4
-	var t = randf_range(0.08, 0.92)
-	match side:
-		0:
-			return Vector2(lerp(rect.position.x, rect.end.x, t), rect.position.y + 8.0)
-		1:
-			return Vector2(lerp(rect.position.x, rect.end.x, t), rect.end.y - 8.0)
-		2:
-			return Vector2(rect.position.x + 8.0, lerp(rect.position.y, rect.end.y, t))
-		_:
-			return Vector2(rect.end.x - 8.0, lerp(rect.position.y, rect.end.y, t))
+	return _get_random_arena_edge_position()
 
 func _spawn_pride_edge_beam(start_position: Vector2, beam_direction: Vector2, telegraph_delay: float, beam_width: float) -> void:
 	if beam_direction == Vector2.ZERO:
@@ -1918,6 +1980,11 @@ func _get_arena_center() -> Vector2:
 func _get_arena_rect() -> Rect2:
 	var tree = get_tree()
 	var scene = tree.current_scene if tree != null else null
+	if scene and scene.has_method("_get_current_arena_bounds"):
+		var arena_bounds = scene.call("_get_current_arena_bounds")
+		if arena_bounds is Rect2:
+			return arena_bounds
+
 	if scene and scene.has_method("_get_current_arena_collision_polygon"):
 		var collision_polygon = scene.call("_get_current_arena_collision_polygon")
 		if collision_polygon:
@@ -1965,7 +2032,34 @@ func _get_random_arena_position_near_player(min_distance: float, max_distance: f
 			return candidate
 	return _get_random_arena_edge_position()
 
+func _get_random_arena_position(margin: float = 0.0) -> Vector2:
+	var tree = get_tree()
+	var scene = tree.current_scene if tree != null else null
+	if scene and scene.has_method("get_random_arena_position"):
+		var arena_position = scene.call("get_random_arena_position", margin)
+		if arena_position is Vector2:
+			return arena_position
+
+	return _get_arena_center()
+
+func _get_random_arena_position_anywhere(margin: float = 0.0) -> Vector2:
+	var tree = get_tree()
+	var scene = tree.current_scene if tree != null else null
+	if scene and scene.has_method("get_random_arena_position_anywhere"):
+		var arena_position = scene.call("get_random_arena_position_anywhere", margin)
+		if arena_position is Vector2:
+			return arena_position
+
+	return _get_random_arena_position(margin)
+
 func _get_random_arena_edge_position() -> Vector2:
+	var tree = get_tree()
+	var scene = tree.current_scene if tree != null else null
+	if scene and scene.has_method("get_random_arena_edge_position"):
+		var arena_position = scene.call("get_random_arena_edge_position", 32.0)
+		if arena_position is Vector2:
+			return arena_position
+
 	var rect = _get_arena_rect()
 	for i in range(30):
 		var side = randi() % 4

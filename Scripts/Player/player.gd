@@ -42,13 +42,27 @@ const SHOCKWAVE_DASH_DAMAGE_MULTIPLIER: float = 0.75
 const EXPLOSIVE_KNOCKBACK_IMMUNITY_DURATION: float = 0.35
 const EXPLOSIVE_SHOCKWAVE_COLOR: Color = Color(0.56, 0.34, 0.15, 0.5)
 const EXPLOSIVE_SHOCKWAVE_PARTICLE_COLOR: Color = Color(0.68, 0.42, 0.18, 0.95)
+const PASSIVE_RING_Z_INDEX: int = 10
+const PASSIVE_RING_COLOR: Color = Color(0.72, 0.48, 0.16, 0.36)
+const PASSIVE_RING_SOFT_COLOR: Color = Color(0.72, 0.48, 0.16, 0.24)
+const PASSIVE_RING_DOT_COLOR: Color = Color(0.88, 0.64, 0.22, 0.86)
+const SLOTH_AURA_DPS: float = 2.0
+const SLOTH_FIELD_DPS: float = 5.0
+const SLOTH_FIELD_TICK_INTERVAL: float = 0.1
+const SLOTH_PLAYER_DOT_META: String = "player_sloth_dot_accumulator"
 const DASH_COOLDOWN_REDUCTION_STEP: float = 0.05
 const MAX_DASH_COOLDOWN_REDUCTION: float = 0.4
 const THORN_CLOTHES_DAMAGE_RETURN_MULTIPLIER: float = 0.4
-const DAMAGE_FEEDBACK_COLOR: Color = Color(1.0, 0.08, 0.08, 1.0)
-const HEAL_FEEDBACK_COLOR: Color = Color(0.18, 1.0, 0.32, 1.0)
+const DAMAGE_FEEDBACK_COLOR: Color = Color(1.0, 0.1, 0.1, 1.0)
+const HEAL_FEEDBACK_COLOR: Color = Color(0.1, 1.0, 0.1, 1.0)
 const WRATH_OVERHEAT_SHOT_INTERVAL: int = 4
 const MIRROR_SHOT_DAMAGE_MULTIPLIER: float = 0.5
+const ENVY_CLONE_OFFSET: Vector2 = Vector2(58.0, 0.0)
+const ENVY_CLONE_DAMAGE_MULTIPLIER: float = 0.75
+const ENVY_CLONE_PLAYER_TARGET_CHANCE: float = 0.1
+const ENVY_CLONE_PLAYER_DAMAGE_MULTIPLIER: float = 0.5
+const ENVY_CLONE_VISUAL_MODULATE: Color = Color(0.55, 0.95, 1.0, 0.56)
+const ENVY_CLONE_SHOT_COLOR: Color = Color(0.25, 0.95, 1.0, 0.9)
 const MAX_PROJECTILE_SIZE_MULTIPLIER: float = 2.0
 const MIN_PROJECTILE_SIZE_MULTIPLIER: float = 0.5
 const MAX_HEAL_AFTER_WAVE_BONUS: float = 0.15
@@ -78,6 +92,8 @@ var level_up_boss_pecado: int = 0
 var current_rare_option: String = ""
 var current_rare_options: Array = []
 const MAX_RARE_PASSIVE_OPTIONS: int = 2
+var current_boss_passive_options: Array = []
+const MAX_BOSS_PASSIVE_OPTIONS: int = 2
 const SHIELD_COOLDOWN: float = 12.0
 const SHIELD_VISUAL_RADIUS: float = 24.0
 var shield_protection_enabled: bool = false
@@ -101,6 +117,7 @@ var damage_taken_multiplier: float = 1.0
 var temporary_attack_multiplier: float = 1.0
 var sloth_aura_vfx: Node2D
 var envy_clone_vfx: Node2D
+var envy_clone_fire_timer: float = 0.0
 var passive_status_vfx: Dictionary = {}
 
 # --- SISTEMA DE DANO CONTÍNUO ---
@@ -554,7 +571,10 @@ func _physics_process(delta: float) -> void:
 
 	if sloth_slow_aura_enabled:
 		_ensure_sloth_slow_aura_vfx()
-		_apply_sloth_slow_aura()
+		_apply_sloth_slow_aura(delta)
+
+	if envy_clone_active:
+		_update_envy_clone_active(delta)
 
 	_update_passive_status_vfx(delta)
 
@@ -589,10 +609,6 @@ func shoot(direction: Vector2) -> void:
 
 		if envy_mirror_shot_enabled:
 			_spawn_mirror_shot(global_position, final_angle, shot_damage)
-
-		if envy_clone_active:
-			var clone_position = global_position + Vector2(48, 0)
-			_spawn_projectile(clone_position, _get_clone_random_shot_angle(clone_position), shot_damage * 0.75, true, Color(0.25, 0.95, 1.0, 0.9))
 
 	_apply_recoil_impulse(direction)
 	if recoil_explosion_enabled:
@@ -651,19 +667,80 @@ func _get_mirrored_shot_angle(source_angle: float) -> float:
 func _spawn_mirror_shot(spawn_position: Vector2, source_angle: float, shot_damage: float) -> void:
 	_spawn_projectile(spawn_position, _get_mirrored_shot_angle(source_angle), shot_damage * MIRROR_SHOT_DAMAGE_MULTIPLIER, false, Color(0.25, 0.95, 1.0, 0.9))
 
-func _get_clone_random_shot_angle(clone_position: Vector2) -> float:
-	var direction_to_player = clone_position.direction_to(global_position)
-	var angle_to_player = direction_to_player.angle()
-	if randf() < 0.18:
-		return angle_to_player + randf_range(-PI / 6.0, PI / 6.0)
+func _update_envy_clone_active(delta: float) -> void:
+	if not is_instance_valid(envy_clone_vfx):
+		return
 
-	for i in range(10):
-		var random_angle = randf_range(-PI, PI)
-		var angle_diff = abs(wrapf(random_angle - angle_to_player, -PI, PI))
-		if angle_diff > PI / 4.0:
-			return random_angle
+	_sync_player_mirror_visual(envy_clone_vfx)
+	envy_clone_fire_timer = max(envy_clone_fire_timer - delta, 0.0)
+	if envy_clone_fire_timer > 0.0:
+		return
 
-	return angle_to_player + PI
+	_fire_envy_clone_auto_shot()
+	envy_clone_fire_timer = max(fire_rate, min_fire_rate)
+
+func _fire_envy_clone_auto_shot() -> void:
+	var clone_position = envy_clone_vfx.global_position if is_instance_valid(envy_clone_vfx) else global_position + ENVY_CLONE_OFFSET
+	var target_data = _get_envy_clone_auto_target(clone_position)
+	if target_data.is_empty():
+		return
+
+	var aim_direction = target_data["direction"] as Vector2
+	if aim_direction == Vector2.ZERO:
+		return
+
+	_aim_player_mirror_visual(envy_clone_vfx, aim_direction)
+	var base_angle = aim_direction.angle()
+	var shot_damage = _get_envy_clone_shot_damage() * float(target_data["damage_multiplier"])
+	var can_hit_player = bool(target_data["can_hit_player"])
+	for i in range(shot_count):
+		var angle_offset = deg_to_rad((i - (shot_count - 1) / 2.0) * spread_angle)
+		_spawn_projectile(clone_position, base_angle + angle_offset, shot_damage, can_hit_player, ENVY_CLONE_SHOT_COLOR)
+
+func _get_envy_clone_auto_target(clone_position: Vector2) -> Dictionary:
+	if randf() < ENVY_CLONE_PLAYER_TARGET_CHANCE:
+		var player_direction = clone_position.direction_to(global_position)
+		if player_direction != Vector2.ZERO:
+			return {
+				"direction": player_direction,
+				"can_hit_player": true,
+				"damage_multiplier": ENVY_CLONE_PLAYER_DAMAGE_MULTIPLIER
+			}
+
+	var enemy = _get_nearest_envy_clone_enemy_target(clone_position)
+	if enemy != null:
+		var enemy_direction = clone_position.direction_to(enemy.global_position)
+		if enemy_direction != Vector2.ZERO:
+			return {
+				"direction": enemy_direction,
+				"can_hit_player": false,
+				"damage_multiplier": ENVY_CLONE_DAMAGE_MULTIPLIER
+			}
+
+	return {}
+
+func _get_nearest_envy_clone_enemy_target(clone_position: Vector2) -> Node2D:
+	var closest_enemy: Node2D = null
+	var closest_distance = INF
+	for enemy in get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
+		if not is_instance_valid(enemy) or not (enemy is Node2D):
+			continue
+		if enemy.get("is_dead") != null and bool(enemy.get("is_dead")):
+			continue
+
+		var enemy_node = enemy as Node2D
+		var distance = clone_position.distance_squared_to(enemy_node.global_position)
+		if distance < closest_distance:
+			closest_distance = distance
+			closest_enemy = enemy_node
+
+	return closest_enemy
+
+func _get_envy_clone_shot_damage() -> float:
+	var damage = attack_damage * temporary_attack_multiplier
+	if lust_for_vengeance_enabled and current_health >= max_health:
+		damage *= 1.75
+	return damage
 
 func _spawn_projectile(spawn_position: Vector2, angle: float, projectile_damage: float, can_hit_player: bool = false, projectile_vfx_color: Color = Color(0.0, 0.0, 0.0, 0.0)) -> Node:
 	if not pistol_bullet_scene:
@@ -927,14 +1004,6 @@ func get_active_ability_description(option_id: String) -> String:
 	return str(data.get("description", option_id))
 
 func get_equipped_passive_summaries() -> Array:
-	var passive_ids: Array = []
-	for passive_id in get_rare_passive_options():
-		passive_ids.append(passive_id)
-
-	for passive_id in Global.SIN_PASSIVE_IDS:
-		if _is_passive_enabled(passive_id):
-			passive_ids.append(passive_id)
-
 	var summaries: Array = []
 	if current_arm_id != "" and Global.STARTING_ARM_DATA.has(current_arm_id):
 		var arm_data: Dictionary = Global.STARTING_ARM_DATA[current_arm_id]
@@ -944,14 +1013,31 @@ func get_equipped_passive_summaries() -> Array:
 			"description": str(arm_data["description"])
 		})
 
-	for passive_id in passive_ids:
-		summaries.append({
-			"id": passive_id,
-			"name": get_passive_effect_name(passive_id),
-			"description": get_passive_effect_description(passive_id)
-		})
+	for summary in get_equipped_boss_passive_summaries():
+		summaries.append(summary)
+	for summary in get_equipped_rare_passive_summaries():
+		summaries.append(summary)
 
 	return summaries
+
+func get_equipped_boss_passive_summaries() -> Array:
+	var summaries: Array = []
+	for passive_id in get_boss_passive_options():
+		summaries.append(_get_passive_summary(passive_id))
+	return summaries
+
+func get_equipped_rare_passive_summaries() -> Array:
+	var summaries: Array = []
+	for passive_id in get_rare_passive_options():
+		summaries.append(_get_passive_summary(passive_id))
+	return summaries
+
+func _get_passive_summary(passive_id: String) -> Dictionary:
+	return {
+		"id": passive_id,
+		"name": get_passive_effect_name(passive_id),
+		"description": get_passive_effect_description(passive_id)
+	}
 
 func get_passive_effect_name(passive_id: String) -> String:
 	var data = Global.PASSIVE_STATUS_DATA.get(passive_id, {})
@@ -966,6 +1052,57 @@ func _is_passive_enabled(passive_id: String) -> bool:
 		return bool(get(Global.SIN_PASSIVE_FLAGS[passive_id]))
 
 	return has_rare_passive(passive_id)
+
+func get_boss_passive_options() -> Array:
+	_sync_boss_passive_options()
+	return current_boss_passive_options.duplicate()
+
+func has_boss_passive(option_id: String) -> bool:
+	_sync_boss_passive_options()
+	return option_id in current_boss_passive_options
+
+func can_equip_boss_passive(option_id: String) -> bool:
+	_sync_boss_passive_options()
+	return option_id in current_boss_passive_options or current_boss_passive_options.size() < MAX_BOSS_PASSIVE_OPTIONS
+
+func equip_boss_passive_id(option_id: String) -> void:
+	if option_id == "":
+		return
+
+	_sync_boss_passive_options()
+	if option_id not in current_boss_passive_options and current_boss_passive_options.size() < MAX_BOSS_PASSIVE_OPTIONS:
+		current_boss_passive_options.append(option_id)
+
+func replace_boss_passive_id(old_option: String, new_option: String) -> void:
+	if new_option == "":
+		return
+
+	_sync_boss_passive_options()
+	var old_index = current_boss_passive_options.find(old_option)
+	if old_index >= 0:
+		current_boss_passive_options[old_index] = new_option
+	elif new_option not in current_boss_passive_options and current_boss_passive_options.size() < MAX_BOSS_PASSIVE_OPTIONS:
+		current_boss_passive_options.append(new_option)
+	_dedupe_boss_passive_options()
+
+func remove_boss_passive_id(option_id: String) -> void:
+	_sync_boss_passive_options()
+	current_boss_passive_options.erase(option_id)
+
+func _sync_boss_passive_options() -> void:
+	for passive_id in Global.SIN_PASSIVE_IDS:
+		if _is_passive_enabled(passive_id) and passive_id not in current_boss_passive_options:
+			current_boss_passive_options.append(passive_id)
+	_dedupe_boss_passive_options()
+	while current_boss_passive_options.size() > MAX_BOSS_PASSIVE_OPTIONS:
+		current_boss_passive_options.pop_back()
+
+func _dedupe_boss_passive_options() -> void:
+	var unique_options: Array = []
+	for option_id in current_boss_passive_options:
+		if option_id != "" and option_id not in unique_options:
+			unique_options.append(option_id)
+	current_boss_passive_options = unique_options
 
 func get_rare_passive_options() -> Array:
 	_sync_rare_passive_options()
@@ -1113,6 +1250,7 @@ func activate_sloth_field() -> void:
 			if is_inside_field:
 				enemy.set_meta("sloth_field_active", true)
 				enemy.set("speed", base_speed * 0.35)
+				_apply_enemy_sloth_dot(enemy, SLOTH_FIELD_DPS * SLOTH_FIELD_TICK_INTERVAL)
 				if enemy not in slowed_enemies:
 					slowed_enemies.append(enemy)
 			elif enemy in slowed_enemies:
@@ -1120,8 +1258,8 @@ func activate_sloth_field() -> void:
 				enemy.remove_meta("sloth_field_active")
 				slowed_enemies.erase(enemy)
 
-		await get_tree().create_timer(0.1, false).timeout
-		elapsed += 0.1
+		await get_tree().create_timer(SLOTH_FIELD_TICK_INTERVAL, false).timeout
+		elapsed += SLOTH_FIELD_TICK_INTERVAL
 
 	_clear_dash_speed_modifier("sloth_field")
 	for enemy in slowed_enemies:
@@ -1150,9 +1288,11 @@ func activate_gluttony_devour() -> void:
 
 func activate_envy_mirror_clone() -> void:
 	envy_clone_active = true
+	envy_clone_fire_timer = min(max(fire_rate * 0.45, 0.15), 0.45)
 	_spawn_clone_vfx(8.0)
 	await get_tree().create_timer(8.0, false).timeout
 	envy_clone_active = false
+	envy_clone_fire_timer = 0.0
 	if is_instance_valid(envy_clone_vfx):
 		envy_clone_vfx.queue_free()
 
@@ -1202,7 +1342,7 @@ func _get_shockwave_damage() -> float:
 func _get_shockwave_dash_damage() -> float:
 	return attack_damage * SHOCKWAVE_DASH_DAMAGE_MULTIPLIER
 
-func _apply_sloth_slow_aura() -> void:
+func _apply_sloth_slow_aura(delta: float) -> void:
 	for enemy in get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
 		if not is_instance_valid(enemy) or enemy.get("speed") == null:
 			continue
@@ -1214,8 +1354,23 @@ func _apply_sloth_slow_aura() -> void:
 		var base_speed = enemy.get_meta("base_speed")
 		if _is_position_inside_iso_aoe(enemy.global_position, global_position, SLOW_AURA_RADIUS):
 			enemy.set("speed", base_speed * 0.7)
+			_apply_enemy_sloth_dot(enemy, SLOTH_AURA_DPS * delta)
 		else:
 			enemy.set("speed", base_speed)
+
+func _apply_enemy_sloth_dot(enemy: Node, damage_amount: float) -> void:
+	if not is_instance_valid(enemy) or not enemy.has_method("take_damage") or damage_amount <= 0.0:
+		return
+
+	var accumulated_damage = float(enemy.get_meta(SLOTH_PLAYER_DOT_META, 0.0)) + damage_amount
+	var whole_damage = floori(accumulated_damage)
+	if whole_damage <= 0:
+		enemy.set_meta(SLOTH_PLAYER_DOT_META, accumulated_damage)
+		return
+
+	enemy.take_damage(float(whole_damage))
+	if is_instance_valid(enemy):
+		enemy.set_meta(SLOTH_PLAYER_DOT_META, accumulated_damage - float(whole_damage))
 
 func _remember_enemy_base_speed(enemy: Node) -> void:
 	if not enemy.has_meta("base_speed"):
@@ -1241,7 +1396,7 @@ func _force_clamp_to_current_arena() -> void:
 		return
 
 	global_position = clamped_position
-	_remove_outward_arena_velocity(previous_position, clamped_position)
+	_apply_arena_clamp_bounce(previous_position, clamped_position)
 
 func _get_current_game_scene() -> Node:
 	var tree = get_tree()
@@ -1274,6 +1429,33 @@ func _remove_outward_arena_velocity(previous_position: Vector2, clamped_position
 	var outward_speed = velocity.dot(outward_direction)
 	if outward_speed > 0.0:
 		velocity -= outward_direction * outward_speed
+
+func _apply_arena_clamp_bounce(previous_position: Vector2, clamped_position: Vector2) -> void:
+	var inward_normal = _get_current_arena_edge_normal(clamped_position)
+	if inward_normal == Vector2.ZERO:
+		inward_normal = previous_position.direction_to(clamped_position)
+
+	if inward_normal != Vector2.ZERO and velocity.length() >= WALL_BOUNCE_MIN_SPEED and velocity.dot(inward_normal) < 0.0:
+		var bounced_velocity = velocity.bounce(inward_normal.normalized()) * WALL_BOUNCE_MULTIPLIER
+		if bounced_velocity.length() < WALL_BOUNCE_MIN_SPEED:
+			velocity = Vector2.ZERO
+		else:
+			velocity = bounced_velocity.limit_length(_get_movement_force_speed_cap())
+		global_position += inward_normal.normalized() * WALL_BOUNCE_PUSH_OUT
+		return
+
+	_remove_outward_arena_velocity(previous_position, clamped_position)
+
+func _get_current_arena_edge_normal(point: Vector2) -> Vector2:
+	var scene = _get_current_game_scene()
+	if scene == null or not scene.has_method("_get_current_arena_edge_normal"):
+		return Vector2.ZERO
+
+	var edge_normal = scene.call("_get_current_arena_edge_normal", point)
+	if edge_normal is Vector2:
+		return edge_normal
+
+	return Vector2.ZERO
 
 func _get_vfx_parent() -> Node:
 	var tree = get_tree()
@@ -1355,6 +1537,8 @@ func _spawn_field_vfx(center: Vector2, radius: float, color: Color, duration: fl
 		return
 
 	parent.add_child(particles)
+	particles.z_index = PASSIVE_RING_Z_INDEX
+	particles.z_as_relative = false
 	particles.global_position = center
 	particles.emitting = true
 
@@ -1394,6 +1578,8 @@ func _spawn_ring_vfx(center: Vector2, radius: float, color: Color, duration: flo
 	radius = min(radius, MAX_ABILITY_AREA_RADIUS)
 	var ring_vfx = Node2D.new()
 	ring_vfx.name = "FilledRingVFX"
+	ring_vfx.z_index = PASSIVE_RING_Z_INDEX
+	ring_vfx.z_as_relative = false
 	var parent = _get_ground_area_vfx_parent()
 	if parent == null:
 		ring_vfx.queue_free()
@@ -1430,8 +1616,8 @@ func _add_circle_fill_to_node(parent: Node, radius: float, color: Color) -> Poly
 	return fill
 
 func _update_passive_status_vfx(delta: float) -> void:
-	_set_passive_ring_vfx_enabled("recoil_explosion", recoil_explosion_enabled, 28.0, Color(1.0, 0.55, 0.14, 0.36), 1.5)
-	_set_passive_ring_vfx_enabled("offensive_dash", offensive_dash_enabled, 31.0, Color(0.38, 0.95, 1.0, 0.34), 1.5)
+	_set_passive_ring_vfx_enabled("recoil_explosion", recoil_explosion_enabled, 28.0, PASSIVE_RING_COLOR, 1.5)
+	_set_passive_ring_vfx_enabled("offensive_dash", offensive_dash_enabled, 31.0, PASSIVE_RING_COLOR, 1.5)
 
 	var dash_charge_vfx = _ensure_double_dash_vfx()
 	if is_instance_valid(dash_charge_vfx):
@@ -1453,6 +1639,8 @@ func _ensure_passive_ring_vfx(vfx_id: String, radius: float, color: Color, width
 
 	var vfx = Node2D.new()
 	vfx.name = "%sPassiveVFX" % vfx_id.capitalize().replace("_", "")
+	vfx.z_index = PASSIVE_RING_Z_INDEX
+	vfx.z_as_relative = false
 	add_child(vfx)
 	move_child(vfx, 0)
 	_add_ring_to_node(vfx, radius, color, width)
@@ -1472,15 +1660,17 @@ func _ensure_double_dash_vfx() -> Node2D:
 
 	var vfx = Node2D.new()
 	vfx.name = "DoubleDashPassiveVFX"
+	vfx.z_index = PASSIVE_RING_Z_INDEX
+	vfx.z_as_relative = false
 	add_child(vfx)
 	move_child(vfx, 0)
-	_add_circular_ring_to_node(vfx, 25.0, Color(0.36, 0.72, 1.0, 0.24), 1.2)
+	_add_circular_ring_to_node(vfx, 25.0, PASSIVE_RING_SOFT_COLOR, 1.2)
 
 	for i in range(2):
 		var dot = Polygon2D.new()
 		dot.name = "DashChargeDot%d" % i
 		dot.polygon = _build_circle_points(3.6, false)
-		dot.color = Color(0.38, 0.78, 1.0, 0.82)
+		dot.color = PASSIVE_RING_DOT_COLOR
 		dot.position = Vector2(28.0, 0.0).rotated(PI * float(i))
 		vfx.add_child(dot)
 
@@ -1636,9 +1826,13 @@ func _spawn_clone_vfx(duration: float) -> void:
 
 	envy_clone_vfx = Node2D.new()
 	envy_clone_vfx.name = "MirrorCloneVFX"
-	envy_clone_vfx.position = Vector2(48.0, 0.0)
+	envy_clone_vfx.position = ENVY_CLONE_OFFSET
 	envy_clone_vfx.z_index = 25
 	add_child(envy_clone_vfx)
+
+	var clone_visual = _create_player_mirror_visual()
+	if clone_visual != null:
+		envy_clone_vfx.add_child(clone_visual)
 
 	_add_ring_to_node(envy_clone_vfx, 36.0, Color(0.4, 0.95, 1.0, 0.44), 2.0)
 	var particles = CPUParticles2D.new()
@@ -1659,6 +1853,55 @@ func _spawn_clone_vfx(duration: float) -> void:
 		return
 	var cleanup_timer = tree.create_timer(duration, false)
 	cleanup_timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(envy_clone_vfx))
+
+func _create_player_mirror_visual() -> Node:
+	if aparencia == null or not (aparencia is Node):
+		return null
+
+	var visual = (aparencia as Node).duplicate()
+	visual.name = "MirroredPlayerCopy"
+	if visual is CanvasItem:
+		(visual as CanvasItem).modulate = ENVY_CLONE_VISUAL_MODULATE
+		(visual as CanvasItem).z_index = 27
+	if visual is Node2D and aparencia is Node2D:
+		(visual as Node2D).position = (aparencia as Node2D).position
+		(visual as Node2D).scale = (aparencia as Node2D).scale
+	if visual is AnimatedSprite2D and aparencia is AnimatedSprite2D:
+		var animated_visual = visual as AnimatedSprite2D
+		var player_visual = aparencia as AnimatedSprite2D
+		animated_visual.animation = player_visual.animation
+		animated_visual.frame = player_visual.frame
+		animated_visual.flip_h = not player_visual.flip_h
+		animated_visual.play()
+
+	return visual
+
+func _sync_player_mirror_visual(parent: Node) -> void:
+	if parent == null or aparencia == null:
+		return
+
+	var visual = parent.get_node_or_null("MirroredPlayerCopy")
+	if visual is CanvasItem:
+		(visual as CanvasItem).modulate = ENVY_CLONE_VISUAL_MODULATE
+	if visual is AnimatedSprite2D and aparencia is AnimatedSprite2D:
+		var animated_visual = visual as AnimatedSprite2D
+		var player_visual = aparencia as AnimatedSprite2D
+		animated_visual.animation = player_visual.animation
+		animated_visual.frame = player_visual.frame
+		animated_visual.flip_h = not player_visual.flip_h
+		if player_visual.is_playing() and not animated_visual.is_playing():
+			animated_visual.play()
+
+func _aim_player_mirror_visual(parent: Node, direction: Vector2) -> void:
+	if parent == null or direction == Vector2.ZERO:
+		return
+
+	var visual = parent.get_node_or_null("MirroredPlayerCopy")
+	if visual is AnimatedSprite2D:
+		var animated_visual = visual as AnimatedSprite2D
+		animated_visual.animation = _get_animation_for_direction(direction)
+		animated_visual.flip_h = direction.x < 0.0
+		animated_visual.play()
 
 func _queue_free_if_valid(node: Node) -> void:
 	if is_instance_valid(node):

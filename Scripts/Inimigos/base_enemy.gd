@@ -25,13 +25,15 @@ const SOFT_SEPARATION_PADDING: float = 10.0
 const SOFT_SEPARATION_FORCE: float = 0.48
 const SOFT_SEPARATION_IDLE_SPEED_MULTIPLIER: float = 0.35
 const BODY_RADIUS_FALLBACK: float = 18.0
-const CORNER_ESCAPE_EDGE_MARGIN: float = 150.0
-const CORNER_ESCAPE_INFLUENCE_DISTANCE: float = 260.0
-const CORNER_ESCAPE_CORRIDOR_HALF_WIDTH: float = 110.0
-const CORNER_ESCAPE_FLANK_DISTANCE: float = 92.0
-const CORNER_ESCAPE_WALL_SIDE_OFFSET: float = 24.0
-const CORNER_ESCAPE_STEER_FORCE: float = 1.85
-const CORNER_ESCAPE_BACK_MARGIN: float = 24.0
+const AGILE_COLLISION_BYPASS_GROUP: String = "AgileEnemyCollisionBypass"
+const CORNER_ESCAPE_EDGE_MARGIN: float = 112.0
+const CORNER_ESCAPE_INFLUENCE_DISTANCE: float = 180.0
+const CORNER_ESCAPE_CORRIDOR_HALF_WIDTH: float = 72.0
+const CORNER_ESCAPE_FLANK_DISTANCE: float = 48.0
+const CORNER_ESCAPE_WALL_SIDE_OFFSET: float = 16.0
+const CORNER_ESCAPE_STEER_FORCE: float = 0.55
+const CORNER_ESCAPE_BACK_MARGIN: float = 16.0
+const CORNER_ESCAPE_MIN_DISTANCE: float = 118.0
 
 var current_health: int
 var player: Node2D
@@ -86,6 +88,9 @@ func _get_corner_escape_opening_direction() -> Vector2:
 		return Vector2.ZERO
 
 	var player_position = player.global_position
+	if global_position.distance_to(player_position) <= CORNER_ESCAPE_MIN_DISTANCE:
+		return Vector2.ZERO
+
 	var escape_direction = _get_player_corner_escape_direction(player_position)
 	if escape_direction == Vector2.ZERO:
 		return Vector2.ZERO
@@ -236,7 +241,7 @@ func _get_blocking_enemy_side(move_dir: Vector2) -> int:
 	var self_radius = _get_body_collision_radius(self)
 
 	for enemy in get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
-		if enemy == self or not is_instance_valid(enemy) or not (enemy is Node2D):
+		if _should_ignore_enemy_body_avoidance(enemy):
 			continue
 
 		var enemy_node = enemy as Node2D
@@ -265,6 +270,8 @@ func _has_blocking_slide_collision(move_dir: Vector2) -> bool:
 		var collider = collision.get_collider()
 		if collider == null or collider == self:
 			continue
+		if _should_ignore_enemy_body_avoidance(collider):
+			continue
 
 		if move_dir.dot(collision.get_normal()) < -0.35:
 			return true
@@ -281,6 +288,8 @@ func _get_slide_collision_avoidance_side(move_dir: Vector2) -> int:
 
 		var collider = collision.get_collider()
 		if collider == null or collider == self:
+			continue
+		if _should_ignore_enemy_body_avoidance(collider):
 			continue
 
 		if collider is Node2D:
@@ -308,7 +317,7 @@ func _get_soft_separation_vector() -> Vector2:
 	var self_radius = _get_body_collision_radius(self)
 
 	for enemy in get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
-		if enemy == self or not is_instance_valid(enemy) or not (enemy is Node2D):
+		if _should_ignore_enemy_body_avoidance(enemy):
 			continue
 
 		var enemy_node = enemy as Node2D
@@ -326,6 +335,12 @@ func _get_soft_separation_vector() -> Vector2:
 		push += offset.normalized() * strength
 
 	return push
+
+func _should_ignore_enemy_body_avoidance(enemy: Node) -> bool:
+	if enemy == self or not is_instance_valid(enemy) or not (enemy is Node2D):
+		return true
+
+	return is_in_group(AGILE_COLLISION_BYPASS_GROUP) or enemy.is_in_group(AGILE_COLLISION_BYPASS_GROUP)
 
 func _get_body_collision_radius(body: Node2D) -> float:
 	var collision = body.get_node_or_null("CollisionShape2D") as CollisionShape2D

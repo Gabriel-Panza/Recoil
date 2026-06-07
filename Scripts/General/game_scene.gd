@@ -13,14 +13,46 @@ const ARENA_CLAMP_EDGE_NUDGE_MULTIPLIERS = [1.0, 2.0, 4.0, 8.0]
 const WAVE_SPAWN_INTERVAL: float = 0.75
 const CAMERA_LIMIT_MARGIN: int = 50
 const ARENA_TILESET_TEXTURE = preload("res://Sprites/tileset_hell.png")
+const ENVY_ARENA_TILESET_TEXTURE = preload("res://Sprites/tileset_mirror.png")
 const ARENA_TILE_SIZE: Vector2i = Vector2i(48, 48)
 const ARENA_TILESET_MARGIN: Vector2i = Vector2i(5, 8)
 const ARENA_GRID_SIZE: Vector2i = Vector2i(40, 25)
 const ARENA_TILE_VISUAL_SCALE: float = 0.64
 const ARENA_TILE_SOURCE_ID: int = 0
+const ARENA_TILESET_HELL: String = "hell"
+const ARENA_TILESET_MIRROR: String = "mirror"
+const ARENA_FILL_TILEMAP: String = "tilemap"
+const ARENA_FILL_ROUND_TILES: String = "round_tiles"
+const ARENA_DETAIL_MIRROR_PANELS: String = "mirror_panels"
+const ARENA_SHAPE_RECT: String = "rect"
+const ARENA_SHAPE_ROUNDED_RECT: String = "rounded_rect"
+const ARENA_SHAPE_ELLIPSE: String = "ellipse"
+const ARENA_SHAPE_FLAME_CIRCLE: String = "flame_circle"
+const ARENA_SHAPE_SERPENT: String = "serpent"
+const ARENA_SHAPE_GOBLET: String = "goblet"
+const ARENA_SHAPE_CROWN: String = "crown"
+const ARENA_POLYGON_SEGMENTS: int = 64
+const ARENA_ROUNDED_RECT_SEGMENTS: int = 10
 const ARENA_PURPLE_TILE: Vector2i = Vector2i(0, 0)
 const ARENA_RED_TILE: Vector2i = Vector2i(6, 0)
 const ARENA_LAVA_TILE: Vector2i = Vector2i(12, 0)
+const MIRROR_DARK_TILE: Vector2i = Vector2i(2, 5)
+const MIRROR_LIGHT_TILE: Vector2i = Vector2i(8, 5)
+const MIRROR_ACCENT_TILE: Vector2i = Vector2i(5, 5)
+const MIRROR_REFLECT_TILE: Vector2i = Vector2i(11, 5)
+const MIRROR_PANEL_TILE: Vector2i = Vector2i(2, 1)
+const MIRROR_PANEL_ALT_TILE: Vector2i = Vector2i(8, 8)
+const MIRROR_TILE_SCALE: float = 0.42
+const MIRROR_PANEL_LINE_COLOR: Color = Color(0.86, 0.94, 0.96, 0.22)
+const MIRROR_PANEL_LINE_WIDTH: float = 2.0
+const ROUND_ARENA_TILE_RADIUS: float = 16.5
+const ROUND_ARENA_TILE_SPACING: float = 31.0
+const ROUND_ARENA_TILE_SEGMENTS: int = 18
+const GLUTTONY_PLATE_FILL_COLOR: Color = Color(0.17, 0.055, 0.052, 1.0)
+const GLUTTONY_INNER_RING_COLOR: Color = Color(0.16, 0.07, 0.04, 0.34)
+const HELL_ROUND_DARK_TILE_COLOR: Color = Color(0.22, 0.17, 0.22, 1.0)
+const HELL_ROUND_RED_TILE_COLOR: Color = Color(0.43, 0.095, 0.075, 1.0)
+const HELL_ROUND_LAVA_TILE_COLOR: Color = Color(0.78, 0.33, 0.055, 1.0)
 const ARENA_LAVA_PATCHES = [
 	Vector2i(7, 1), Vector2i(7, 2), Vector2i(8, 1),
 	Vector2i(20, 2), Vector2i(20, 3),
@@ -35,7 +67,7 @@ var fade_rect: ColorRect
 var starting_arm_layer: CanvasLayer
 var is_transitioning: bool = false
 
-var arena_tile_set: TileSet
+var arena_tile_sets: Dictionary = {}
 
 # Preload dos inimigos
 const MELEE_ENEMY = preload("res://Cenas/Inimigos/melee_enemy.tscn")
@@ -280,95 +312,544 @@ func _wait_for_level_up_selection() -> void:
 		await get_tree().create_timer(0.1, false).timeout
 
 func _setup_arena_tile_visuals() -> void:
-	arena_tile_set = _create_arena_tile_set()
+	arena_tile_sets = {
+		ARENA_TILESET_HELL: _create_arena_tile_set(ARENA_TILESET_TEXTURE, [ARENA_PURPLE_TILE, ARENA_RED_TILE, ARENA_LAVA_TILE]),
+		ARENA_TILESET_MIRROR: _create_arena_tile_set(ENVY_ARENA_TILESET_TEXTURE, [MIRROR_DARK_TILE, MIRROR_LIGHT_TILE, MIRROR_ACCENT_TILE, MIRROR_REFLECT_TILE, MIRROR_PANEL_TILE, MIRROR_PANEL_ALT_TILE])
+	}
 
-	for arena in arena_nodes:
+	for arena_index in range(arena_nodes.size()):
+		var arena = arena_nodes[arena_index]
+		var profile = _get_arena_profile(arena_index)
 		_prepare_arena_node_for_tile_visual(arena)
-		_add_arena_tile_layer(arena)
-		_add_arena_tile_border(arena)
-		_resize_arena_collision(arena)
+		_add_arena_tile_layer(arena, profile, arena_index)
+		_add_arena_tile_border(arena, profile)
+		_add_arena_inner_details(arena, profile)
+		_add_arena_mirror_panel_details(arena, profile)
+		_resize_arena_collision(arena, profile)
 
-func _create_arena_tile_set() -> TileSet:
+func _create_arena_tile_set(texture: Texture2D, atlas_tiles: Array) -> TileSet:
 	var tile_set = TileSet.new()
 	tile_set.tile_size = ARENA_TILE_SIZE
 
 	var atlas_source = TileSetAtlasSource.new()
-	atlas_source.texture = ARENA_TILESET_TEXTURE
+	atlas_source.texture = texture
 	atlas_source.texture_region_size = ARENA_TILE_SIZE
 	atlas_source.margins = ARENA_TILESET_MARGIN
 
-	for atlas_coords in [ARENA_PURPLE_TILE, ARENA_RED_TILE, ARENA_LAVA_TILE]:
-		atlas_source.create_tile(atlas_coords)
+	for atlas_coords in atlas_tiles:
+		if _is_atlas_tile_inside_texture(texture, atlas_coords):
+			atlas_source.create_tile(atlas_coords)
 
 	tile_set.add_source(atlas_source, ARENA_TILE_SOURCE_ID)
 	return tile_set
+
+func _is_atlas_tile_inside_texture(texture: Texture2D, atlas_coords: Vector2i) -> bool:
+	if texture == null:
+		return false
+
+	var tile_start = ARENA_TILESET_MARGIN + atlas_coords * ARENA_TILE_SIZE
+	return tile_start.x + ARENA_TILE_SIZE.x <= texture.get_width() and tile_start.y + ARENA_TILE_SIZE.y <= texture.get_height()
 
 func _prepare_arena_node_for_tile_visual(arena: Node2D) -> void:
 	arena.scale = Vector2.ONE
 	if arena is Sprite2D:
 		(arena as Sprite2D).texture = null
 
-func _add_arena_tile_layer(arena: Node2D) -> void:
+func _add_arena_tile_layer(arena: Node2D, profile: Dictionary, arena_index: int) -> void:
 	var existing_layer = arena.get_node_or_null("ArenaTileLayer")
 	if existing_layer != null:
 		arena.remove_child(existing_layer)
 		existing_layer.queue_free()
 
+	if str(profile.get("fill", ARENA_FILL_TILEMAP)) == ARENA_FILL_ROUND_TILES:
+		_add_round_arena_tile_layer(arena, profile, arena_index)
+		return
+
 	var tile_layer = TileMapLayer.new()
 	tile_layer.name = "ArenaTileLayer"
-	tile_layer.tile_set = arena_tile_set
-	tile_layer.position = -_get_arena_unscaled_pixel_size() * 0.5 * ARENA_TILE_VISUAL_SCALE
-	tile_layer.scale = Vector2.ONE * ARENA_TILE_VISUAL_SCALE
+	tile_layer.tile_set = _get_tile_set_for_profile(profile)
+	tile_layer.scale = Vector2.ONE * _get_arena_tile_visual_scale(profile)
 	tile_layer.z_index = 0
 	arena.add_child(tile_layer)
 
-	for y in range(ARENA_GRID_SIZE.y):
-		for x in range(ARENA_GRID_SIZE.x):
-			var atlas_coords = ARENA_RED_TILE if (x + y) % 2 == 0 else ARENA_PURPLE_TILE
-			tile_layer.set_cell(Vector2i(x, y), ARENA_TILE_SOURCE_ID, atlas_coords)
+	if str(profile.get("shape", ARENA_SHAPE_RECT)) == ARENA_SHAPE_RECT:
+		_fill_rect_arena_tile_layer(tile_layer, profile, arena_index)
+		return
 
-	for lava_coords in ARENA_LAVA_PATCHES:
-		if _is_tile_inside_arena_grid(lava_coords):
-			tile_layer.set_cell(lava_coords, ARENA_TILE_SOURCE_ID, ARENA_LAVA_TILE)
+	var polygon = _build_arena_polygon(profile)
+	var bounds = _get_local_polygon_bounds(polygon)
+	var tile_parent_size = Vector2(float(ARENA_TILE_SIZE.x), float(ARENA_TILE_SIZE.y)) * _get_arena_tile_visual_scale(profile)
+	var min_cell = Vector2i(
+		floori(bounds.position.x / tile_parent_size.x) - 1,
+		floori(bounds.position.y / tile_parent_size.y) - 1
+	)
+	var max_cell = Vector2i(
+		ceili(bounds.end.x / tile_parent_size.x) + 1,
+		ceili(bounds.end.y / tile_parent_size.y) + 1
+	)
 
-func _add_arena_tile_border(arena: Node2D) -> void:
+	for y in range(min_cell.y, max_cell.y + 1):
+		for x in range(min_cell.x, max_cell.x + 1):
+			var tile_coords = Vector2i(x, y)
+			var tile_center = _get_arena_tile_center_position(tile_coords, profile)
+			if not _is_tile_visually_inside_arena_polygon(tile_center, polygon):
+				continue
+
+			var atlas_coords = _get_arena_tile_atlas_coords(tile_coords, arena_index, profile)
+			tile_layer.set_cell(tile_coords, ARENA_TILE_SOURCE_ID, atlas_coords)
+
+func _fill_rect_arena_tile_layer(tile_layer: TileMapLayer, profile: Dictionary, arena_index: int) -> void:
+	var size = profile.get("size", _get_arena_pixel_size()) as Vector2
+	var tile_parent_size = Vector2(float(ARENA_TILE_SIZE.x), float(ARENA_TILE_SIZE.y)) * _get_arena_tile_visual_scale(profile)
+	var cell_count = Vector2i(
+		max(1, roundi(size.x / tile_parent_size.x)),
+		max(1, roundi(size.y / tile_parent_size.y))
+	)
+	var filled_size = Vector2(cell_count) * tile_parent_size
+	tile_layer.position = -filled_size * 0.5
+
+	for y in range(cell_count.y):
+		for x in range(cell_count.x):
+			var tile_coords = Vector2i(x, y)
+			var atlas_coords = _get_arena_tile_atlas_coords(tile_coords, arena_index, profile)
+			tile_layer.set_cell(tile_coords, ARENA_TILE_SOURCE_ID, atlas_coords)
+
+func _add_round_arena_tile_layer(arena: Node2D, profile: Dictionary, arena_index: int) -> void:
+	var layer = Node2D.new()
+	layer.name = "ArenaTileLayer"
+	layer.z_index = 0
+	arena.add_child(layer)
+
+	var polygon = _build_arena_polygon(profile)
+	var plate_fill = Polygon2D.new()
+	plate_fill.name = "GluttonyPlateFill"
+	plate_fill.polygon = polygon
+	plate_fill.color = GLUTTONY_PLATE_FILL_COLOR
+	layer.add_child(plate_fill)
+
+	var bounds = _get_local_polygon_bounds(polygon)
+	var min_cell = Vector2i(
+		floori(bounds.position.x / ROUND_ARENA_TILE_SPACING) - 1,
+		floori(bounds.position.y / ROUND_ARENA_TILE_SPACING) - 1
+	)
+	var max_cell = Vector2i(
+		ceili(bounds.end.x / ROUND_ARENA_TILE_SPACING) + 1,
+		ceili(bounds.end.y / ROUND_ARENA_TILE_SPACING) + 1
+	)
+	var round_tile_polygon = _build_circle_polygon(ROUND_ARENA_TILE_RADIUS, ROUND_ARENA_TILE_SEGMENTS)
+
+	for y in range(min_cell.y, max_cell.y + 1):
+		for x in range(min_cell.x, max_cell.x + 1):
+			var stagger_offset = ROUND_ARENA_TILE_SPACING * 0.5 if abs(y) % 2 == 1 else 0.0
+			var tile_center = Vector2(float(x) * ROUND_ARENA_TILE_SPACING + stagger_offset, float(y) * ROUND_ARENA_TILE_SPACING)
+			if not _is_round_tile_visually_inside_arena_polygon(tile_center, ROUND_ARENA_TILE_RADIUS * 0.78, polygon):
+				continue
+
+			var tile = Polygon2D.new()
+			tile.polygon = round_tile_polygon
+			tile.position = tile_center
+			tile.color = _get_round_arena_tile_color(Vector2i(x, y), arena_index)
+			layer.add_child(tile)
+
+func _is_round_tile_visually_inside_arena_polygon(tile_center: Vector2, radius: float, polygon: PackedVector2Array) -> bool:
+	if not Geometry2D.is_point_in_polygon(tile_center, polygon):
+		return false
+
+	var samples = [
+		tile_center + Vector2(radius, 0.0),
+		tile_center + Vector2(-radius, 0.0),
+		tile_center + Vector2(0.0, radius),
+		tile_center + Vector2(0.0, -radius)
+	]
+	for sample in samples:
+		if not Geometry2D.is_point_in_polygon(sample, polygon):
+			return false
+
+	return true
+
+func _get_round_arena_tile_color(tile_coords: Vector2i, arena_index: int) -> Color:
+	if _should_place_lava_tile(tile_coords, arena_index):
+		return HELL_ROUND_LAVA_TILE_COLOR
+	return HELL_ROUND_RED_TILE_COLOR if (tile_coords.x + tile_coords.y) % 2 == 0 else HELL_ROUND_DARK_TILE_COLOR
+
+func _get_tile_set_for_profile(profile: Dictionary) -> TileSet:
+	var tile_set_id = str(profile.get("tile_set", ARENA_TILESET_HELL))
+	return arena_tile_sets.get(tile_set_id, arena_tile_sets.get(ARENA_TILESET_HELL, TileSet.new()))
+
+func _get_arena_tile_visual_scale(profile: Dictionary) -> float:
+	return float(profile.get("tile_scale", ARENA_TILE_VISUAL_SCALE))
+
+func _get_arena_tile_center_position(tile_coords: Vector2i, profile: Dictionary) -> Vector2:
+	return (Vector2(tile_coords) + Vector2(0.5, 0.5)) * Vector2(float(ARENA_TILE_SIZE.x), float(ARENA_TILE_SIZE.y)) * _get_arena_tile_visual_scale(profile)
+
+func _is_tile_visually_inside_arena_polygon(tile_center: Vector2, polygon: PackedVector2Array) -> bool:
+	return Geometry2D.is_point_in_polygon(tile_center, polygon)
+
+func _get_arena_tile_atlas_coords(tile_coords: Vector2i, arena_index: int, profile: Dictionary) -> Vector2i:
+	if str(profile.get("tile_set", ARENA_TILESET_HELL)) == ARENA_TILESET_MIRROR:
+		return _get_mirror_arena_tile_atlas_coords(tile_coords, arena_index)
+
+	if _should_place_lava_tile(tile_coords, arena_index):
+		return ARENA_LAVA_TILE
+
+	return ARENA_RED_TILE if (tile_coords.x + tile_coords.y) % 2 == 0 else ARENA_PURPLE_TILE
+
+func _should_place_lava_tile(tile_coords: Vector2i, arena_index: int) -> bool:
+	var hash_value = abs(tile_coords.x * 928371 + tile_coords.y * 1237 + arena_index * 8191)
+	return hash_value % 101 < 5
+
+func _should_place_mirror_accent_tile(tile_coords: Vector2i, arena_index: int) -> bool:
+	var hash_value = abs(tile_coords.x * 1439 + tile_coords.y * 7877 + arena_index * 3167)
+	return hash_value % 101 < 9
+
+func _get_mirror_arena_tile_atlas_coords(tile_coords: Vector2i, arena_index: int) -> Vector2i:
+	var panel_width = 4
+	var panel_height = 5
+	var local_x = posmod(tile_coords.x, panel_width)
+	var local_y = posmod(tile_coords.y, panel_height)
+	var panel_hash = abs(floori(tile_coords.x / float(panel_width)) * 9173 + floori(tile_coords.y / float(panel_height)) * 5279 + arena_index * 233)
+
+	if local_x == 0 or local_y == 0:
+		return MIRROR_LIGHT_TILE if panel_hash % 2 == 0 else MIRROR_REFLECT_TILE
+
+	if local_x == panel_width - 1 and local_y == panel_height - 1:
+		return MIRROR_ACCENT_TILE
+
+	if _should_place_mirror_accent_tile(tile_coords, arena_index):
+		return MIRROR_REFLECT_TILE
+
+	match panel_hash % 4:
+		0:
+			return MIRROR_PANEL_TILE
+		1:
+			return MIRROR_PANEL_ALT_TILE
+		2:
+			return MIRROR_DARK_TILE
+		_:
+			return MIRROR_ACCENT_TILE
+
+func _add_arena_tile_border(arena: Node2D, profile: Dictionary) -> void:
 	var border = arena.get_node_or_null("ArenaTileBorder") as Line2D
 	if border == null:
 		border = Line2D.new()
 		border.name = "ArenaTileBorder"
-		border.z_index = 1
-		border.width = 6.0
-		border.default_color = Color(0.08, 0.04, 0.05, 1.0)
+		border.z_index = 2
 		border.joint_mode = Line2D.LINE_JOINT_SHARP
 		arena.add_child(border)
 
-	var half_size = _get_arena_pixel_size() * 0.5
-	border.points = PackedVector2Array([
-		Vector2(-half_size.x, -half_size.y),
-		Vector2(half_size.x, -half_size.y),
-		Vector2(half_size.x, half_size.y),
-		Vector2(-half_size.x, half_size.y),
-		Vector2(-half_size.x, -half_size.y)
-	])
+	border.width = float(profile.get("border_width", 6.0))
+	border.default_color = profile.get("border_color", Color(0.08, 0.04, 0.05, 1.0))
+	var border_points = _build_arena_polygon(profile)
+	border_points.append(border_points[0])
+	border.points = border_points
 
-func _resize_arena_collision(arena: Node2D) -> void:
+func _add_arena_inner_details(arena: Node2D, profile: Dictionary) -> void:
+	var detail = arena.get_node_or_null("ArenaInnerDetail") as Line2D
+	if detail == null:
+		detail = Line2D.new()
+		detail.name = "ArenaInnerDetail"
+		detail.z_index = 2
+		detail.joint_mode = Line2D.LINE_JOINT_ROUND
+		arena.add_child(detail)
+
+	detail.width = float(profile.get("detail_width", 4.0))
+	detail.default_color = profile.get("detail_color", Color(0.16, 0.07, 0.04, 0.78))
+	var detail_points = _build_arena_detail_points(profile)
+	detail.visible = not detail_points.is_empty()
+	detail.points = detail_points
+
+func _add_arena_mirror_panel_details(arena: Node2D, profile: Dictionary) -> void:
+	var existing_panel_lines = arena.get_node_or_null("ArenaMirrorPanelLines")
+	if existing_panel_lines != null:
+		arena.remove_child(existing_panel_lines)
+		existing_panel_lines.queue_free()
+
+	if str(profile.get("detail", "")) != ARENA_DETAIL_MIRROR_PANELS:
+		return
+
+	var panel_lines = Node2D.new()
+	panel_lines.name = "ArenaMirrorPanelLines"
+	panel_lines.z_index = 2
+	arena.add_child(panel_lines)
+
+	var size = profile.get("size", _get_arena_pixel_size()) as Vector2
+	var half_size = size * 0.5
+	var corner_radius = float(profile.get("radius", 72.0))
+	var vertical_spacing = float(ARENA_TILE_SIZE.x) * MIRROR_TILE_SCALE * 4.0
+	var horizontal_spacing = float(ARENA_TILE_SIZE.y) * MIRROR_TILE_SCALE * 5.0
+	var vertical_top = -half_size.y + 22.0
+	var vertical_bottom = half_size.y - 22.0
+	var horizontal_left = -half_size.x + corner_radius * 0.55
+	var horizontal_right = half_size.x - corner_radius * 0.55
+
+	var x = -half_size.x + corner_radius
+	while x < half_size.x - corner_radius:
+		_add_mirror_panel_line(panel_lines, Vector2(x, vertical_top), Vector2(x, vertical_bottom))
+		x += vertical_spacing
+
+	var y = -half_size.y + horizontal_spacing
+	while y < half_size.y - horizontal_spacing * 0.5:
+		_add_mirror_panel_line(panel_lines, Vector2(horizontal_left, y), Vector2(horizontal_right, y))
+		y += horizontal_spacing
+
+func _add_mirror_panel_line(parent: Node, from_position: Vector2, to_position: Vector2) -> void:
+	var line = Line2D.new()
+	line.width = MIRROR_PANEL_LINE_WIDTH
+	line.default_color = MIRROR_PANEL_LINE_COLOR
+	line.points = PackedVector2Array([from_position, to_position])
+	parent.add_child(line)
+
+func _resize_arena_collision(arena: Node2D, profile: Dictionary) -> void:
 	var collision_polygon = arena.get_node_or_null("StaticBody2D/CollisionPolygon2D")
 	if collision_polygon == null:
 		return
 
-	var half_size = _get_arena_pixel_size() * 0.5
-	collision_polygon.polygon = PackedVector2Array([
-		Vector2(-half_size.x, -half_size.y),
-		Vector2(half_size.x, -half_size.y),
-		Vector2(half_size.x, half_size.y),
-		Vector2(-half_size.x, half_size.y)
-	])
+	collision_polygon.polygon = _build_arena_polygon(profile)
 
 func _get_arena_pixel_size() -> Vector2:
 	return _get_arena_unscaled_pixel_size() * ARENA_TILE_VISUAL_SCALE
 
 func _get_arena_unscaled_pixel_size() -> Vector2:
 	return Vector2(ARENA_GRID_SIZE.x * ARENA_TILE_SIZE.x, ARENA_GRID_SIZE.y * ARENA_TILE_SIZE.y)
+
+func _get_arena_profile(arena_index: int) -> Dictionary:
+	var base_size = _get_arena_pixel_size()
+	match arena_index:
+		0:
+			return {"shape": ARENA_SHAPE_RECT, "size": base_size, "tile_set": ARENA_TILESET_HELL}
+		1:
+			return {"shape": ARENA_SHAPE_RECT, "size": base_size, "tile_set": ARENA_TILESET_HELL}
+		2:
+			return {
+				"shape": ARENA_SHAPE_ELLIPSE,
+				"size": Vector2(base_size.x * 0.92, base_size.y * 0.94),
+				"tile_set": ARENA_TILESET_HELL,
+				"fill": ARENA_FILL_ROUND_TILES,
+				"detail": "inner_ellipse",
+				"detail_size": Vector2(base_size.x * 0.48, base_size.y * 0.42),
+				"detail_color": GLUTTONY_INNER_RING_COLOR
+			}
+		3:
+			return {
+				"shape": ARENA_SHAPE_ROUNDED_RECT,
+				"size": _get_envy_arena_size(base_size),
+				"radius": 96.0,
+				"tile_set": ARENA_TILESET_MIRROR,
+				"tile_scale": MIRROR_TILE_SCALE,
+				"detail": ARENA_DETAIL_MIRROR_PANELS,
+				"lock_camera_x": true
+			}
+		4:
+			return {
+				"shape": ARENA_SHAPE_FLAME_CIRCLE,
+				"size": Vector2(base_size.y * 1.08, base_size.y * 0.98),
+				"tile_set": ARENA_TILESET_HELL
+			}
+		5:
+			return {
+				"shape": ARENA_SHAPE_SERPENT,
+				"size": Vector2(base_size.x * 0.78, base_size.y * 1.02),
+				"tile_set": ARENA_TILESET_HELL,
+				"anchors": _build_serpent_anchor_points(Vector2(base_size.x * 0.78, base_size.y * 1.02))
+			}
+		6:
+			return {
+				"shape": ARENA_SHAPE_GOBLET,
+				"size": Vector2(base_size.x * 0.92, base_size.y * 1.02),
+				"tile_set": ARENA_TILESET_HELL,
+				"anchors": [Vector2(0.0, -base_size.y * 0.25), Vector2.ZERO, Vector2(0.0, base_size.y * 0.3)]
+			}
+		7:
+			return {
+				"shape": ARENA_SHAPE_CROWN,
+				"size": Vector2(base_size.x * 0.96, base_size.y * 1.0),
+				"tile_set": ARENA_TILESET_HELL,
+				"anchors": [Vector2.ZERO, Vector2(0.0, base_size.y * 0.22), Vector2(-base_size.x * 0.22, 0.0), Vector2(base_size.x * 0.22, 0.0)]
+			}
+
+	return {"shape": ARENA_SHAPE_RECT, "size": base_size, "tile_set": ARENA_TILESET_HELL}
+
+func _get_current_arena_profile() -> Dictionary:
+	return _get_arena_profile(arena_nodes.find(current_arena))
+
+func _get_envy_arena_size(base_size: Vector2) -> Vector2:
+	var camera = $Player.get_node_or_null("Camera2D")
+	if camera is Camera2D:
+		var visible_size = get_viewport_rect().size / camera.zoom
+		return Vector2(visible_size.x, max(base_size.y * 1.8, visible_size.y * 2.35))
+
+	return Vector2(base_size.x * 0.56, base_size.y * 1.8)
+
+func _build_arena_polygon(profile: Dictionary) -> PackedVector2Array:
+	var shape = str(profile.get("shape", ARENA_SHAPE_RECT))
+	var size = profile.get("size", _get_arena_pixel_size()) as Vector2
+	match shape:
+		ARENA_SHAPE_ROUNDED_RECT:
+			return _build_rounded_rect_points(size, float(profile.get("radius", 72.0)))
+		ARENA_SHAPE_ELLIPSE:
+			return _build_ellipse_points(size)
+		ARENA_SHAPE_FLAME_CIRCLE:
+			return _build_flame_circle_points(size)
+		ARENA_SHAPE_SERPENT:
+			return _build_serpent_points(size)
+		ARENA_SHAPE_GOBLET:
+			return _build_goblet_points(size)
+		ARENA_SHAPE_CROWN:
+			return _build_crown_points(size)
+		_:
+			return _build_rect_points(size)
+
+func _build_rect_points(size: Vector2) -> PackedVector2Array:
+	var half_size = size * 0.5
+	return PackedVector2Array([
+		Vector2(-half_size.x, -half_size.y),
+		Vector2(half_size.x, -half_size.y),
+		Vector2(half_size.x, half_size.y),
+		Vector2(-half_size.x, half_size.y)
+	])
+
+func _build_ellipse_points(size: Vector2) -> PackedVector2Array:
+	var points = PackedVector2Array()
+	var radius = size * 0.5
+	for i in range(ARENA_POLYGON_SEGMENTS):
+		var angle = TAU * float(i) / float(ARENA_POLYGON_SEGMENTS)
+		points.append(Vector2(cos(angle) * radius.x, sin(angle) * radius.y))
+	return points
+
+func _build_circle_polygon(radius: float, segment_count: int) -> PackedVector2Array:
+	var points = PackedVector2Array()
+	for i in range(segment_count):
+		var angle = TAU * float(i) / float(segment_count)
+		points.append(Vector2(cos(angle), sin(angle)) * radius)
+	return points
+
+func _build_rounded_rect_points(size: Vector2, radius: float) -> PackedVector2Array:
+	var half_size = size * 0.5
+	var safe_radius = min(radius, min(half_size.x, half_size.y) - 4.0)
+	var corner_centers = [
+		Vector2(half_size.x - safe_radius, -half_size.y + safe_radius),
+		Vector2(half_size.x - safe_radius, half_size.y - safe_radius),
+		Vector2(-half_size.x + safe_radius, half_size.y - safe_radius),
+		Vector2(-half_size.x + safe_radius, -half_size.y + safe_radius)
+	]
+	var angle_ranges = [
+		Vector2(-PI * 0.5, 0.0),
+		Vector2(0.0, PI * 0.5),
+		Vector2(PI * 0.5, PI),
+		Vector2(PI, PI * 1.5)
+	]
+
+	var points = PackedVector2Array()
+	for corner_index in range(corner_centers.size()):
+		var angle_range = angle_ranges[corner_index]
+		for segment in range(ARENA_ROUNDED_RECT_SEGMENTS + 1):
+			var t = float(segment) / float(ARENA_ROUNDED_RECT_SEGMENTS)
+			var angle = lerp(angle_range.x, angle_range.y, t)
+			points.append(corner_centers[corner_index] + Vector2(cos(angle), sin(angle)) * safe_radius)
+
+	return points
+
+func _build_flame_circle_points(size: Vector2) -> PackedVector2Array:
+	var points = PackedVector2Array()
+	var radius = size * 0.5
+	for i in range(ARENA_POLYGON_SEGMENTS):
+		var t = float(i) / float(ARENA_POLYGON_SEGMENTS)
+		var angle = TAU * t
+		var tremble = 1.0 + 0.08 * sin(angle * 7.0) + 0.045 * sin(angle * 13.0 + 0.7)
+		points.append(Vector2(cos(angle) * radius.x * tremble, sin(angle) * radius.y * tremble))
+	return points
+
+func _build_serpent_points(size: Vector2) -> PackedVector2Array:
+	var samples = 38
+	var amplitude = size.x * 0.26
+	var half_height = size.y * 0.5
+	var thickness = min(size.x * 0.11, 96.0)
+	var left_side = []
+	var right_side = []
+
+	for i in range(samples):
+		var t = float(i) / float(samples - 1)
+		var center = _get_serpent_center_point(t, amplitude, half_height)
+		var tangent = _get_serpent_tangent(t, amplitude, half_height)
+		var normal = Vector2(-tangent.y, tangent.x).normalized()
+		var width = thickness * (0.92 + 0.12 * sin(TAU * t))
+		left_side.append(center + normal * width)
+		right_side.append(center - normal * width)
+
+	var points = PackedVector2Array()
+	for point in left_side:
+		points.append(point)
+	for i in range(right_side.size() - 1, -1, -1):
+		points.append(right_side[i])
+	return points
+
+func _get_serpent_center_point(t: float, amplitude: float, half_height: float) -> Vector2:
+	return Vector2(sin((t - 0.5) * TAU) * amplitude, lerp(-half_height, half_height, t))
+
+func _get_serpent_tangent(t: float, amplitude: float, half_height: float) -> Vector2:
+	var dx = cos((t - 0.5) * TAU) * TAU * amplitude
+	var dy = half_height * 2.0
+	return Vector2(dx, dy).normalized()
+
+func _build_serpent_anchor_points(size: Vector2) -> Array:
+	var anchors = []
+	var amplitude = size.x * 0.26
+	var half_height = size.y * 0.5
+	for t in [0.12, 0.28, 0.44, 0.6, 0.76, 0.9]:
+		anchors.append(_get_serpent_center_point(float(t), amplitude, half_height))
+	return anchors
+
+func _build_goblet_points(size: Vector2) -> PackedVector2Array:
+	var half_size = size * 0.5
+	return PackedVector2Array([
+		Vector2(-half_size.x, -half_size.y),
+		Vector2(half_size.x, -half_size.y),
+		Vector2(half_size.x * 0.82, -half_size.y * 0.48),
+		Vector2(half_size.x * 0.54, half_size.y * 0.18),
+		Vector2(half_size.x * 0.25, half_size.y),
+		Vector2(-half_size.x * 0.25, half_size.y),
+		Vector2(-half_size.x * 0.54, half_size.y * 0.18),
+		Vector2(-half_size.x * 0.82, -half_size.y * 0.48)
+	])
+
+func _build_crown_points(size: Vector2) -> PackedVector2Array:
+	var half_size = size * 0.5
+	return PackedVector2Array([
+		Vector2(-half_size.x, half_size.y),
+		Vector2(half_size.x, half_size.y),
+		Vector2(half_size.x * 0.96, half_size.y * 0.35),
+		Vector2(half_size.x * 0.70, half_size.y * 0.52),
+		Vector2(half_size.x * 0.58, -half_size.y * 0.46),
+		Vector2(half_size.x * 0.36, half_size.y * 0.12),
+		Vector2(half_size.x * 0.15, -half_size.y),
+		Vector2(0.0, -half_size.y * 0.12),
+		Vector2(-half_size.x * 0.15, -half_size.y),
+		Vector2(-half_size.x * 0.36, half_size.y * 0.12),
+		Vector2(-half_size.x * 0.58, -half_size.y * 0.46),
+		Vector2(-half_size.x * 0.70, half_size.y * 0.52),
+		Vector2(-half_size.x * 0.96, half_size.y * 0.35)
+	])
+
+func _build_arena_detail_points(profile: Dictionary) -> PackedVector2Array:
+	if str(profile.get("detail", "")) != "inner_ellipse":
+		return PackedVector2Array()
+
+	var detail_profile = {
+		"shape": ARENA_SHAPE_ELLIPSE,
+		"size": profile.get("detail_size", Vector2(360.0, 220.0))
+	}
+	var detail_points = _build_arena_polygon(detail_profile)
+	detail_points.append(detail_points[0])
+	return detail_points
+
+func _get_local_polygon_bounds(polygon: PackedVector2Array) -> Rect2:
+	if polygon.is_empty():
+		return Rect2(Vector2.ZERO, Vector2.ZERO)
+
+	var rect = Rect2(polygon[0], Vector2.ZERO)
+	for point in polygon:
+		rect = rect.expand(point)
+	return rect
 
 func _is_tile_inside_arena_grid(tile_coords: Vector2i) -> bool:
 	return tile_coords.x >= 0 and tile_coords.y >= 0 and tile_coords.x < ARENA_GRID_SIZE.x and tile_coords.y < ARENA_GRID_SIZE.y
@@ -384,9 +865,17 @@ func _update_camera_limits() -> void:
 	if arena_rect.size == Vector2.ZERO:
 		return
 
-	camera.limit_left = int(floor(arena_rect.position.x)) - (CAMERA_LIMIT_MARGIN*2)
+	var profile = _get_current_arena_profile()
+	if bool(profile.get("lock_camera_x", false)):
+		var visible_size = get_viewport_rect().size / camera.zoom
+		var arena_center = _get_current_arena_center()
+		camera.limit_left = int(floor(arena_center.x - visible_size.x * 0.5))
+		camera.limit_right = int(ceil(arena_center.x + visible_size.x * 0.5))
+	else:
+		camera.limit_left = int(floor(arena_rect.position.x)) - (CAMERA_LIMIT_MARGIN*2)
+		camera.limit_right = int(ceil(arena_rect.end.x)) + CAMERA_LIMIT_MARGIN
+
 	camera.limit_top = int(floor(arena_rect.position.y)) - (CAMERA_LIMIT_MARGIN*2)
-	camera.limit_right = int(ceil(arena_rect.end.x)) + CAMERA_LIMIT_MARGIN
 	camera.limit_bottom = int(ceil(arena_rect.end.y)) + CAMERA_LIMIT_MARGIN
 	camera.reset_smoothing()
 
@@ -506,7 +995,7 @@ func get_random_camera_edge_position(spawn_margin: float = 0.0) -> Vector2:
 		return get_random_arena_position(spawn_margin)
 
 	var cam_pos = camera.global_position
-	var viewport_size = get_viewport_rect().size
+	var viewport_size = get_viewport_rect().size / camera.zoom
 	var cam_rect = Rect2(cam_pos - viewport_size / 2, viewport_size)
 
 	var margin = 50.0
@@ -531,7 +1020,7 @@ func get_random_camera_edge_position(spawn_margin: float = 0.0) -> Vector2:
 			if player == null or pos.distance_to(player.global_position) > SPAWN_PLAYER_MIN_DISTANCE:
 				return pos
 
-	return get_random_arena_position(spawn_margin)
+	return get_random_arena_edge_position(spawn_margin)
 
 func get_camera_top_center_position(spawn_margin: float = 0.0) -> Vector2:
 	var camera = get_viewport().get_camera_2d()
@@ -543,6 +1032,12 @@ func get_camera_top_center_position(spawn_margin: float = 0.0) -> Vector2:
 	return clamp_position_to_current_arena(top_center, spawn_margin)
 
 func get_random_arena_position(spawn_margin: float = 0.0) -> Vector2:
+	return _get_random_arena_position(spawn_margin, true)
+
+func get_random_arena_position_anywhere(spawn_margin: float = 0.0) -> Vector2:
+	return _get_random_arena_position(spawn_margin, false)
+
+func _get_random_arena_position(spawn_margin: float, avoid_player: bool) -> Vector2:
 	var collision_polygon = _get_current_arena_collision_polygon()
 	if collision_polygon == null:
 		return current_arena.global_position
@@ -562,10 +1057,31 @@ func get_random_arena_position(spawn_margin: float = 0.0) -> Vector2:
 		)
 		if _is_position_safe_in_current_arena(pos, spawn_margin):
 			var player = get_tree().get_first_node_in_group(Global.GROUP_PLAYER)
-			if player == null or pos.distance_to(player.global_position) > SPAWN_PLAYER_MIN_DISTANCE:
+			if not avoid_player or player == null or pos.distance_to(player.global_position) > SPAWN_PLAYER_MIN_DISTANCE:
 				return pos
 
 	return clamp_position_to_current_arena(current_arena.global_position, spawn_margin)
+
+func get_random_arena_edge_position(spawn_margin: float = 0.0) -> Vector2:
+	var collision_polygon = _get_current_arena_collision_polygon()
+	if collision_polygon == null or collision_polygon.polygon.is_empty():
+		return get_random_arena_position(spawn_margin)
+
+	var global_points = _get_arena_global_polygon_points(collision_polygon)
+	var player = get_tree().get_first_node_in_group(Global.GROUP_PLAYER)
+	for i in range(80):
+		var segment_index = randi() % global_points.size()
+		var segment_start: Vector2 = global_points[segment_index]
+		var segment_end: Vector2 = global_points[(segment_index + 1) % global_points.size()]
+		var edge_point = segment_start.lerp(segment_end, randf())
+		var inward_normal = _get_current_arena_edge_normal(edge_point)
+		var candidate = clamp_position_to_current_arena(edge_point + inward_normal * max(spawn_margin + SPAWN_WALL_PADDING, 16.0), spawn_margin)
+		if not _is_position_safe_in_current_arena(candidate, spawn_margin):
+			continue
+		if player == null or candidate.distance_to(player.global_position) > SPAWN_PLAYER_MIN_DISTANCE:
+			return candidate
+
+	return get_random_arena_position(spawn_margin)
 
 func clamp_position_to_current_arena(global_pos: Vector2, safety_margin: float = 0.0) -> Vector2:
 	if _is_position_safe_in_current_arena(global_pos, safety_margin):
@@ -634,6 +1150,8 @@ func _append_safe_arena_anchor_candidates(candidates: Array, global_pos: Vector2
 		_get_current_arena_center(),
 		current_arena.global_position
 	]
+	for local_anchor in _get_current_arena_local_anchor_points():
+		anchors.append(current_arena.to_global(local_anchor))
 
 	for anchor in anchors:
 		if not _is_position_safe_in_current_arena(anchor, 0.0):
@@ -681,6 +1199,44 @@ func _get_closest_point_on_segment(point: Vector2, segment_start: Vector2, segme
 
 	var t = clamp((point - segment_start).dot(segment) / segment_length_squared, 0.0, 1.0)
 	return segment_start + segment * t
+
+func _get_current_arena_edge_normal(global_pos: Vector2) -> Vector2:
+	var collision_polygon = _get_current_arena_collision_polygon()
+	if collision_polygon == null or collision_polygon.polygon.is_empty():
+		return Vector2.ZERO
+
+	var global_points = _get_arena_global_polygon_points(collision_polygon)
+	var closest_segment_start = Vector2.ZERO
+	var closest_segment_end = Vector2.ZERO
+	var closest_point = Vector2.ZERO
+	var closest_distance = INF
+	for i in range(global_points.size()):
+		var segment_start: Vector2 = global_points[i]
+		var segment_end: Vector2 = global_points[(i + 1) % global_points.size()]
+		var point_on_segment = _get_closest_point_on_segment(global_pos, segment_start, segment_end)
+		var distance = global_pos.distance_squared_to(point_on_segment)
+		if distance < closest_distance:
+			closest_distance = distance
+			closest_segment_start = segment_start
+			closest_segment_end = segment_end
+			closest_point = point_on_segment
+
+	var edge = closest_segment_end - closest_segment_start
+	if edge.length_squared() <= 0.001:
+		return Vector2.ZERO
+
+	var normal = Vector2(-edge.y, edge.x).normalized()
+	if _is_position_inside_current_arena(closest_point + normal * 8.0):
+		return normal
+	if _is_position_inside_current_arena(closest_point - normal * 8.0):
+		return -normal
+
+	var center_direction = closest_point.direction_to(_get_current_arena_center())
+	return center_direction.normalized() if center_direction != Vector2.ZERO else normal
+
+func _get_current_arena_local_anchor_points() -> Array:
+	var profile = _get_current_arena_profile()
+	return profile.get("anchors", [])
 
 func _is_position_safe_in_current_arena(global_pos: Vector2, safety_margin: float = 0.0) -> bool:
 	if not _is_position_inside_current_arena(global_pos):

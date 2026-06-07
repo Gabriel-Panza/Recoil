@@ -20,9 +20,12 @@ var bump_cooldown: float = 0.0
 
 func _ready() -> void:
 	super()
+	add_to_group(AGILE_COLLISION_BYPASS_GROUP)
+	collision_layer = collision_layer & ~Global.ENEMY_LAYER_MASK
+	collision_mask = collision_mask & ~Global.ENEMY_COLLISION_MASK
 	orbit_direction = 1 if randf() > 0.5 else -1
 	
-	max_health = 50 + ((Global.pecado - 1) * 25)
+	max_health = 50 + ((Global.pecado - 1) * 30)
 	current_health = max_health
 	speed *= 1.67
 	_configure_enemy_sprite_sheet(AGILE_SPRITESHEET, AGILE_FRAME_SIZE, AGILE_FRAMES_PER_ROW, ["walk"], {}, 6.0, Vector2(1.45, 1.45), AGILE_FRAME_SPACING)

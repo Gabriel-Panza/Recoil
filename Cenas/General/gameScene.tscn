@@ -14,42 +14,42 @@ script = ExtResource("1_6fp5d")
 
 [node name="Fundo" type="Sprite2D" parent="Arenas/Node2D" unique_id=1287308056]
 position = Vector2(643, 324)
-scale = Vector2(3, 3)
+scale = Vector2(4, 4)
 texture = ExtResource("2_6fp5d")
 
 [node name="Fundo2" type="Sprite2D" parent="Arenas/Node2D" unique_id=906864049]
-position = Vector2(2133, -1027)
-scale = Vector2(3, 3)
+position = Vector2(2877, -2335)
+scale = Vector2(4, 4)
 texture = ExtResource("2_6fp5d")
 
 [node name="Fundo3" type="Sprite2D" parent="Arenas/Node2D" unique_id=65348474]
-position = Vector2(4414, -1027)
-scale = Vector2(3, 3)
+position = Vector2(5293, -2335)
+scale = Vector2(4, 4)
 texture = ExtResource("2_6fp5d")
 
 [node name="Fundo4" type="Sprite2D" parent="Arenas/Node2D" unique_id=516988603]
-position = Vector2(6679, -1027)
-scale = Vector2(3, 3)
+position = Vector2(7710, -2348)
+scale = Vector2(4, 6)
 texture = ExtResource("2_6fp5d")
 
 [node name="Fundo5" type="Sprite2D" parent="Arenas/Node2D" unique_id=1211365843]
-position = Vector2(2133.0002, 1635)
-scale = Vector2(3, 3)
+position = Vector2(2877, 2943)
+scale = Vector2(4, 4)
 texture = ExtResource("2_6fp5d")
 
 [node name="Fundo6" type="Sprite2D" parent="Arenas/Node2D" unique_id=744703823]
-position = Vector2(4415, 1635)
-scale = Vector2(3, 3)
+position = Vector2(5294, 2943)
+scale = Vector2(4, 4)
 texture = ExtResource("2_6fp5d")
 
 [node name="Fundo7" type="Sprite2D" parent="Arenas/Node2D" unique_id=942720123]
-position = Vector2(6679, 1635)
-scale = Vector2(3, 3)
+position = Vector2(7710, 2943)
+scale = Vector2(4, 4)
 texture = ExtResource("2_6fp5d")
 
 [node name="Fundo8" type="Sprite2D" parent="Arenas/Node2D" unique_id=1218737864]
-position = Vector2(8489, 319)
-scale = Vector2(3, 3)
+position = Vector2(9920, 319)
+scale = Vector2(4, 4)
 texture = ExtResource("2_6fp5d")
 
 [node name="ArenaEnemy" type="Sprite2D" parent="Arenas" unique_id=1853213105]
@@ -64,7 +64,7 @@ build_mode = 1
 polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63.199997, 64.083336, -51.5, 63.694443, 53.7, 54.805557, 63.400005, -55.13889, 63.8, -64.02778, 52.400005)
 
 [node name="Pecado1" type="Sprite2D" parent="Arenas" unique_id=90380552]
-position = Vector2(2133, -1030)
+position = Vector2(2877, -2338)
 scale = Vector2(10, 5)
 
 [node name="StaticBody2D" type="StaticBody2D" parent="Arenas/Pecado1" unique_id=1155165009]
@@ -77,7 +77,7 @@ polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63
 [node name="Centro" type="Marker2D" parent="Arenas/Pecado1" unique_id=1599619679]
 
 [node name="Pecado2" type="Sprite2D" parent="Arenas" unique_id=1381154649]
-position = Vector2(4415, -1030)
+position = Vector2(5294, -2338)
 scale = Vector2(10, 5)
 
 [node name="StaticBody2D" type="StaticBody2D" parent="Arenas/Pecado2" unique_id=910169492]
@@ -90,7 +90,7 @@ polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63
 [node name="Centro" type="Marker2D" parent="Arenas/Pecado2" unique_id=108621662]
 
 [node name="Pecado3" type="Sprite2D" parent="Arenas" unique_id=1664075302]
-position = Vector2(6678, -1030)
+position = Vector2(7709, -2338)
 scale = Vector2(10, 5)
 
 [node name="StaticBody2D" type="StaticBody2D" parent="Arenas/Pecado3" unique_id=1716634973]
@@ -103,7 +103,7 @@ polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63
 [node name="Centro" type="Marker2D" parent="Arenas/Pecado3" unique_id=1721452226]
 
 [node name="Pecado4" type="Sprite2D" parent="Arenas" unique_id=1789608018]
-position = Vector2(2133, 1634)
+position = Vector2(2876.9998, 2942)
 scale = Vector2(10, 5)
 
 [node name="StaticBody2D" type="StaticBody2D" parent="Arenas/Pecado4" unique_id=1885269317]
@@ -116,7 +116,7 @@ polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63
 [node name="Centro" type="Marker2D" parent="Arenas/Pecado4" unique_id=1799420584]
 
 [node name="Pecado5" type="Sprite2D" parent="Arenas" unique_id=643689195]
-position = Vector2(4415, 1634)
+position = Vector2(5293.9995, 2942)
 scale = Vector2(10, 5)
 
 [node name="StaticBody2D" type="StaticBody2D" parent="Arenas/Pecado5" unique_id=800296856]
@@ -129,7 +129,7 @@ polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63
 [node name="Centro" type="Marker2D" parent="Arenas/Pecado5" unique_id=958605534]
 
 [node name="Pecado6" type="Sprite2D" parent="Arenas" unique_id=11392063]
-position = Vector2(6678, 1634)
+position = Vector2(7708.9995, 2942)
 scale = Vector2(10, 5)
 
 [node name="StaticBody2D" type="StaticBody2D" parent="Arenas/Pecado6" unique_id=1957166289]
@@ -142,7 +142,7 @@ polygon = PackedVector2Array(-63.63889, -53.5, -54.361115, -63.9, 55.694443, -63
 [node name="Centro" type="Marker2D" parent="Arenas/Pecado6" unique_id=613594488]
 
 [node name="Pecado7" type="Sprite2D" parent="Arenas" unique_id=1273363467]
-position = Vector2(8490, 320)
+position = Vector2(9921, 320)
 scale = Vector2(10, 5)
 
 [node name="StaticBody2D" type="StaticBody2D" parent="Arenas/Pecado7" unique_id=439330336]

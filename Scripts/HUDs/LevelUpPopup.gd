@@ -52,6 +52,7 @@ var special_level_up_confetti: CPUParticles2D
 signal option_selected(option)
 signal active_discard_selected(discarded_slot, new_option)
 signal rare_discard_selected(discarded_option, old_option, new_option)
+signal boss_passive_discard_selected(discarded_option, old_option, new_option)
 
 func _ready() -> void:
 	randomize()
@@ -161,6 +162,32 @@ func show_rare_discard_popup(old_options, new_option: String) -> void:
 	pending_old_rare_option = str(pending_rare_options[0]) if pending_rare_options.size() > 0 else ""
 	pending_new_rare_option = new_option
 	title_label.text = "Escolha 1 rara para substituir"
+	title_label.visible = true
+
+	var discard_options = []
+	for old_option in pending_rare_options:
+		var old_option_data = _get_option_by_id(str(old_option)).duplicate()
+		old_option_data["discard_target"] = "equipped"
+		old_option_data["discard_option"] = str(old_option)
+		old_option_data["text"] = "Descartar - %s" % _get_option_button_text(old_option_data)
+		discard_options.append(old_option_data)
+
+	var new_option_data = _get_option_by_id(new_option).duplicate()
+	new_option_data["discard_target"] = "new"
+	new_option_data["text"] = "Manter atuais - %s" % _get_option_button_text(new_option_data)
+	discard_options.append(new_option_data)
+
+	_render_options(discard_options, false)
+
+func show_boss_passive_discard_popup(old_options, new_option: String) -> void:
+	get_tree().paused = true
+	current_mode = "discard_boss_passive"
+	pending_active_option = ""
+	pending_rare_options = old_options.duplicate() if old_options is Array else [old_options]
+	pending_rare_options = pending_rare_options.filter(func(option_id): return str(option_id) != "")
+	pending_old_rare_option = str(pending_rare_options[0]) if pending_rare_options.size() > 0 else ""
+	pending_new_rare_option = new_option
+	title_label.text = "Escolha 1 passiva de boss para substituir"
 	title_label.visible = true
 
 	var discard_options = []
@@ -680,6 +707,26 @@ func _on_option_button_pressed(index: int) -> void:
 			discarded_option = option.get("id", pending_new_rare_option)
 
 		emit_signal("rare_discard_selected", discarded_option, pending_old_rare_option, pending_new_rare_option)
+		if discarded_option == pending_new_rare_option:
+			_block_level_option(pending_new_rare_option)
+			_return_to_saved_level_options()
+		else:
+			_complete_level_up_choice()
+		return
+
+	if current_mode == "discard_boss_passive":
+		var discard_target = str(option.get("discard_target", ""))
+		var discarded_option = pending_new_rare_option
+		if discard_target == "equipped":
+			discarded_option = str(option.get("discard_option", option.get("id", pending_new_rare_option)))
+		elif discard_target == "old":
+			discarded_option = pending_old_rare_option
+		elif discard_target == "new":
+			discarded_option = pending_new_rare_option
+		else:
+			discarded_option = option.get("id", pending_new_rare_option)
+
+		emit_signal("boss_passive_discard_selected", discarded_option, pending_old_rare_option, pending_new_rare_option)
 		if discarded_option == pending_new_rare_option:
 			_block_level_option(pending_new_rare_option)
 			_return_to_saved_level_options()

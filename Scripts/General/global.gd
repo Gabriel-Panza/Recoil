@@ -21,7 +21,7 @@ const CHARACTER_RENDER_Z_INDEX: int = 10
 const GROUND_AREA_VFX_LAYER_NAME: String = "GroundAreaVFX"
 const GROUND_AREA_VFX_Z_INDEX: int = 1
 const ENEMY_ATTACK_ACTIVE_COLOR_DARKENING: float = 0.3
-const AREA_AURA_VFX_DARKENING: float = 0.12
+const AREA_AURA_VFX_DARKENING: float = 0.15
 
 const STARTING_ARM_DATA = {
 	"fast": {
@@ -145,7 +145,7 @@ const ACTIVE_ABILITY_DATA = {
 	"envy_mirror_clone": {
 		"name": "Mirror Clone",
 		"description": "Summon a mirror clone that fires random risky shots with you for a short time. Clone bullets can hit anything, including you.",
-		"cooldown": 20.0,
+		"cooldown": 25.0,
 		"method": "activate_envy_mirror_clone"
 	},
 	"wrath_burst": {
