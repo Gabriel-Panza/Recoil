@@ -35,13 +35,16 @@ func _physics_process(delta: float) -> void:
 
 func mover(_delta: float) -> void:
 	var distance_to_player = global_position.distance_to(player.global_position)
+	var opening_direction = _get_corner_escape_opening_direction()
 
 	if distance_to_player > attack_range:
-		var direction = global_position.direction_to(player.global_position)
+		var direction = _get_chase_direction_to_player()
 		_move_with_obstacle_avoidance(direction, speed, _delta)
 	elif distance_to_player < stop_distance:
-		var direction = player.global_position.direction_to(global_position)
+		var direction = opening_direction if opening_direction != Vector2.ZERO else player.global_position.direction_to(global_position)
 		_move_with_obstacle_avoidance(direction, speed, _delta)
+	elif opening_direction != Vector2.ZERO:
+		_move_with_obstacle_avoidance(opening_direction, speed, _delta)
 	else:
 		velocity = _get_idle_soft_separation_velocity(speed)
 		move_and_slide()

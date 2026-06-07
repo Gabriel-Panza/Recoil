@@ -9,10 +9,15 @@ const OPTION_BUTTON_COUNT: int = 3
 const SLOT_ROLL_BASE_TICKS: int = 14
 const SLOT_ROLL_STOP_TICK_STEP: int = 6
 const SLOT_ROLL_INTERVAL: float = 0.075
-const SPECIAL_LEVEL_UP_ROLL_CHANCE: float = 0.075
-const SPECIAL_LEVEL_UP_MULTIPLIER: float = 2.0
+const SPECIAL_LEVEL_UP_ROLL_CHANCE: float = 0.08
+const SPECIAL_LEVEL_UP_EPIC_TIER: String = "epic"
+const SPECIAL_LEVEL_UP_LEGENDARY_TIER: String = "legendary"
+const SPECIAL_LEVEL_UP_LEGENDARY_SHARE: float = 0.3
+const SPECIAL_LEVEL_UP_EPIC_MULTIPLIER: float = 1.5
+const SPECIAL_LEVEL_UP_LEGENDARY_MULTIPLIER: float = 2.0
 const SPECIAL_LEVEL_UP_GLOW_NODE_NAME: String = "SpecialLevelUpGlow"
-const SPECIAL_LEVEL_UP_GLOW_COLOR: Color = Color(1.0, 0.8, 0.2, 1.0)
+const SPECIAL_LEVEL_UP_EPIC_GLOW_COLOR: Color = Color(0.68, 0.22, 1.0, 1.0)
+const SPECIAL_LEVEL_UP_LEGENDARY_GLOW_COLOR: Color = Color(1.0, 0.8, 0.2, 1.0)
 const SPECIAL_LEVEL_UP_CONFETTI_NAME: String = "SpecialLevelUpConfetti"
 const CONFETTI_LIFETIME: float = 2.5
 const CONFETTI_VIEWPORT_WIDTH_MULTIPLIER: float = 1.15
@@ -337,10 +342,18 @@ func _roll_special_level_up_options(options: Array) -> Array:
 	for option in options:
 		var rolled_option = option.duplicate(true)
 		if _can_roll_special_level_up(rolled_option) and randf() <= SPECIAL_LEVEL_UP_ROLL_CHANCE:
+			var tier = _roll_special_level_up_tier()
 			rolled_option["special_level_up"] = true
-			rolled_option["stat_multiplier"] = SPECIAL_LEVEL_UP_MULTIPLIER
+			rolled_option["special_level_up_tier"] = tier
+			rolled_option["stat_multiplier"] = _get_special_level_up_tier_multiplier(tier)
 		rolled_options.append(rolled_option)
 	return rolled_options
+
+func _roll_special_level_up_tier() -> String:
+	return SPECIAL_LEVEL_UP_LEGENDARY_TIER if randf() <= SPECIAL_LEVEL_UP_LEGENDARY_SHARE else SPECIAL_LEVEL_UP_EPIC_TIER
+
+func _get_special_level_up_tier_multiplier(tier: String) -> float:
+	return SPECIAL_LEVEL_UP_LEGENDARY_MULTIPLIER if tier == SPECIAL_LEVEL_UP_LEGENDARY_TIER else SPECIAL_LEVEL_UP_EPIC_MULTIPLIER
 
 func _can_roll_special_level_up(option: Dictionary) -> bool:
 	var rarity = str(option.get("rarity", ""))
@@ -411,7 +424,7 @@ func _play_level_up_slot_roll(final_options: Array, pools: Array) -> void:
 
 	is_rolling_options = false
 	_render_options(final_options, true)
-	if _has_special_level_up_option(final_options):
+	if _has_legendary_special_level_up_option(final_options):
 		_spawn_special_level_up_confetti()
 
 func _get_slot_roll_pool(slot_index: int, final_options: Array, pools: Array) -> Array:
@@ -459,21 +472,28 @@ func _set_special_level_up_button_effect(button: Button, option: Dictionary, is_
 		glow.offset_right = 4.0
 		glow.offset_bottom = 4.0
 		var style = StyleBoxFlat.new()
-		style.bg_color = Color(SPECIAL_LEVEL_UP_GLOW_COLOR.r, SPECIAL_LEVEL_UP_GLOW_COLOR.g, SPECIAL_LEVEL_UP_GLOW_COLOR.b, 0.12)
-		style.border_color = SPECIAL_LEVEL_UP_GLOW_COLOR
 		style.set_border_width_all(2)
 		style.set_corner_radius_all(6)
 		glow.add_theme_stylebox_override("panel", style)
 		button.add_child(glow)
 
+	var glow_color = _get_special_level_up_color(option)
+	var style = glow.get_theme_stylebox("panel") as StyleBoxFlat
+	if style:
+		style.bg_color = Color(glow_color.r, glow_color.g, glow_color.b, 0.12)
+		style.border_color = glow_color
+
 	glow.visible = true
-	var effect_key = "%s:%.2f" % [str(option.get("id", "")), _get_option_stat_multiplier(option)]
+	var effect_key = "%s:%s:%.2f" % [str(option.get("id", "")), _get_special_level_up_tier(option), _get_option_stat_multiplier(option)]
 	if str(button.get_meta("special_level_up_effect_key", "")) == effect_key:
 		return
 
 	_kill_special_level_up_tween(button)
 	button.set_meta("special_level_up_effect_key", effect_key)
 	glow.modulate = Color(1.0, 1.0, 1.0, 1.0)
+	if not _is_legendary_special_level_up_option(option):
+		return
+
 	var pulse = create_tween().bind_node(glow)
 	pulse.set_loops()
 	pulse.tween_property(glow, "modulate:a", 0.42, 0.34).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
@@ -534,9 +554,15 @@ func _get_option_button_text(option: Dictionary) -> String:
 func _get_option_tooltip(option: Dictionary) -> String:
 	var tooltip = str(option.get("description", ""))
 	if _is_special_level_up_option(option):
-		var special_tooltip = "Special level up: numeric values are doubled."
+		var special_tooltip = _get_special_level_up_tooltip(option)
 		return special_tooltip if tooltip == "" else "%s\n%s" % [tooltip, special_tooltip]
 	return tooltip
+
+func _get_special_level_up_tooltip(option: Dictionary) -> String:
+	var tier = _get_special_level_up_tier(option)
+	if tier == SPECIAL_LEVEL_UP_LEGENDARY_TIER:
+		return "Lucky Legendary: numeric values are doubled."
+	return "Lucky Epic: numeric values are increased by 50%."
 
 func _get_special_level_up_text(text: String, multiplier: float) -> String:
 	var regex = RegEx.new()
@@ -573,8 +599,23 @@ func _has_special_level_up_option(options: Array) -> bool:
 			return true
 	return false
 
+func _has_legendary_special_level_up_option(options: Array) -> bool:
+	for option in options:
+		if option is Dictionary and _is_legendary_special_level_up_option(option):
+			return true
+	return false
+
+func _is_legendary_special_level_up_option(option: Dictionary) -> bool:
+	return _is_special_level_up_option(option) and _get_special_level_up_tier(option) == SPECIAL_LEVEL_UP_LEGENDARY_TIER
+
+func _get_special_level_up_tier(option: Dictionary) -> String:
+	return str(option.get("special_level_up_tier", SPECIAL_LEVEL_UP_LEGENDARY_TIER))
+
 func _get_option_stat_multiplier(option: Dictionary) -> float:
 	return max(float(option.get("stat_multiplier", 1.0)), 0.0)
+
+func _get_special_level_up_color(option: Dictionary) -> Color:
+	return SPECIAL_LEVEL_UP_LEGENDARY_GLOW_COLOR if _get_special_level_up_tier(option) == SPECIAL_LEVEL_UP_LEGENDARY_TIER else SPECIAL_LEVEL_UP_EPIC_GLOW_COLOR
 
 func _get_color_for_rarity(rarity: String) -> Color:
 	match rarity:
@@ -592,7 +633,7 @@ func _get_option_button_color(option: Dictionary, is_blocked: bool) -> Color:
 	if is_blocked:
 		return Color(color.r * 0.28, color.g * 0.28, color.b * 0.28, 0.78)
 	if _is_special_level_up_option(option):
-		return color.lerp(SPECIAL_LEVEL_UP_GLOW_COLOR, 0.68)
+		return color.lerp(_get_special_level_up_color(option), 0.68)
 
 	return color
 

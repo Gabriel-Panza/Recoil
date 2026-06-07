@@ -25,6 +25,13 @@ const SOFT_SEPARATION_PADDING: float = 10.0
 const SOFT_SEPARATION_FORCE: float = 0.48
 const SOFT_SEPARATION_IDLE_SPEED_MULTIPLIER: float = 0.35
 const BODY_RADIUS_FALLBACK: float = 18.0
+const CORNER_ESCAPE_EDGE_MARGIN: float = 150.0
+const CORNER_ESCAPE_INFLUENCE_DISTANCE: float = 260.0
+const CORNER_ESCAPE_CORRIDOR_HALF_WIDTH: float = 110.0
+const CORNER_ESCAPE_FLANK_DISTANCE: float = 92.0
+const CORNER_ESCAPE_WALL_SIDE_OFFSET: float = 24.0
+const CORNER_ESCAPE_STEER_FORCE: float = 1.85
+const CORNER_ESCAPE_BACK_MARGIN: float = 24.0
 
 var current_health: int
 var player: Node2D
@@ -60,8 +67,117 @@ func _physics_process(delta: float) -> void:
 		mover(delta)
 
 func mover(_delta: float) -> void:
-	var direction = global_position.direction_to(player.global_position)
+	var direction = _get_chase_direction_to_player()
 	_move_with_obstacle_avoidance(direction, speed, _delta)
+
+func _get_chase_direction_to_player() -> Vector2:
+	if player == null:
+		return Vector2.ZERO
+
+	var direct_direction = global_position.direction_to(player.global_position)
+	var opening_direction = _get_corner_escape_opening_direction()
+	if opening_direction == Vector2.ZERO:
+		return direct_direction
+
+	return (direct_direction + opening_direction * CORNER_ESCAPE_STEER_FORCE).normalized()
+
+func _get_corner_escape_opening_direction() -> Vector2:
+	if player == null:
+		return Vector2.ZERO
+
+	var player_position = player.global_position
+	var escape_direction = _get_player_corner_escape_direction(player_position)
+	if escape_direction == Vector2.ZERO:
+		return Vector2.ZERO
+
+	var player_to_enemy = global_position - player_position
+	var forward_distance = player_to_enemy.dot(escape_direction)
+	if forward_distance < -CORNER_ESCAPE_BACK_MARGIN or forward_distance > CORNER_ESCAPE_INFLUENCE_DISTANCE:
+		return Vector2.ZERO
+
+	var lateral_axis = escape_direction.rotated(PI * 0.5)
+	var lateral_distance = player_to_enemy.dot(lateral_axis)
+	if abs(lateral_distance) > CORNER_ESCAPE_CORRIDOR_HALF_WIDTH:
+		return Vector2.ZERO
+
+	var side_sign = _get_corner_escape_side_sign(lateral_distance)
+	var flank_target = _get_corner_escape_flank_target(player_position, escape_direction, lateral_axis, side_sign)
+	var opening_direction = global_position.direction_to(flank_target)
+	return opening_direction.normalized() if opening_direction != Vector2.ZERO else Vector2.ZERO
+
+func _get_player_corner_escape_direction(player_position: Vector2) -> Vector2:
+	var arena_bounds = _get_current_arena_bounds()
+	if arena_bounds.size == Vector2.ZERO:
+		return Vector2.ZERO
+
+	var near_left = player_position.x - arena_bounds.position.x <= CORNER_ESCAPE_EDGE_MARGIN
+	var near_right = arena_bounds.end.x - player_position.x <= CORNER_ESCAPE_EDGE_MARGIN
+	var near_top = player_position.y - arena_bounds.position.y <= CORNER_ESCAPE_EDGE_MARGIN
+	var near_bottom = arena_bounds.end.y - player_position.y <= CORNER_ESCAPE_EDGE_MARGIN
+	if not ((near_left or near_right) and (near_top or near_bottom)):
+		return Vector2.ZERO
+
+	var arena_center = _get_current_arena_center(arena_bounds)
+	var escape_direction = player_position.direction_to(arena_center)
+	return escape_direction.normalized() if escape_direction != Vector2.ZERO else Vector2.ZERO
+
+func _get_corner_escape_side_sign(lateral_distance: float) -> int:
+	if abs(lateral_distance) > 1.0:
+		return 1 if lateral_distance > 0.0 else -1
+
+	return 1 if get_instance_id() % 2 == 0 else -1
+
+func _get_corner_escape_flank_target(player_position: Vector2, escape_direction: Vector2, lateral_axis: Vector2, side_sign: int) -> Vector2:
+	var flank_distance = CORNER_ESCAPE_FLANK_DISTANCE + _get_body_collision_radius(self)
+	var side_options = [side_sign, -side_sign]
+	for side in side_options:
+		var side_direction = lateral_axis * float(side)
+		var target = player_position + side_direction * flank_distance - escape_direction * CORNER_ESCAPE_WALL_SIDE_OFFSET
+		if _is_current_arena_position_safe(target):
+			return target
+
+	for side in side_options:
+		var side_direction = lateral_axis * float(side)
+		var target = player_position + side_direction * flank_distance
+		if _is_current_arena_position_safe(target):
+			return target
+
+	return player_position + lateral_axis * flank_distance * float(side_sign)
+
+func _get_current_arena_bounds() -> Rect2:
+	var game_scene = _get_game_scene()
+	if game_scene != null and game_scene.has_method("_get_current_arena_bounds"):
+		var bounds = game_scene.call("_get_current_arena_bounds")
+		if bounds is Rect2:
+			return bounds
+
+	return Rect2()
+
+func _get_current_arena_center(arena_bounds: Rect2) -> Vector2:
+	var game_scene = _get_game_scene()
+	if game_scene != null and game_scene.has_method("_get_current_arena_center"):
+		var arena_center = game_scene.call("_get_current_arena_center")
+		if arena_center is Vector2:
+			return arena_center
+
+	return arena_bounds.get_center()
+
+func _is_current_arena_position_safe(position: Vector2) -> bool:
+	var game_scene = _get_game_scene()
+	if game_scene != null and game_scene.has_method("_is_position_safe_in_current_arena"):
+		return bool(game_scene.call("_is_position_safe_in_current_arena", position, _get_body_collision_radius(self)))
+
+	return true
+
+func _get_game_scene() -> Node:
+	var tree = get_tree()
+	if tree == null:
+		return null
+
+	if tree.current_scene != null:
+		return tree.current_scene
+
+	return get_node_or_null("/root/GameScene")
 
 func _move_with_obstacle_avoidance(desired_direction: Vector2, move_speed: float, delta: float, include_soft_separation: bool = true) -> void:
 	velocity = _get_obstacle_aware_velocity(desired_direction, move_speed, delta, include_soft_separation)
