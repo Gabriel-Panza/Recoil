@@ -17,9 +17,9 @@ const PLAYER_LAYER_MASK: int = 2
 const ENEMY_LAYER_MASK: int = 4
 const ENEMY_COLLISION_MASK: int = ENEMY_LAYER_MASK
 const ENEMY_BODY_COLLISION_SCALE: float = 0.7
-const CHARACTER_RENDER_Z_INDEX: int = 10
+const CHARACTER_RENDER_Z_INDEX: int = 20
 const GROUND_AREA_VFX_LAYER_NAME: String = "GroundAreaVFX"
-const GROUND_AREA_VFX_Z_INDEX: int = 1
+const GROUND_AREA_VFX_Z_INDEX: int = 10
 const ENEMY_ATTACK_ACTIVE_COLOR_DARKENING: float = 0.3
 const AREA_AURA_VFX_DARKENING: float = 0.15
 
@@ -30,7 +30,7 @@ const STARTING_ARM_DATA = {
 		"attack_damage": 35.0,
 		"base_fire_rate": 0.5,
 		"min_fire_rate": 0.3,
-		"base_recoil_force": 415.0,
+		"base_recoil_force": 410.0,
 		"friction": 900.0,
 		"attack_speed_upgrade_multiplier": 0.3,
 		"unstable_projectiles": false
@@ -41,7 +41,7 @@ const STARTING_ARM_DATA = {
 		"attack_damage": 66.0,
 		"base_fire_rate": 2.0,
 		"min_fire_rate": 1.35,
-		"base_recoil_force": 755.0,
+		"base_recoil_force": 750.0,
 		"friction": 600.0,
 		"attack_speed_upgrade_multiplier": 0.5,
 		"unstable_projectiles": false
@@ -52,7 +52,7 @@ const STARTING_ARM_DATA = {
 		"attack_damage": 40.0,
 		"base_fire_rate": 1.1,
 		"min_fire_rate": 0.60,
-		"base_recoil_force": 585.0,
+		"base_recoil_force": 580.0,
 		"friction": 750.0,
 		"attack_speed_upgrade_multiplier": 0.7,
 		"unstable_projectiles": true
@@ -83,7 +83,7 @@ const STARTING_ARM_OPTIONS = [
 const PASSIVE_UPGRADE_OPTIONS = [
 	{ "id": "option_1", "text": "Recoil Force (+5%)", "description": "+5% recoil force is additive from your base recoil, not your current recoil. Does not appear for the heavy arm and stops appearing at 8.0 recoil force.", "rarity": "passive_common" },
 	{ "id": "option_2", "text": "Health (+5%)", "description": "Increases your maximum health and heals you slightly based on your current health.", "rarity": "passive_common" },
-	{ "id": "option_3", "text": "Attack (+15%)", "description": "Increases the damage dealt by your bullets and damage-based effects.", "rarity": "passive_common" },
+	{ "id": "option_3", "text": "Attack (+10%)", "description": "Increases the damage dealt by your bullets and damage-based effects.", "rarity": "passive_common" },
 	{ "id": "option_4", "text": "Atk-Speed (+5%)", "description": "+5% attack speed before the chosen arm's tuning. Does not appear for the fast arm; heavy and unstable arms each have their own safe cooldown floor.", "rarity": "passive_common" },
 	{ "id": "option_5", "text": "Bullet Size (+5%)", "description": "+5% bullet size for friendly projectiles. Bonus is additive and stops at 200% bullet size.", "rarity": "passive_common" },
 	{ "id": "option_6", "text": "Heal After Wave (+3%)", "description": "Heal 3% max health after each enemy wave. This upgrade stops appearing at 15%.", "rarity": "passive_common" },
@@ -106,7 +106,7 @@ const RARE_PASSIVE_OPTIONS = [
 ]
 
 const BOSS_REWARD_OPTIONS = [
-	{ "id": "sloth_slow_aura", "name": "Slow Aura", "text": "Slow Aura", "description": "Enemies within 180px move at 70% speed.", "rarity": "passive_sin" },
+	{ "id": "sloth_slow_aura", "name": "Slow Aura", "text": "Slow Aura", "description": "Enemies within 180px move at 65% speed.", "rarity": "passive_sin" },
 	{ "id": "sloth_field", "name": "Sloth Field", "text": "Sloth Field", "description": "Create a 180px field near you for 5 seconds. Enemies inside drop to 35% speed, but your dash speed drops to 75% during the field.", "rarity": "active_sin" },
 	{ "id": "gluttony_heal_kill", "name": "Blood Feast", "text": "Blood Feast", "description": "Killing an enemy releases green motes that heal 1% max health when they return.", "rarity": "passive_sin" },
 	{ "id": "gluttony_devour", "name": "Devour", "text": "Devour", "description": "Consume up to two enemies within 180px. Green motes fly back and heal up to 12.5% max health when they arrive, but your dash speed is halved for 5 seconds.", "rarity": "active_sin" },
@@ -116,7 +116,7 @@ const BOSS_REWARD_OPTIONS = [
 	{ "id": "wrath_burst", "name": "Wrath Burst", "text": "Wrath Burst", "description": "Fire 16 radial bullets for 120% attack damage each, then take 20 damage.", "rarity": "active_sin" },
 	{ "id": "lust_for_vengeance", "name": "Vengeance", "text": "Vengeance", "description": "Deal 75% more damage while at full HP, but lose the bonus when hit.", "rarity": "passive_sin" },
 	{ "id": "lust_for_perfection", "name": "Perfection", "text": "Perfection", "description": "Become invulnerable for 3 seconds, then take double damage for 5 seconds.", "rarity": "active_sin" },
-	{ "id": "greed_cursed_level", "name": "Cursed Level", "text": "Cursed Level", "description": "Gain 1 bonus level per wave. Enemies move 25% faster.", "rarity": "passive_sin" },
+	{ "id": "greed_cursed_level", "name": "Golden Debt", "text": "Golden Debt", "description": "Gain +20% attack and +10% attack speed, but pay 5% of your current health at the start of each wave.", "rarity": "passive_sin" },
 	{ "id": "greed_treasure_rain", "name": "Treasure Rain", "text": "Treasure Rain", "description": "Rain golden projectiles from above. Each projectile deals 120% attack damage only when it collides, including with you.", "rarity": "active_sin" },
 ]
 
@@ -191,7 +191,7 @@ const PASSIVE_STATUS_DATA = {
 	},
 	"sloth_slow_aura": {
 		"name": "Slow Aura",
-		"description": "Enemies within 180px move at 70% speed."
+		"description": "Enemies within 180px move at 65% speed."
 	},
 	"gluttony_heal_kill": {
 		"name": "Blood Feast",
@@ -210,8 +210,8 @@ const PASSIVE_STATUS_DATA = {
 		"description": "At full HP, deal 75% more damage."
 	},
 	"greed_cursed_level": {
-		"name": "Cursed Level",
-		"description": "Gain 1 bonus level per wave. Enemies move 25% faster."
+		"name": "Golden Debt",
+		"description": "+20% attack and +10% attack speed. Pay 5% current health at each wave start."
 	},
 }
 

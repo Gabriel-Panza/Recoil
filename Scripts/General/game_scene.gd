@@ -23,6 +23,7 @@ const ARENA_TILESET_HELL: String = "hell"
 const ARENA_TILESET_MIRROR: String = "mirror"
 const ARENA_FILL_TILEMAP: String = "tilemap"
 const ARENA_FILL_ROUND_TILES: String = "round_tiles"
+const ARENA_FILL_MIRROR_SURFACE: String = "mirror_surface"
 const ARENA_DETAIL_MIRROR_PANELS: String = "mirror_panels"
 const ARENA_SHAPE_RECT: String = "rect"
 const ARENA_SHAPE_ROUNDED_RECT: String = "rounded_rect"
@@ -43,13 +44,20 @@ const MIRROR_REFLECT_TILE: Vector2i = Vector2i(11, 5)
 const MIRROR_PANEL_TILE: Vector2i = Vector2i(2, 1)
 const MIRROR_PANEL_ALT_TILE: Vector2i = Vector2i(8, 8)
 const MIRROR_TILE_SCALE: float = 0.42
-const MIRROR_PANEL_LINE_COLOR: Color = Color(0.86, 0.94, 0.96, 0.22)
-const MIRROR_PANEL_LINE_WIDTH: float = 2.0
+const MIRROR_BASE_COLOR: Color = Color(0.47, 0.54, 0.55, 1.0)
+const MIRROR_PANEL_COLOR: Color = Color(0.62, 0.69, 0.70, 0.68)
+const MIRROR_PANEL_ALT_COLOR: Color = Color(0.38, 0.45, 0.46, 0.64)
+const MIRROR_PANEL_LINE_COLOR: Color = Color(0.93, 0.98, 1.0, 0.34)
+const MIRROR_PANEL_LINE_WIDTH: float = 2.4
+const MIRROR_PANEL_COUNT: int = 5
+const MIRROR_INNER_MARGIN: float = 18.0
+const MIRROR_HIGHLIGHT_COLOR: Color = Color(0.97, 1.0, 1.0, 0.22)
 const ROUND_ARENA_TILE_RADIUS: float = 16.5
 const ROUND_ARENA_TILE_SPACING: float = 31.0
 const ROUND_ARENA_TILE_SEGMENTS: int = 18
 const GLUTTONY_PLATE_FILL_COLOR: Color = Color(0.17, 0.055, 0.052, 1.0)
 const GLUTTONY_INNER_RING_COLOR: Color = Color(0.16, 0.07, 0.04, 0.34)
+const HELL_FLOOR_UNDERLAY_COLOR: Color = Color(0.25, 0.105, 0.095, 1.0)
 const HELL_ROUND_DARK_TILE_COLOR: Color = Color(0.22, 0.17, 0.22, 1.0)
 const HELL_ROUND_RED_TILE_COLOR: Color = Color(0.43, 0.095, 0.075, 1.0)
 const HELL_ROUND_LAVA_TILE_COLOR: Color = Color(0.78, 0.33, 0.055, 1.0)
@@ -321,6 +329,7 @@ func _setup_arena_tile_visuals() -> void:
 		var arena = arena_nodes[arena_index]
 		var profile = _get_arena_profile(arena_index)
 		_prepare_arena_node_for_tile_visual(arena)
+		_add_arena_floor_underlay(arena, profile)
 		_add_arena_tile_layer(arena, profile, arena_index)
 		_add_arena_tile_border(arena, profile)
 		_add_arena_inner_details(arena, profile)
@@ -361,6 +370,10 @@ func _add_arena_tile_layer(arena: Node2D, profile: Dictionary, arena_index: int)
 		arena.remove_child(existing_layer)
 		existing_layer.queue_free()
 
+	if str(profile.get("fill", ARENA_FILL_TILEMAP)) == ARENA_FILL_MIRROR_SURFACE:
+		_add_mirror_arena_surface(arena, profile, arena_index)
+		return
+
 	if str(profile.get("fill", ARENA_FILL_TILEMAP)) == ARENA_FILL_ROUND_TILES:
 		_add_round_arena_tile_layer(arena, profile, arena_index)
 		return
@@ -392,7 +405,7 @@ func _add_arena_tile_layer(arena: Node2D, profile: Dictionary, arena_index: int)
 		for x in range(min_cell.x, max_cell.x + 1):
 			var tile_coords = Vector2i(x, y)
 			var tile_center = _get_arena_tile_center_position(tile_coords, profile)
-			if not _is_tile_visually_inside_arena_polygon(tile_center, polygon):
+			if not _is_tile_visually_inside_arena_polygon(tile_center, tile_parent_size * 0.46, polygon, bool(profile.get("strict_tile_clip", false))):
 				continue
 
 			var atlas_coords = _get_arena_tile_atlas_coords(tile_coords, arena_index, profile)
@@ -413,6 +426,133 @@ func _fill_rect_arena_tile_layer(tile_layer: TileMapLayer, profile: Dictionary, 
 			var tile_coords = Vector2i(x, y)
 			var atlas_coords = _get_arena_tile_atlas_coords(tile_coords, arena_index, profile)
 			tile_layer.set_cell(tile_coords, ARENA_TILE_SOURCE_ID, atlas_coords)
+
+func _add_arena_floor_underlay(arena: Node2D, profile: Dictionary) -> void:
+	var existing_underlay = arena.get_node_or_null("ArenaFloorUnderlay")
+	if existing_underlay != null:
+		arena.remove_child(existing_underlay)
+		existing_underlay.queue_free()
+
+	if str(profile.get("fill", ARENA_FILL_TILEMAP)) == ARENA_FILL_ROUND_TILES:
+		return
+
+	var underlay = Polygon2D.new()
+	underlay.name = "ArenaFloorUnderlay"
+	underlay.z_index = 0
+	underlay.polygon = _build_visual_floor_polygon(profile)
+	underlay.color = profile.get("floor_underlay_color", _get_default_floor_underlay_color(profile))
+	arena.add_child(underlay)
+
+func _build_visual_floor_polygon(profile: Dictionary) -> PackedVector2Array:
+	var polygon = _build_arena_polygon(profile)
+	var bleed = float(profile.get("floor_bleed", 1.0))
+	if abs(bleed - 1.0) <= 0.001:
+		return polygon
+
+	var expanded = PackedVector2Array()
+	for point in polygon:
+		expanded.append(point * bleed)
+	return expanded
+
+func _get_default_floor_underlay_color(profile: Dictionary) -> Color:
+	if str(profile.get("tile_set", ARENA_TILESET_HELL)) == ARENA_TILESET_MIRROR:
+		return MIRROR_BASE_COLOR
+	return HELL_FLOOR_UNDERLAY_COLOR
+
+func _add_mirror_arena_surface(arena: Node2D, profile: Dictionary, arena_index: int) -> void:
+	var layer = Node2D.new()
+	layer.name = "ArenaTileLayer"
+	layer.z_index = 0
+	arena.add_child(layer)
+
+	var base = Polygon2D.new()
+	base.name = "MirrorBaseSurface"
+	base.polygon = _build_visual_floor_polygon(profile)
+	base.color = MIRROR_BASE_COLOR
+	layer.add_child(base)
+
+	_add_large_mirror_panels(layer, profile, arena_index)
+	_add_mirror_surface_highlights(layer, profile, arena_index)
+
+func _add_large_mirror_panels(layer: Node2D, profile: Dictionary, arena_index: int) -> void:
+	var size = profile.get("size", _get_arena_pixel_size()) as Vector2
+	var half_size = size * 0.5
+	var radius = float(profile.get("radius", 72.0))
+	var usable_left = -half_size.x + MIRROR_INNER_MARGIN
+	var usable_right = half_size.x - MIRROR_INNER_MARGIN
+	var panel_width = (usable_right - usable_left) / float(MIRROR_PANEL_COUNT)
+
+	for panel_index in range(MIRROR_PANEL_COUNT):
+		var x_left = usable_left + panel_width * float(panel_index)
+		var x_right = usable_left + panel_width * float(panel_index + 1)
+		var panel = Polygon2D.new()
+		panel.name = "MirrorPanel%d" % panel_index
+		panel.polygon = _build_rounded_rect_vertical_slice_polygon(x_left, x_right, half_size, radius, MIRROR_INNER_MARGIN)
+		panel.color = _get_mirror_panel_color(panel_index, arena_index)
+		layer.add_child(panel)
+
+func _get_mirror_panel_color(panel_index: int, arena_index: int) -> Color:
+	var hash_value = abs(panel_index * 9283 + arena_index * 173)
+	var base_color = MIRROR_PANEL_COLOR if hash_value % 2 == 0 else MIRROR_PANEL_ALT_COLOR
+	var brightness = 0.94 + float(hash_value % 7) * 0.018
+	return Color(
+		clamp(base_color.r * brightness, 0.0, 1.0),
+		clamp(base_color.g * brightness, 0.0, 1.0),
+		clamp(base_color.b * brightness, 0.0, 1.0),
+		base_color.a
+	)
+
+func _build_rounded_rect_vertical_slice_polygon(x_left: float, x_right: float, half_size: Vector2, radius: float, inset: float) -> PackedVector2Array:
+	var points = PackedVector2Array()
+	var samples = 6
+	for sample in range(samples + 1):
+		var t = float(sample) / float(samples)
+		var x = lerp(x_left, x_right, t)
+		points.append(Vector2(x, _get_rounded_rect_edge_y_for_x(x, half_size, radius, true) + inset))
+
+	for sample in range(samples, -1, -1):
+		var t = float(sample) / float(samples)
+		var x = lerp(x_left, x_right, t)
+		points.append(Vector2(x, _get_rounded_rect_edge_y_for_x(x, half_size, radius, false) - inset))
+
+	return points
+
+func _get_rounded_rect_edge_y_for_x(x: float, half_size: Vector2, radius: float, top: bool) -> float:
+	var safe_radius = min(radius, min(half_size.x, half_size.y) - 4.0)
+	var straight_half_width = half_size.x - safe_radius
+	var abs_x = abs(x)
+	if abs_x <= straight_half_width:
+		return -half_size.y if top else half_size.y
+
+	var dx = min(abs_x - straight_half_width, safe_radius)
+	var circle_y = sqrt(max(safe_radius * safe_radius - dx * dx, 0.0))
+	if top:
+		return -half_size.y + safe_radius - circle_y
+	return half_size.y - safe_radius + circle_y
+
+func _add_mirror_surface_highlights(layer: Node2D, profile: Dictionary, arena_index: int) -> void:
+	var size = profile.get("size", _get_arena_pixel_size()) as Vector2
+	var half_size = size * 0.5
+	var radius = float(profile.get("radius", 72.0))
+	var usable_left = -half_size.x + MIRROR_INNER_MARGIN
+	var usable_right = half_size.x - MIRROR_INNER_MARGIN
+	var panel_width = (usable_right - usable_left) / float(MIRROR_PANEL_COUNT)
+
+	for panel_index in range(MIRROR_PANEL_COUNT):
+		var x_left = usable_left + panel_width * float(panel_index)
+		var x_right = usable_left + panel_width * float(panel_index + 1)
+		var top_y = max(
+			_get_rounded_rect_edge_y_for_x(x_left, half_size, radius, true),
+			_get_rounded_rect_edge_y_for_x(x_right, half_size, radius, true)
+		) + MIRROR_INNER_MARGIN + 18.0
+		var line = Line2D.new()
+		line.width = 3.0 if panel_index % 2 == 0 else 2.0
+		line.default_color = MIRROR_HIGHLIGHT_COLOR
+		line.points = PackedVector2Array([
+			Vector2(x_left + panel_width * 0.18, top_y + float((panel_index + arena_index) % 3) * 34.0),
+			Vector2(x_right - panel_width * 0.24, top_y + 180.0 + float(panel_index % 2) * 54.0)
+		])
+		layer.add_child(line)
 
 func _add_round_arena_tile_layer(arena: Node2D, profile: Dictionary, arena_index: int) -> void:
 	var layer = Node2D.new()
@@ -482,8 +622,22 @@ func _get_arena_tile_visual_scale(profile: Dictionary) -> float:
 func _get_arena_tile_center_position(tile_coords: Vector2i, profile: Dictionary) -> Vector2:
 	return (Vector2(tile_coords) + Vector2(0.5, 0.5)) * Vector2(float(ARENA_TILE_SIZE.x), float(ARENA_TILE_SIZE.y)) * _get_arena_tile_visual_scale(profile)
 
-func _is_tile_visually_inside_arena_polygon(tile_center: Vector2, polygon: PackedVector2Array) -> bool:
-	return Geometry2D.is_point_in_polygon(tile_center, polygon)
+func _is_tile_visually_inside_arena_polygon(tile_center: Vector2, tile_half_size: Vector2, polygon: PackedVector2Array, strict_clip: bool) -> bool:
+	if not Geometry2D.is_point_in_polygon(tile_center, polygon):
+		return false
+	if not strict_clip:
+		return true
+
+	var samples = [
+		tile_center + Vector2(tile_half_size.x, tile_half_size.y),
+		tile_center + Vector2(-tile_half_size.x, tile_half_size.y),
+		tile_center + Vector2(tile_half_size.x, -tile_half_size.y),
+		tile_center + Vector2(-tile_half_size.x, -tile_half_size.y)
+	]
+	for sample in samples:
+		if not Geometry2D.is_point_in_polygon(sample, polygon):
+			return false
+	return true
 
 func _get_arena_tile_atlas_coords(tile_coords: Vector2i, arena_index: int, profile: Dictionary) -> Vector2i:
 	if str(profile.get("tile_set", ARENA_TILESET_HELL)) == ARENA_TILESET_MIRROR:
@@ -529,18 +683,32 @@ func _get_mirror_arena_tile_atlas_coords(tile_coords: Vector2i, arena_index: int
 			return MIRROR_ACCENT_TILE
 
 func _add_arena_tile_border(arena: Node2D, profile: Dictionary) -> void:
+	var backer = arena.get_node_or_null("ArenaTileBorderBacker") as Line2D
+	if backer == null:
+		backer = Line2D.new()
+		backer.name = "ArenaTileBorderBacker"
+		backer.z_index = 1
+		backer.joint_mode = Line2D.LINE_JOINT_ROUND
+		arena.add_child(backer)
+
 	var border = arena.get_node_or_null("ArenaTileBorder") as Line2D
 	if border == null:
 		border = Line2D.new()
 		border.name = "ArenaTileBorder"
-		border.z_index = 2
-		border.joint_mode = Line2D.LINE_JOINT_SHARP
+		border.z_index = 3
 		arena.add_child(border)
 
 	border.width = float(profile.get("border_width", 6.0))
+	border.joint_mode = Line2D.LINE_JOINT_ROUND if bool(profile.get("round_border_joints", false)) else Line2D.LINE_JOINT_SHARP
 	border.default_color = profile.get("border_color", Color(0.08, 0.04, 0.05, 1.0))
 	var border_points = _build_arena_polygon(profile)
 	border_points.append(border_points[0])
+
+	backer.width = border.width + float(profile.get("border_backer_extra", 0.0))
+	backer.visible = backer.width > border.width + 0.1
+	backer.default_color = profile.get("border_backer_color", Color(0.035, 0.012, 0.012, 1.0))
+	backer.joint_mode = border.joint_mode
+	backer.points = border_points
 	border.points = border_points
 
 func _add_arena_inner_details(arena: Node2D, profile: Dictionary) -> void:
@@ -575,22 +743,19 @@ func _add_arena_mirror_panel_details(arena: Node2D, profile: Dictionary) -> void
 	var size = profile.get("size", _get_arena_pixel_size()) as Vector2
 	var half_size = size * 0.5
 	var corner_radius = float(profile.get("radius", 72.0))
-	var vertical_spacing = float(ARENA_TILE_SIZE.x) * MIRROR_TILE_SCALE * 4.0
-	var horizontal_spacing = float(ARENA_TILE_SIZE.y) * MIRROR_TILE_SCALE * 5.0
-	var vertical_top = -half_size.y + 22.0
-	var vertical_bottom = half_size.y - 22.0
-	var horizontal_left = -half_size.x + corner_radius * 0.55
-	var horizontal_right = half_size.x - corner_radius * 0.55
+	var vertical_spacing = (size.x - MIRROR_INNER_MARGIN * 2.0) / float(MIRROR_PANEL_COUNT)
+	var vertical_top = -half_size.y + corner_radius * 0.55
+	var vertical_bottom = half_size.y - corner_radius * 0.55
 
-	var x = -half_size.x + corner_radius
-	while x < half_size.x - corner_radius:
+	for i in range(1, MIRROR_PANEL_COUNT):
+		var x = -half_size.x + MIRROR_INNER_MARGIN + vertical_spacing * float(i)
 		_add_mirror_panel_line(panel_lines, Vector2(x, vertical_top), Vector2(x, vertical_bottom))
-		x += vertical_spacing
 
-	var y = -half_size.y + horizontal_spacing
-	while y < half_size.y - horizontal_spacing * 0.5:
+	var horizontal_left = -half_size.x + corner_radius * 0.8
+	var horizontal_right = half_size.x - corner_radius * 0.8
+	for y_ratio in [0.18, 0.52]:
+		var y = lerp(-half_size.y + corner_radius, half_size.y - corner_radius, float(y_ratio))
 		_add_mirror_panel_line(panel_lines, Vector2(horizontal_left, y), Vector2(horizontal_right, y))
-		y += horizontal_spacing
 
 func _add_mirror_panel_line(parent: Node, from_position: Vector2, to_position: Vector2) -> void:
 	var line = Line2D.new()
@@ -635,21 +800,42 @@ func _get_arena_profile(arena_index: int) -> Dictionary:
 				"size": _get_envy_arena_size(base_size),
 				"radius": 96.0,
 				"tile_set": ARENA_TILESET_MIRROR,
-				"tile_scale": MIRROR_TILE_SCALE,
+				"fill": ARENA_FILL_MIRROR_SURFACE,
 				"detail": ARENA_DETAIL_MIRROR_PANELS,
+				"floor_bleed": 1.018,
+				"floor_underlay_color": MIRROR_BASE_COLOR,
+				"border_width": 10.0,
+				"border_backer_extra": 16.0,
+				"border_color": Color(0.08, 0.09, 0.095, 1.0),
+				"border_backer_color": Color(0.015, 0.018, 0.02, 1.0),
+				"round_border_joints": true,
 				"lock_camera_x": true
 			}
 		4:
 			return {
 				"shape": ARENA_SHAPE_FLAME_CIRCLE,
 				"size": Vector2(base_size.y * 1.08, base_size.y * 0.98),
-				"tile_set": ARENA_TILESET_HELL
+				"tile_set": ARENA_TILESET_HELL,
+				"strict_tile_clip": true,
+				"floor_bleed": 1.035,
+				"border_width": 10.0,
+				"border_backer_extra": 18.0,
+				"border_color": Color(0.08, 0.018, 0.012, 1.0),
+				"border_backer_color": Color(0.025, 0.004, 0.002, 1.0),
+				"round_border_joints": true
 			}
 		5:
 			return {
 				"shape": ARENA_SHAPE_SERPENT,
 				"size": Vector2(base_size.x * 0.78, base_size.y * 1.02),
 				"tile_set": ARENA_TILESET_HELL,
+				"strict_tile_clip": true,
+				"floor_bleed": 1.04,
+				"border_width": 10.0,
+				"border_backer_extra": 18.0,
+				"border_color": Color(0.09, 0.018, 0.035, 1.0),
+				"border_backer_color": Color(0.028, 0.004, 0.012, 1.0),
+				"round_border_joints": true,
 				"anchors": _build_serpent_anchor_points(Vector2(base_size.x * 0.78, base_size.y * 1.02))
 			}
 		6:
@@ -664,6 +850,13 @@ func _get_arena_profile(arena_index: int) -> Dictionary:
 				"shape": ARENA_SHAPE_CROWN,
 				"size": Vector2(base_size.x * 0.96, base_size.y * 1.0),
 				"tile_set": ARENA_TILESET_HELL,
+				"strict_tile_clip": true,
+				"floor_bleed": 1.035,
+				"border_width": 10.0,
+				"border_backer_extra": 18.0,
+				"border_color": Color(0.11, 0.048, 0.015, 1.0),
+				"border_backer_color": Color(0.028, 0.009, 0.002, 1.0),
+				"round_border_joints": true,
 				"anchors": [Vector2.ZERO, Vector2(0.0, base_size.y * 0.22), Vector2(-base_size.x * 0.22, 0.0), Vector2(base_size.x * 0.22, 0.0)]
 			}
 
@@ -918,9 +1111,10 @@ func spawn_wave(data: Dictionary) -> void:
 	var total_enemies = data["melee"] + data["ranged"] + data["spread"] + data["tank"] + data["agile"]
 	_set_player_xp_goal(total_enemies, level_context, Global.pecado)
 
-	if $Player.greed_cursed_level_enabled:
-		$Player.grant_bonus_level_up("normal")
-		await _wait_for_level_up_selection()
+	if $Player.greed_cursed_level_enabled and $Player.has_method("apply_golden_debt_wave_cost"):
+		$Player.apply_golden_debt_wave_cost()
+		if $Player.current_health <= 0:
+			return
 
 	# Cria filas separadas
 	var melee_queue = []
@@ -985,9 +1179,8 @@ func spawn_enemy(enemy_scene: PackedScene) -> void:
 	# Monitora a morte do inimigo
 	enemy.tree_exited.connect(_on_enemy_died)
 
-func _apply_enemy_spawn_modifiers(enemy: Node) -> void:
-	if $Player.greed_cursed_level_enabled and enemy.get("speed") != null:
-		enemy.set("speed", enemy.get("speed") * 1.25)
+func _apply_enemy_spawn_modifiers(_enemy: Node) -> void:
+	pass
 
 func get_random_camera_edge_position(spawn_margin: float = 0.0) -> Vector2:
 	var camera = get_viewport().get_camera_2d()

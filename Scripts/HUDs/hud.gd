@@ -10,6 +10,7 @@ var camera
 
 var hud_offset: Vector2 = global_position
 var level_up_popup
+var active_skill_title_label: Label
 var active_skill_e_label: Label
 var active_skill_r_label: Label
 var passive_status_label: Label
@@ -17,13 +18,17 @@ var skill_status_top_background: TextureRect
 var skill_status_list_background: TextureRect
 const SKILL_STATUS_TOP_TEXTURE = preload("res://Sprites/Menu/hud_skills_and_passives.png")
 const SKILL_STATUS_LIST_TEXTURE = preload("res://Sprites/Menu/hud_list_of_passives.png")
+const HUD_PIXEL_FONT = preload("res://Fonts/cg-pixel-4x5.otf")
 const SKILL_STATUS_POSITION = Vector2(10.0, 86.0)
 const SKILL_STATUS_SCALE = 3.0
-const SKILL_STATUS_TOP_SIZE = Vector2(69.0, 35.0) * SKILL_STATUS_SCALE
+const SKILL_STATUS_TOP_SIZE = Vector2(69.0, 40.0) * SKILL_STATUS_SCALE
 const SKILL_STATUS_LIST_WIDTH = 69.0 * SKILL_STATUS_SCALE
 const SKILL_STATUS_LIST_MIN_HEIGHT = 10.0 * SKILL_STATUS_SCALE
 const SKILL_STATUS_LIST_VERTICAL_PADDING = 18.0
 const SKILL_STATUS_PASSIVE_LINE_HEIGHT = 24.0
+const ACTIVE_SKILL_TITLE_OFFSET = Vector2(10.0, 4.0)
+const ACTIVE_SKILL_E_OFFSET = Vector2(46.0, 28.0)
+const ACTIVE_SKILL_R_OFFSET = Vector2(46.0, 62.0)
 const SKILL_STATUS_BACKGROUND_ALPHA = 0.72
 const SKILL_STATUS_LABEL_ALPHA = 0.88
 
@@ -57,14 +62,22 @@ func _process(_delta: float) -> void:
 	_update_status_hud_labels()
 
 func _setup_active_skill_hud_labels() -> void:
+	active_skill_title_label = get_node_or_null("ActiveSkillHudTitle")
+	if active_skill_title_label == null:
+		active_skill_title_label = _create_active_skill_hud_title_label()
+	_style_active_skill_hud_title_label(active_skill_title_label)
+	_apply_skill_status_label_alpha(active_skill_title_label)
+
 	active_skill_e_label = get_node_or_null("ActiveSkillHudE")
 	if active_skill_e_label == null:
-		active_skill_e_label = _create_active_skill_hud_label("ActiveSkillHudE", SKILL_STATUS_POSITION + Vector2(46.0, 14.0))
+		active_skill_e_label = _create_active_skill_hud_label("ActiveSkillHudE")
+	active_skill_e_label.position = SKILL_STATUS_POSITION + ACTIVE_SKILL_E_OFFSET
 	_apply_skill_status_label_alpha(active_skill_e_label)
 
 	active_skill_r_label = get_node_or_null("ActiveSkillHudR")
 	if active_skill_r_label == null:
-		active_skill_r_label = _create_active_skill_hud_label("ActiveSkillHudR", SKILL_STATUS_POSITION + Vector2(46.0, 48.0))
+		active_skill_r_label = _create_active_skill_hud_label("ActiveSkillHudR")
+	active_skill_r_label.position = SKILL_STATUS_POSITION + ACTIVE_SKILL_R_OFFSET
 	_apply_skill_status_label_alpha(active_skill_r_label)
 
 func _setup_skill_status_background() -> void:
@@ -126,10 +139,9 @@ func _setup_passive_status_label() -> void:
 	_apply_skill_status_label_alpha(passive_status_label)
 	add_child(passive_status_label)
 
-func _create_active_skill_hud_label(label_name: String, label_position: Vector2) -> Label:
+func _create_active_skill_hud_label(label_name: String) -> Label:
 	var label = Label.new()
 	label.name = label_name
-	label.position = label_position
 	label.size = Vector2(SKILL_STATUS_LIST_WIDTH - 56.0, 20.0)
 	label.z_index = 0
 	label.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -140,6 +152,26 @@ func _create_active_skill_hud_label(label_name: String, label_position: Vector2)
 	_apply_skill_status_label_alpha(label)
 	add_child(label)
 	return label
+
+func _create_active_skill_hud_title_label() -> Label:
+	var label = Label.new()
+	label.name = "ActiveSkillHudTitle"
+	add_child(label)
+	return label
+
+func _style_active_skill_hud_title_label(label: Label) -> void:
+	if label == null:
+		return
+
+	label.position = SKILL_STATUS_POSITION + ACTIVE_SKILL_TITLE_OFFSET
+	label.size = Vector2(SKILL_STATUS_LIST_WIDTH - 20.0, 20.0)
+	label.z_index = 0
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
+	label.add_theme_font_override("font", HUD_PIXEL_FONT)
+	label.add_theme_constant_override("outline_size", 0)
+	label.add_theme_font_size_override("font_size", 15)
+	label.text = "ACTIVES:"
 
 func _apply_skill_status_label_alpha(label: Label) -> void:
 	if label == null:
@@ -288,7 +320,7 @@ func _apply_effect(option) -> void:
 			player.heal(health_gain)
 			_on_hp_updated(player.current_health, player.max_health)
 		"option_3":
-			player.attack_damage += player.attack_damage * 0.15 * stat_multiplier
+			player.attack_damage += player.attack_damage * 0.10 * stat_multiplier
 		"option_4":
 			player.add_attack_speed_bonus(0.05 * stat_multiplier)
 		"option_5":
@@ -326,7 +358,7 @@ func _apply_effect(option) -> void:
 		"lust_for_vengeance":
 			player.lust_for_vengeance_enabled = true
 		"greed_cursed_level":
-			player.greed_cursed_level_enabled = true
+			_enable_golden_debt()
 
 	_finish_effect_application()
 
@@ -365,7 +397,7 @@ func _apply_boss_passive_effect(option: String) -> void:
 		"lust_for_vengeance":
 			player.lust_for_vengeance_enabled = true
 		"greed_cursed_level":
-			player.greed_cursed_level_enabled = true
+			_enable_golden_debt()
 
 func _remove_boss_passive_effect(option: String) -> void:
 	match option:
@@ -380,7 +412,25 @@ func _remove_boss_passive_effect(option: String) -> void:
 		"lust_for_vengeance":
 			player.lust_for_vengeance_enabled = false
 		"greed_cursed_level":
-			player.greed_cursed_level_enabled = false
+			_disable_golden_debt()
+
+func _enable_golden_debt() -> void:
+	if player.has_method("enable_golden_debt"):
+		player.enable_golden_debt()
+		return
+
+	player.greed_cursed_level_enabled = true
+	player.attack_damage *= 1.2
+	player.add_attack_speed_bonus(0.1)
+
+func _disable_golden_debt() -> void:
+	if player.has_method("disable_golden_debt"):
+		player.disable_golden_debt()
+		return
+
+	player.greed_cursed_level_enabled = false
+	player.attack_damage /= 1.2
+	player.add_attack_speed_bonus(-0.1)
 
 func _equip_rare_option(option: String) -> void:
 	var already_equipped = player.has_rare_passive(option) if player.has_method("has_rare_passive") else player.current_rare_option == option

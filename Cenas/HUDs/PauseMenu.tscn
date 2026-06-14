@@ -266,32 +266,6 @@ offset_right = -18.895996
 offset_bottom = -41.112
 scale = Vector2(1.2, 1.2)
 
-[node name="MarginContainer" type="MarginContainer" parent="GameWin" unique_id=301964833]
-z_index = 2
-layout_mode = 0
-offset_left = 928.0
-offset_top = 488.0
-offset_right = 1128.0
-offset_bottom = 540.0
-
-[node name="TextureButton" type="TextureButton" parent="GameWin/MarginContainer" unique_id=1200009221]
-process_mode = 3
-layout_mode = 2
-
-[node name="Label" type="Label" parent="GameWin/MarginContainer/TextureButton" unique_id=226030254]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_colors/font_color = Color(0.882353, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 24
-text = "Retry"
-horizontal_alignment = 1
-vertical_alignment = 1
-
 [node name="MarginContainer2" type="MarginContainer" parent="GameWin" unique_id=1704343652]
 z_index = 2
 layout_mode = 0
@@ -329,5 +303,4 @@ volume_db = -10.0
 [connection signal="pressed" from="PauseMenu/OptionsMenu/VBoxContainer/BackButton" to="." method="_on_back_button_pressed"]
 [connection signal="pressed" from="GameOver/MarginContainer/TextureButton" to="." method="_on_retry_button_pressed"]
 [connection signal="pressed" from="GameOver/MarginContainer2/TextureButton" to="." method="_on_menu_button_pressed"]
-[connection signal="pressed" from="GameWin/MarginContainer/TextureButton" to="." method="_on_retry_button_pressed"]
 [connection signal="pressed" from="GameWin/MarginContainer2/TextureButton" to="." method="_on_menu_button_pressed"]

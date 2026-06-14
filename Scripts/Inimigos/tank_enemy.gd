@@ -6,13 +6,13 @@ const TANK_FRAME_SIZE: Vector2i = Vector2i(48, 48)
 const TANK_FRAMES_PER_ROW: int = 4
 const CONTACT_KNOCKBACK_MULTIPLIER: float = 0.35
 const TANK_ROW_BY_PECADO = {
-	1: 0,
-	2: 0,
-	3: 1,
+	1: 4,
+	2: 4,
+	3: 5,
 	4: 2,
 	5: 3,
-	6: 4,
-	7: 5,
+	6: 1,
+	7: 0,
 }
 
 func _ready() -> void:

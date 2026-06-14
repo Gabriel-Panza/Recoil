@@ -23,16 +23,24 @@ const WRATH_BOMB_PUSH_SPEED: float = 550.0
 const WRATH_BOMB_DAMAGE: float = 40.0
 const LUST_WALL_THICKNESS: float = 24.0
 const LUST_WALL_LENGTH: float = 260.0
-const LUST_BREAKABLE_WALL_HP: float = 110.0
+const LUST_BREAKABLE_WALL_MAX_HITS: int = 2
+const LUST_SERPENT_LASH_SEGMENTS: int = 11
+const LUST_SERPENT_LASH_RADIUS: float = 34.0
+const LUST_SERPENT_LASH_TELEGRAPH_DURATION: float = 0.75
+const LUST_SERPENT_LASH_DAMAGE_DURATION: float = 0.32
+const LUST_SERPENT_LASH_SEGMENT_INTERVAL: float = 0.035
+const LUST_SERPENT_LASH_DAMAGE_MULTIPLIER: float = 0.85
+const LUST_SERPENT_LASH_HIT_META: String = "lust_serpent_lash_hit_id"
 const SLOTH_SLOW_ZONE_RADIUS: float = 100.0
 const SLOTH_SUMMON_SPAWN_INTERVAL: float = 3.0
 const SLOTH_ZONE_TELEGRAPH_DURATION: float = 0.75
 const SLOTH_ZONE_SPAWN_INTERVAL: float = 1.5
 const SLOTH_SLOW_ZONE_LIFETIME: float = 15.0
-const SLOTH_BOSS_PLAYER_DASH_SPEED_MULTIPLIER: float = 0.45
+const SLOTH_BOSS_PLAYER_DASH_SPEED_MULTIPLIER: float = 0.75
 const SLOTH_BOSS_PLAYER_VELOCITY_MULTIPLIER: float = 0.75
 const SLOTH_BOSS_ZONE_DPS: float = 2.0
 const SLOTH_BOSS_ENEMY_SLOW_EFFECT_RATIO: float = 0.1
+const SLOTH_BOSS_ENEMY_SLOW_REFERENCE_DASH_MULTIPLIER: float = 0.45
 const GLUTTONY_FOOD_SPAWN_INTERVAL: float = 1.75
 const GLUTTONY_STRESS_DURATION_PHASE_1: float = 7.5
 const GLUTTONY_STRESS_DURATION_PHASE_2: float = 10.0
@@ -58,6 +66,10 @@ const PRIDE_EDGE_BEAM_WIDTH: float = 30.0
 const PRIDE_EDGE_BEAM_DELAY_PHASE_1: float = 0.75
 const PRIDE_EDGE_BEAM_DELAY_PHASE_2: float = 0.75
 const PRIDE_EDGE_BEAM_DURATION: float = 0.4
+const PRIDE_EDGE_OVERLAY_CHANCE_PHASE_1: float = 0.32
+const PRIDE_EDGE_OVERLAY_CHANCE_PHASE_2: float = 0.46
+const PRIDE_EDGE_OVERLAY_COOLDOWN_PHASE_1: float = 4.25
+const PRIDE_EDGE_OVERLAY_COOLDOWN_PHASE_2: float = 3.2
 const PRIDE_EDGE_CROSSBAR_LENGTH: float = 155.0
 const PRIDE_EDGE_CROSSBAR_OFFSET_RATIO: float = 0.65
 const PRIDE_FIRE_ORB_DAMAGE_MULTIPLIER: float = 0.65
@@ -73,12 +85,12 @@ const HEAL_FEEDBACK_COLOR: Color = Color(0.18, 1.0, 0.32, 1.0)
 
 const BOSS_CONFIG = {
 	1: { "max_health": 400, "speed": 0.0, "damage": 40, "state": BossState.SLOTH, "animation": "pecado1" },
-	2: { "max_health": 700, "speed": 80.0, "damage": 45, "state": BossState.GLUTTONY, "animation": "pecado2", "visual_scale": Vector2(2.15, 2.15) },
+	2: { "max_health": 700, "speed": 90.0, "damage": 45, "state": BossState.GLUTTONY, "animation": "pecado2", "visual_scale": Vector2(2.15, 2.15) },
 	3: { "max_health": 1000, "speed": 90.0, "damage": 50, "state": BossState.ENVY, "animation": "pecado3" },
-	4: { "max_health": 1200, "speed": 90.0, "damage": 60, "state": BossState.WRATH, "animation": "pecado4" },
-	5: { "max_health": 1400, "speed": 80.0, "damage": 50, "state": BossState.LUST, "animation": "pecado5" },
-	6: { "max_health": 1750, "speed": 85.0, "damage": 45, "state": BossState.GREED, "animation": "pecado6" },
-	7: { "max_health": 2000, "speed": 80.0, "damage": 80, "state": BossState.PRIDE, "animation": "pecado7" },
+	4: { "max_health": 1500, "speed": 90.0, "damage": 60, "state": BossState.WRATH, "animation": "pecado4" },
+	5: { "max_health": 2000, "speed": 80.0, "damage": 50, "state": BossState.LUST, "animation": "pecado5" },
+	6: { "max_health": 2750, "speed": 80.0, "damage": 45, "state": BossState.GREED, "animation": "pecado6" },
+	7: { "max_health": 3500, "speed": 80.0, "damage": 80, "state": BossState.PRIDE, "animation": "pecado7" },
 }
 
 var current_health: int
@@ -123,6 +135,7 @@ var greed_tax_timer: float = 0.0
 var greed_tax_meter: float = 0.0
 var greed_previous_player_position: Vector2 = Vector2.ZERO
 var greed_previous_can_shoot: bool = true
+var pride_edge_overlay_cooldown: float = 0.0
 var boss_indicator_layer: CanvasLayer
 var boss_indicator_node: Node2D
 
@@ -207,6 +220,8 @@ func _update_phase() -> void:
 func _update_shared_mechanics(delta: float) -> void:
 	if action_cooldown > 0.0:
 		action_cooldown = max(action_cooldown - delta, 0.0)
+	if pride_edge_overlay_cooldown > 0.0:
+		pride_edge_overlay_cooldown = max(pride_edge_overlay_cooldown - delta, 0.0)
 
 	_update_wrath_bombs(delta)
 	_update_gluttony_foods(delta)
@@ -279,9 +294,9 @@ func handle_wrath(delta: float) -> void:
 		return
 
 	if phase == 1:
-		_start_wrath_bomb_volley(3, 3.35)
+		_start_wrath_bomb_volley(3, 2.85)
 	else:
-		_start_wrath_bomb_volley(5, 2.45)
+		_start_wrath_bomb_volley(5, 2.05)
 
 func handle_lust(delta: float) -> void:
 	_move_toward_player(delta, 0.7)
@@ -293,7 +308,17 @@ func handle_lust(delta: float) -> void:
 	if not _can_start_action():
 		return
 
-	_start_lust_wall_pattern()
+	var roll = randf()
+	if phase == 1:
+		if roll < 0.58:
+			_start_lust_wall_pattern()
+		else:
+			_start_lust_serpent_lash()
+	else:
+		if roll < 0.48:
+			_start_lust_wall_pattern()
+		else:
+			_start_lust_serpent_lash()
 
 func handle_greed(delta: float) -> void:
 	_move_toward_player(delta, 0.85)
@@ -320,27 +345,35 @@ func handle_pride(delta: float) -> void:
 
 	if phase == 1:
 		var roll = randf()
-		if roll < 0.30:
+		if roll < 0.42:
 			_start_pride_edge_bullet_hell(false)
-		elif roll < 0.52:
+		elif roll < 0.62:
+			_maybe_start_pride_edge_beam_overlay(false)
 			_start_pride_fire_orbs(false)
-		elif roll < 0.70:
+		elif roll < 0.76:
+			_maybe_start_pride_edge_beam_overlay(false)
 			_start_pride_light_cross(false)
-		elif roll < 0.88:
+		elif roll < 0.90:
+			_maybe_start_pride_edge_beam_overlay(false)
 			_start_pride_inverted_cross_pattern(false)
 		else:
+			_maybe_start_pride_edge_beam_overlay(false)
 			_start_pride_judgement()
 	else:
 		var roll = randf()
-		if roll < 0.35:
+		if roll < 0.48:
 			_start_pride_edge_bullet_hell(true)
-		elif roll < 0.55:
+		elif roll < 0.66:
+			_maybe_start_pride_edge_beam_overlay(true)
 			_start_pride_fire_orbs(true)
-		elif roll < 0.75:
+		elif roll < 0.80:
+			_maybe_start_pride_edge_beam_overlay(true)
 			_start_pride_inverted_cross_pattern(true)
-		elif roll < 0.90:
+		elif roll < 0.92:
+			_maybe_start_pride_edge_beam_overlay(true)
 			_start_pride_judgement()
 		else:
+			_maybe_start_pride_edge_beam_overlay(true)
 			_start_pride_light_cross(true)
 
 func _move_toward_player(_delta: float, speed_multiplier: float = 1.0) -> void:
@@ -514,7 +547,7 @@ func _can_sloth_zone_slow_enemy(enemy: Node) -> bool:
 	return is_instance_valid(enemy) and enemy != self and not enemy.is_in_group(Global.GROUP_BOSS) and enemy.get("speed") != null
 
 func _update_sloth_zone_enemy_slow(enemies_inside_zone: Array) -> void:
-	var player_slow_amount = 1.0 - SLOTH_BOSS_PLAYER_DASH_SPEED_MULTIPLIER
+	var player_slow_amount = 1.0 - SLOTH_BOSS_ENEMY_SLOW_REFERENCE_DASH_MULTIPLIER
 	var enemy_speed_multiplier = 1.0 - player_slow_amount * SLOTH_BOSS_ENEMY_SLOW_EFFECT_RATIO
 
 	for enemy in get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
@@ -598,12 +631,12 @@ func _update_gluttony_stress(delta: float) -> void:
 func _start_gluttony_body_slam() -> void:
 	is_performing_action = true
 	current_sub_state = BossSubState.TELEGRAPH
-	_spawn_circle_telegraph(player.global_position, 115.0, _with_alpha(GLUTTONY_COLOR, 0.24), MIN_TELEGRAPH_DURATION)
+	var slam_position = _clamp_to_current_arena(player.global_position, 32.0)
+	_spawn_circle_telegraph(slam_position, 115.0, _with_alpha(GLUTTONY_COLOR, 0.24), MIN_TELEGRAPH_DURATION)
 	await get_tree().create_timer(MIN_TELEGRAPH_DURATION, false).timeout
 
 	current_sub_state = BossSubState.ATTACK
-	var slam_position = player.global_position
-	global_position = _clamp_to_current_arena(slam_position, 32.0)
+	global_position = slam_position
 	_spawn_ring_vfx(global_position, 115.0, _with_alpha(GLUTTONY_COLOR, 0.44), 0.32)
 	_spawn_burst_particles(global_position, _with_alpha(GLUTTONY_COLOR, 0.88), 34, 0.3, 160.0)
 	if _is_point_inside_iso_aoe(player.global_position, global_position, 115.0):
@@ -897,9 +930,9 @@ func _start_wrath_bomb_volley(amount: int, fuse_time: float) -> void:
 		if is_dead or player == null:
 			return
 		_create_wrath_bomb(bomb_position, target, fuse_time)
-		await get_tree().create_timer(1.2 if phase == 1 else 0.9, false).timeout
+		await get_tree().create_timer(0.8 if phase == 1 else 0.6, false).timeout
 
-	_finish_action(0.95 if phase == 1 else 0.7)
+	_finish_action(0.6 if phase == 1 else 0.45)
 
 func _create_wrath_bomb(from_position: Vector2, target_position: Vector2, fuse_time: float) -> void:
 	var bomb = Area2D.new()
@@ -1012,9 +1045,9 @@ func _create_lust_wall(wall_position: Vector2, size: Vector2, breakable: bool, l
 	_add_rect_visual(wall, size, _with_alpha(LUST_COLOR, 0.82) if breakable else Color(0.24, 0.03, 0.12, 0.92), 14)
 
 	if breakable:
-		var wall_health = LUST_BREAKABLE_WALL_HP * (1.0 if phase == 1 else 1.35)
-		wall.set_meta("health", wall_health)
-		wall.set_meta("max_health", wall_health)
+		wall.set_meta("hits_remaining", LUST_BREAKABLE_WALL_MAX_HITS)
+		wall.set_meta("health", float(LUST_BREAKABLE_WALL_MAX_HITS))
+		wall.set_meta("max_health", float(LUST_BREAKABLE_WALL_MAX_HITS))
 		var hurtbox = Area2D.new()
 		hurtbox.name = "BreakableHurtbox"
 		hurtbox.collision_layer = Global.ENEMY_LAYER_MASK
@@ -1031,6 +1064,99 @@ func _create_lust_wall(wall_position: Vector2, size: Vector2, breakable: bool, l
 	_add_child_at_global(_get_vfx_parent(), wall, wall_position)
 	active_lust_walls.append(wall)
 	_trim_node_array(active_lust_walls, 7 if phase == 1 else 10)
+
+func _start_lust_serpent_lash() -> void:
+	is_performing_action = true
+	current_sub_state = BossSubState.TELEGRAPH
+	var path = _build_lust_serpent_lash_path()
+	var lash_id = "lust_lash_%d" % Time.get_ticks_usec()
+	_spawn_action_charge_vfx(global_position, 72.0, LUST_COLOR, LUST_SERPENT_LASH_TELEGRAPH_DURATION, 22)
+	_spawn_lust_serpent_lash_telegraph(path, LUST_SERPENT_LASH_TELEGRAPH_DURATION)
+	await get_tree().create_timer(LUST_SERPENT_LASH_TELEGRAPH_DURATION, false).timeout
+	if is_dead or player == null:
+		return
+
+	current_sub_state = BossSubState.ATTACK
+	var lash_damage = max(float(roundi(float(damage) * LUST_SERPENT_LASH_DAMAGE_MULTIPLIER / 5.0) * 5), 5.0)
+	for point in path:
+		if is_dead or player == null:
+			return
+		_create_lust_serpent_lash_area(point, lash_id, lash_damage)
+		await get_tree().create_timer(LUST_SERPENT_LASH_SEGMENT_INTERVAL, false).timeout
+
+	_finish_action(1.15 if phase == 1 else 0.85)
+
+func _build_lust_serpent_lash_path() -> PackedVector2Array:
+	var path = PackedVector2Array()
+	var start_position = _clamp_to_current_arena(global_position, LUST_SERPENT_LASH_RADIUS + 8.0)
+	var target_position = player.global_position if player != null else _get_arena_center()
+	var direction = start_position.direction_to(target_position)
+	if direction == Vector2.ZERO:
+		direction = Vector2.DOWN
+
+	var normal = Vector2(-direction.y, direction.x).normalized()
+	var lash_length = clamp(start_position.distance_to(target_position) + 180.0, 320.0, 640.0)
+	var origin = _clamp_to_current_arena(start_position + direction * 36.0, LUST_SERPENT_LASH_RADIUS + 8.0)
+	var end_position = _clamp_to_current_arena(origin + direction * lash_length, LUST_SERPENT_LASH_RADIUS + 8.0)
+	var amplitude = 70.0 if phase == 1 else 92.0
+
+	for i in range(LUST_SERPENT_LASH_SEGMENTS):
+		var t = float(i) / float(LUST_SERPENT_LASH_SEGMENTS - 1)
+		var center = origin.lerp(end_position, t)
+		var wave = sin(t * TAU * 1.35) * amplitude * sin(t * PI)
+		path.append(_clamp_to_current_arena(center + normal * wave, LUST_SERPENT_LASH_RADIUS + 8.0))
+
+	return path
+
+func _spawn_lust_serpent_lash_telegraph(path: PackedVector2Array, duration: float) -> Node2D:
+	var telegraph = Node2D.new()
+	telegraph.name = "LustSerpentLashTelegraph"
+	var glow = Line2D.new()
+	glow.width = LUST_SERPENT_LASH_RADIUS * 1.75
+	glow.default_color = _with_alpha(LUST_COLOR, 0.18)
+	glow.points = path
+	glow.joint_mode = Line2D.LINE_JOINT_ROUND
+	telegraph.add_child(glow)
+
+	var edge = Line2D.new()
+	edge.width = 3.0
+	edge.default_color = _with_alpha(LUST_COLOR, 0.74)
+	edge.points = path
+	edge.joint_mode = Line2D.LINE_JOINT_ROUND
+	telegraph.add_child(edge)
+
+	if not _add_child_at_global(_get_ground_area_vfx_parent(), telegraph, Vector2.ZERO):
+		return telegraph
+
+	var tree = get_tree()
+	if tree == null:
+		return telegraph
+	var timer = tree.create_timer(duration, false)
+	timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(telegraph))
+	return telegraph
+
+func _create_lust_serpent_lash_area(area_position: Vector2, lash_id: String, lash_damage: float) -> void:
+	var area = Area2D.new()
+	area.name = "LustSerpentLashArea"
+	area.collision_layer = 0
+	area.collision_mask = Global.PLAYER_LAYER_MASK
+	area.set_meta("damage", lash_damage)
+	area.set_meta("lash_id", lash_id)
+	_add_circle_collision(area, LUST_SERPENT_LASH_RADIUS)
+	_add_circle_visual(area, LUST_SERPENT_LASH_RADIUS, _with_alpha(LUST_COLOR, 0.36), 0)
+	_add_ring_visual(area, LUST_SERPENT_LASH_RADIUS, _with_alpha(LUST_COLOR, 0.78), 2.0, 1)
+	area.body_entered.connect(Callable(self, "_on_lust_serpent_lash_body_entered").bind(area))
+	if not _add_child_at_global(_get_ground_area_vfx_parent(), area, area_position):
+		return
+
+	if player != null and _is_point_inside_iso_aoe(player.global_position, area_position, LUST_SERPENT_LASH_RADIUS):
+		_damage_lust_lash_player(player, area)
+
+	var tree = get_tree()
+	if tree == null:
+		return
+	var cleanup_timer = tree.create_timer(LUST_SERPENT_LASH_DAMAGE_DURATION, false)
+	cleanup_timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(area))
 
 func _add_breakable_wall_particles(wall: Node2D, size: Vector2) -> void:
 	var particles = CPUParticles2D.new()
@@ -1265,6 +1391,40 @@ func _start_pride_edge_bullet_hell(overlap: bool) -> void:
 
 	_finish_action(1.1 if phase == 1 else 0.85)
 
+func _maybe_start_pride_edge_beam_overlay(overlap: bool) -> void:
+	if pride_edge_overlay_cooldown > 0.0:
+		return
+
+	var chance = PRIDE_EDGE_OVERLAY_CHANCE_PHASE_2 if phase == 2 else PRIDE_EDGE_OVERLAY_CHANCE_PHASE_1
+	if randf() > chance:
+		return
+
+	pride_edge_overlay_cooldown = PRIDE_EDGE_OVERLAY_COOLDOWN_PHASE_2 if phase == 2 else PRIDE_EDGE_OVERLAY_COOLDOWN_PHASE_1
+	_start_pride_edge_beam_overlay(overlap)
+
+func _start_pride_edge_beam_overlay(overlap: bool) -> void:
+	if player == null:
+		return
+
+	var telegraph_delay = PRIDE_EDGE_BEAM_DELAY_PHASE_1 if phase == 1 else PRIDE_EDGE_BEAM_DELAY_PHASE_2
+	var beam_count = 3 if overlap else 2
+	var beam_spacing = 0.16 if overlap else 0.2
+	var beam_width = PRIDE_EDGE_BEAM_WIDTH + (5.0 if phase == 2 else 0.0)
+	for i in range(beam_count):
+		if is_dead or player == null:
+			return
+
+		var start_position = _get_pride_edge_beam_start(i)
+		var target_position = player.global_position
+		if phase == 2 and player.get("velocity") != null:
+			target_position += player.velocity * 0.1
+		var direction = start_position.direction_to(_clamp_to_current_arena(target_position, 28.0))
+		if direction == Vector2.ZERO:
+			direction = start_position.direction_to(_get_arena_center())
+		_spawn_pride_edge_beam(start_position, direction, telegraph_delay, beam_width)
+		if i < beam_count - 1:
+			await get_tree().create_timer(beam_spacing, false).timeout
+
 func _get_pride_edge_beam_start(index: int) -> Vector2:
 	return _get_random_arena_edge_position()
 
@@ -1490,17 +1650,34 @@ func _get_projectile_damage(projectile: Node, fallback_damage: float) -> float:
 		return float(projectile.get("damage"))
 	return fallback_damage
 
-func _damage_lust_wall(wall: Node, amount: float, hit_position: Vector2) -> void:
+func _damage_lust_wall(wall: Node, _amount: float, hit_position: Vector2) -> void:
 	if not is_instance_valid(wall) or not bool(wall.get_meta("breakable", false)):
 		return
-	var health = float(wall.get_meta("health", 0.0)) - amount
-	wall.set_meta("health", health)
+	var hits_remaining = int(wall.get_meta("hits_remaining", LUST_BREAKABLE_WALL_MAX_HITS)) - 1
+	wall.set_meta("hits_remaining", hits_remaining)
+	wall.set_meta("health", float(max(hits_remaining, 0)))
 	_update_embedded_health_bar(wall)
 	_spawn_burst_particles(hit_position, Color(1.0, 1.0, 1.0, 0.72), 8, 0.16, 65.0)
-	if health <= 0.0:
+	if hits_remaining <= 0:
 		active_lust_walls.erase(wall)
 		_spawn_burst_particles(wall.global_position, _with_alpha(LUST_COLOR, 0.82), 24, 0.28, 130.0)
 		wall.queue_free()
+
+func _on_lust_serpent_lash_body_entered(body: Node, area: Area2D) -> void:
+	if body.is_in_group(Global.GROUP_PLAYER):
+		_damage_lust_lash_player(body, area)
+
+func _damage_lust_lash_player(target: Node, area: Area2D) -> void:
+	if not is_instance_valid(target) or not is_instance_valid(area):
+		return
+
+	var lash_id = str(area.get_meta("lash_id", ""))
+	if str(target.get_meta(LUST_SERPENT_LASH_HIT_META, "")) == lash_id:
+		return
+
+	target.set_meta(LUST_SERPENT_LASH_HIT_META, lash_id)
+	if target.has_method("take_damage"):
+		target.take_damage(float(area.get_meta("damage", damage)), area.global_position)
 
 func _damage_envy_clone(amount: float, hit_position: Vector2) -> void:
 	if not is_instance_valid(envy_clone):
@@ -2137,6 +2314,9 @@ func _spawn_marker_on_node(target: Node2D, radius: float, color: Color, duration
 	if not is_instance_valid(target):
 		return
 	var marker = Node2D.new()
+	marker.z_index = Global.GROUND_AREA_VFX_Z_INDEX
+	marker.z_as_relative = false
+	marker.show_behind_parent = true
 	target.add_child(marker)
 	target.move_child(marker, 0)
 	_add_circle_visual(marker, radius, _with_alpha(color, 0.1), 0)
@@ -2207,6 +2387,9 @@ func _spawn_attached_aura(radius: float, color: Color, duration: float) -> void:
 	radius = min(radius, MAX_BOSS_CIRCLE_VFX_RADIUS)
 	var vfx_color = _get_area_aura_vfx_color(color)
 	var aura = Node2D.new()
+	aura.z_index = Global.GROUND_AREA_VFX_Z_INDEX
+	aura.z_as_relative = false
+	aura.show_behind_parent = true
 	add_child(aura)
 	move_child(aura, 0)
 	var fill = Polygon2D.new()

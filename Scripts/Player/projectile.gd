@@ -115,7 +115,7 @@ func _try_ricochet_from_body(body: Node) -> bool:
 	if bool(get_meta("risk_after_ricochet", false)):
 		add_to_group(Global.GROUP_ENEMY_PROJECTILE)
 		collision_mask = Global.ENEMY_LAYER_MASK | Global.PLAYER_LAYER_MASK
-		damage = max(float(damage) * 0.45, 12.0)
+		damage = max(float(damage) * 0.5, 12.0)
 		set_meta("vfx_color", Color(1.0, 0.78, 0.08, 0.95))
 		_configure_projectile_vfx()
 

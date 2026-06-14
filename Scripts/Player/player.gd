@@ -11,7 +11,7 @@ var min_fire_rate: float = DEFAULT_MIN_FIRE_RATE
 var base_fire_rate: float = 1.1
 var attack_speed_bonus: float = 0.0
 @export var recoil_force: float = 460.0
-const MAX_RECOIL_FORCE: float = 800.0
+const MAX_RECOIL_FORCE: float = 650.0
 var base_recoil_force: float = 460.0
 var recoil_force_bonus: float = 0.0
 @export var friction: float = 760.0
@@ -40,12 +40,16 @@ const SHOCKWAVE_RADIUS: float = MAX_ABILITY_AREA_RADIUS - 30
 const SHOCKWAVE_DAMAGE_MULTIPLIER: float = 0.35
 const SHOCKWAVE_DASH_DAMAGE_MULTIPLIER: float = 0.75
 const EXPLOSIVE_KNOCKBACK_IMMUNITY_DURATION: float = 0.35
-const EXPLOSIVE_SHOCKWAVE_COLOR: Color = Color(0.56, 0.34, 0.15, 0.5)
-const EXPLOSIVE_SHOCKWAVE_PARTICLE_COLOR: Color = Color(0.68, 0.42, 0.18, 0.95)
+const EXPLOSIVE_SHOCKWAVE_COLOR: Color = Color(0.62, 0.39, 0.16, 0.72)
+const EXPLOSIVE_SHOCKWAVE_PARTICLE_COLOR: Color = Color(0.76, 0.48, 0.18, 1.0)
 const PASSIVE_RING_Z_INDEX: int = 10
-const PASSIVE_RING_COLOR: Color = Color(0.72, 0.48, 0.16, 0.36)
-const PASSIVE_RING_SOFT_COLOR: Color = Color(0.72, 0.48, 0.16, 0.24)
-const PASSIVE_RING_DOT_COLOR: Color = Color(0.88, 0.64, 0.22, 0.86)
+const PASSIVE_RING_COLOR: Color = Color(0.78, 0.54, 0.18, 0.58)
+const PASSIVE_RING_SOFT_COLOR: Color = Color(0.78, 0.54, 0.18, 0.42)
+const PASSIVE_RING_DOT_COLOR: Color = Color(0.95, 0.7, 0.24, 0.95)
+const AREA_FILL_ALPHA_MULTIPLIER: float = 0.18
+const SHOT_COOLDOWN_BAR_SIZE: Vector2 = Vector2(28.0, 4.0)
+const SHOT_COOLDOWN_BAR_OFFSET: Vector2 = Vector2(-14.0, -36.0)
+const SHOT_COOLDOWN_BAR_Z_INDEX: int = 35
 const SLOTH_AURA_DPS: float = 2.0
 const SLOTH_FIELD_DPS: float = 5.0
 const SLOTH_FIELD_TICK_INTERVAL: float = 0.1
@@ -63,6 +67,9 @@ const ENVY_CLONE_PLAYER_TARGET_CHANCE: float = 0.1
 const ENVY_CLONE_PLAYER_DAMAGE_MULTIPLIER: float = 0.5
 const ENVY_CLONE_VISUAL_MODULATE: Color = Color(0.55, 0.95, 1.0, 0.56)
 const ENVY_CLONE_SHOT_COLOR: Color = Color(0.25, 0.95, 1.0, 0.9)
+const GOLDEN_DEBT_ATTACK_MULTIPLIER: float = 1.2
+const GOLDEN_DEBT_ATTACK_SPEED_BONUS: float = 0.1
+const GOLDEN_DEBT_WAVE_HEALTH_RATIO: float = 0.05
 const MAX_PROJECTILE_SIZE_MULTIPLIER: float = 2.0
 const MIN_PROJECTILE_SIZE_MULTIPLIER: float = 0.5
 const MAX_HEAL_AFTER_WAVE_BONUS: float = 0.15
@@ -151,6 +158,7 @@ var knockback_immunity_remaining: float = 0.0
 # --- TIMERS ---
 var shoot_timer: Timer
 var dash_cd_timer: Timer
+var shot_cooldown_bar: ProgressBar
 
 # --- Paths ---
 const PAUSE_CONTROL_PATH: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/PauseControl"
@@ -185,6 +193,7 @@ func _ready() -> void:
 	shoot_timer.one_shot = true
 	shoot_timer.timeout.connect(_on_shoot_timer_timeout)
 	add_child(shoot_timer)
+	_setup_shot_cooldown_bar()
 	
 	dash_cd_timer = Timer.new()
 	dash_cd_timer.one_shot = true
@@ -225,10 +234,15 @@ func get_starting_arm_name() -> String:
 	return str(Global.STARTING_ARM_DATA[current_arm_id]["name"])
 
 func add_attack_speed_bonus(amount: float) -> void:
-	if not can_upgrade_attack_speed():
+	if amount > 0.0 and not can_upgrade_attack_speed():
 		return
 
 	attack_speed_bonus += amount * arm_attack_speed_upgrade_multiplier
+	_recalculate_fire_rate()
+	emit_signal("stats_updated")
+
+func add_raw_attack_speed_bonus(amount: float) -> void:
+	attack_speed_bonus = max(attack_speed_bonus + amount, -0.95)
 	_recalculate_fire_rate()
 	emit_signal("stats_updated")
 
@@ -390,6 +404,34 @@ func disable_thorn_clothes() -> void:
 	thorn_clothes_enabled = false
 	emit_signal("stats_updated")
 
+func enable_golden_debt() -> void:
+	if greed_cursed_level_enabled:
+		return
+
+	greed_cursed_level_enabled = true
+	attack_damage *= GOLDEN_DEBT_ATTACK_MULTIPLIER
+	add_raw_attack_speed_bonus(GOLDEN_DEBT_ATTACK_SPEED_BONUS)
+	_spawn_burst_particles(global_position, Color(1.0, 0.72, 0.12, 0.92), 22, 0.28, 115.0)
+	emit_signal("stats_updated")
+
+func disable_golden_debt() -> void:
+	if not greed_cursed_level_enabled:
+		return
+
+	greed_cursed_level_enabled = false
+	attack_damage /= GOLDEN_DEBT_ATTACK_MULTIPLIER
+	add_raw_attack_speed_bonus(-GOLDEN_DEBT_ATTACK_SPEED_BONUS)
+	emit_signal("stats_updated")
+
+func apply_golden_debt_wave_cost() -> void:
+	if not greed_cursed_level_enabled or current_health <= 0:
+		return
+
+	var debt_damage = max(1.0, float(current_health) * GOLDEN_DEBT_WAVE_HEALTH_RATIO)
+	_take_direct_damage(debt_damage)
+	if current_health > 0:
+		_spawn_burst_particles(global_position, Color(1.0, 0.72, 0.12, 0.82), 18, 0.24, 95.0)
+
 func _update_shield_protection(delta: float) -> void:
 	if not shield_protection_enabled:
 		_destroy_shield_vfx(false)
@@ -549,6 +591,7 @@ func _physics_process(delta: float) -> void:
 	_update_shield_protection(delta)
 	_update_movement_force_combo_lock(delta)
 	_update_knockback_immunity(delta)
+	_update_shot_cooldown_bar()
 
 	var mouse_pos = get_global_mouse_position()
 	var look_direction = global_position.direction_to(mouse_pos)
@@ -594,6 +637,7 @@ func shoot(direction: Vector2) -> void:
 	
 	can_shoot = false
 	shoot_timer.start(fire_rate)
+	_update_shot_cooldown_bar()
 	
 	var mouse_pos = get_global_mouse_position()
 	var base_direction = (mouse_pos - global_position).normalized()
@@ -894,6 +938,45 @@ func _finish_current_run() -> void:
 
 func _on_shoot_timer_timeout() -> void:
 	can_shoot = true
+	_update_shot_cooldown_bar()
+
+func _setup_shot_cooldown_bar() -> void:
+	if is_instance_valid(shot_cooldown_bar):
+		return
+
+	shot_cooldown_bar = ProgressBar.new()
+	shot_cooldown_bar.name = "ShotCooldownBar"
+	shot_cooldown_bar.show_percentage = false
+	shot_cooldown_bar.custom_minimum_size = SHOT_COOLDOWN_BAR_SIZE
+	shot_cooldown_bar.size = SHOT_COOLDOWN_BAR_SIZE
+	shot_cooldown_bar.position = SHOT_COOLDOWN_BAR_OFFSET
+	shot_cooldown_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	shot_cooldown_bar.z_index = SHOT_COOLDOWN_BAR_Z_INDEX
+	shot_cooldown_bar.max_value = 1.0
+	shot_cooldown_bar.value = 1.0
+	shot_cooldown_bar.visible = false
+	shot_cooldown_bar.add_theme_stylebox_override("background", _make_shot_cooldown_stylebox(Color(0.08, 0.06, 0.04, 0.72)))
+	shot_cooldown_bar.add_theme_stylebox_override("fill", _make_shot_cooldown_stylebox(Color(0.95, 0.66, 0.22, 0.96)))
+	add_child(shot_cooldown_bar)
+
+func _update_shot_cooldown_bar() -> void:
+	if not is_instance_valid(shot_cooldown_bar):
+		return
+
+	if can_shoot or shoot_timer == null or shoot_timer.is_stopped():
+		shot_cooldown_bar.visible = false
+		shot_cooldown_bar.value = shot_cooldown_bar.max_value
+		return
+
+	var cooldown = max(fire_rate, 0.001)
+	shot_cooldown_bar.visible = true
+	shot_cooldown_bar.value = clamp(1.0 - shoot_timer.time_left / cooldown, 0.0, 1.0)
+
+func _make_shot_cooldown_stylebox(color: Color) -> StyleBoxFlat:
+	var style = StyleBoxFlat.new()
+	style.bg_color = color
+	style.set_corner_radius_all(1)
+	return style
 
 func _on_dash_cd_timer_timeout() -> void:
 	if double_dash_charges < max_dash_charges:
@@ -1233,7 +1316,7 @@ func grant_bonus_level_up(context: String = "normal", boss_pecado: int = 0) -> v
 func activate_sloth_field() -> void:
 	var field_position = global_position
 	var field_radius = MAX_ABILITY_AREA_RADIUS
-	_spawn_field_vfx(field_position, field_radius, Color(0.25, 0.95, 1.0, 0.42), 5.0)
+	_spawn_field_vfx(field_position, field_radius, Color(0.25, 0.95, 1.0, 0.54), 5.0)
 
 	var slowed_enemies: Array = []
 	var elapsed = 0.0
@@ -1353,7 +1436,7 @@ func _apply_sloth_slow_aura(delta: float) -> void:
 		_remember_enemy_base_speed(enemy)
 		var base_speed = enemy.get_meta("base_speed")
 		if _is_position_inside_iso_aoe(enemy.global_position, global_position, SLOW_AURA_RADIUS):
-			enemy.set("speed", base_speed * 0.7)
+			enemy.set("speed", base_speed * 0.65)
 			_apply_enemy_sloth_dot(enemy, SLOTH_AURA_DPS * delta)
 		else:
 			enemy.set("speed", base_speed)
@@ -1552,6 +1635,9 @@ func _spawn_attached_aura(radius: float, color: Color, duration: float) -> void:
 	radius = min(radius, MAX_ABILITY_AREA_RADIUS)
 	var aura = Node2D.new()
 	aura.name = "TimedAuraVFX"
+	aura.z_index = PASSIVE_RING_Z_INDEX
+	aura.z_as_relative = false
+	aura.show_behind_parent = true
 	add_child(aura)
 	move_child(aura, 0)
 
@@ -1609,7 +1695,7 @@ func _add_circle_fill_to_node(parent: Node, radius: float, color: Color) -> Poly
 	radius = min(radius, MAX_ABILITY_AREA_RADIUS)
 	var fill = Polygon2D.new()
 	var fill_color = color
-	fill_color.a *= 0.1
+	fill_color.a *= AREA_FILL_ALPHA_MULTIPLIER
 	fill.color = fill_color
 	fill.polygon = _build_iso_ellipse_points(radius, false)
 	parent.add_child(fill)
@@ -1699,7 +1785,7 @@ func _add_circular_ring_to_node(parent: Node, radius: float, color: Color, width
 	var vfx_color = _get_area_aura_vfx_color(color)
 	var fill = Polygon2D.new()
 	var fill_color = vfx_color
-	fill_color.a *= 0.1
+	fill_color.a *= AREA_FILL_ALPHA_MULTIPLIER
 	fill.color = fill_color
 	fill.polygon = _build_circle_points(radius, false)
 	parent.add_child(fill)
@@ -1803,10 +1889,13 @@ func _ensure_sloth_slow_aura_vfx() -> void:
 
 	sloth_aura_vfx = Node2D.new()
 	sloth_aura_vfx.name = "SlothSlowAuraVFX"
+	sloth_aura_vfx.z_index = PASSIVE_RING_Z_INDEX
+	sloth_aura_vfx.z_as_relative = false
+	sloth_aura_vfx.show_behind_parent = true
 	add_child(sloth_aura_vfx)
 	move_child(sloth_aura_vfx, 0)
 
-	_add_ring_to_node(sloth_aura_vfx, SLOW_AURA_RADIUS, Color(0.25, 0.95, 1.0, 0.26), 2.0)
+	_add_ring_to_node(sloth_aura_vfx, SLOW_AURA_RADIUS, Color(0.25, 0.95, 1.0, 0.4), 2.0)
 
 	var particles = CPUParticles2D.new()
 	particles.amount = 64
@@ -1816,7 +1905,9 @@ func _ensure_sloth_slow_aura_vfx() -> void:
 	particles.gravity = Vector2.ZERO
 	particles.initial_velocity_min = 45.0
 	particles.initial_velocity_max = 120.0
-	particles.color = _get_area_aura_vfx_color(Color(0.25, 0.95, 1.0, 0.3))
+	particles.color = _get_area_aura_vfx_color(Color(0.25, 0.95, 1.0, 0.46))
+	particles.z_index = PASSIVE_RING_Z_INDEX
+	particles.z_as_relative = false
 	sloth_aura_vfx.add_child(particles)
 	particles.emitting = true
 
