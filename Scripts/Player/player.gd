@@ -46,7 +46,7 @@ const PASSIVE_RING_Z_INDEX: int = 10
 const PASSIVE_RING_COLOR: Color = Color(0.78, 0.54, 0.18, 0.58)
 const PASSIVE_RING_SOFT_COLOR: Color = Color(0.78, 0.54, 0.18, 0.42)
 const PASSIVE_RING_DOT_COLOR: Color = Color(0.95, 0.7, 0.24, 0.95)
-const AREA_FILL_ALPHA_MULTIPLIER: float = 0.18
+const AREA_FILL_ALPHA_MULTIPLIER: float = 0.2
 const SHOT_COOLDOWN_BAR_SIZE: Vector2 = Vector2(28.0, 4.0)
 const SHOT_COOLDOWN_BAR_OFFSET: Vector2 = Vector2(-14.0, -36.0)
 const SHOT_COOLDOWN_BAR_Z_INDEX: int = 35
@@ -57,6 +57,11 @@ const SLOTH_PLAYER_DOT_META: String = "player_sloth_dot_accumulator"
 const DASH_COOLDOWN_REDUCTION_STEP: float = 0.05
 const MAX_DASH_COOLDOWN_REDUCTION: float = 0.4
 const THORN_CLOTHES_DAMAGE_RETURN_MULTIPLIER: float = 0.4
+const KINETIC_RELOAD_REMAINING_COOLDOWN_REDUCTION: float = 0.35
+const KINETIC_RELOAD_INTERNAL_COOLDOWN: float = 0.35
+const SPLINTERED_CHAMBER_SHOT_INTERVAL: int = 8
+const SPLINTERED_CHAMBER_DAMAGE_MULTIPLIER: float = 0.35
+const SPLINTERED_CHAMBER_FRAGMENT_ANGLE: float = 18.0
 const DAMAGE_FEEDBACK_COLOR: Color = Color(1.0, 0.1, 0.1, 1.0)
 const HEAL_FEEDBACK_COLOR: Color = Color(0.1, 1.0, 0.1, 1.0)
 const WRATH_OVERHEAT_SHOT_INTERVAL: int = 4
@@ -110,6 +115,10 @@ var shield_vfx: Node2D
 var recoil_explosion_enabled: bool = false
 var offensive_dash_enabled: bool = false
 var thorn_clothes_enabled: bool = false
+var kinetic_reload_enabled: bool = false
+var kinetic_reload_cooldown_remaining: float = 0.0
+var splintered_chamber_enabled: bool = false
+var splintered_chamber_shot_count: int = 0
 var max_dash_charges: int = 1
 var double_dash_charges: int = 1
 var sloth_slow_aura_enabled: bool = false
@@ -120,8 +129,12 @@ var wrath_overheat_enabled: bool = false
 var wrath_shot_count: int = 0
 var lust_for_vengeance_enabled: bool = false
 var greed_cursed_level_enabled: bool = false
+var healing_received_multiplier: float = 1.0
+var damage_taken_base_multiplier: float = 1.0
+var temporary_damage_taken_multiplier: float = 1.0
 var damage_taken_multiplier: float = 1.0
 var temporary_attack_multiplier: float = 1.0
+var special_level_up_chance_bonus: float = 0.0
 var sloth_aura_vfx: Node2D
 var envy_clone_vfx: Node2D
 var envy_clone_fire_timer: float = 0.0
@@ -373,6 +386,32 @@ func apply_heal_after_wave() -> void:
 	heal(heal_amount)
 	_spawn_burst_particles(global_position, Color(0.25, 1.0, 0.45, 0.9), 18, 0.24, 90.0)
 
+func add_healing_received_multiplier_bonus(amount: float) -> void:
+	healing_received_multiplier *= max(1.0 + amount, 0.0)
+	emit_signal("stats_updated")
+
+func get_healing_received_percent() -> float:
+	return healing_received_multiplier * 100.0
+
+func add_damage_taken_multiplier_bonus(amount: float) -> void:
+	damage_taken_base_multiplier *= max(1.0 + amount, 0.01)
+	_recalculate_damage_taken_multiplier()
+	emit_signal("stats_updated")
+
+func _set_temporary_damage_taken_multiplier(multiplier: float) -> void:
+	temporary_damage_taken_multiplier = max(multiplier, 0.0)
+	_recalculate_damage_taken_multiplier()
+
+func _recalculate_damage_taken_multiplier() -> void:
+	damage_taken_multiplier = damage_taken_base_multiplier * temporary_damage_taken_multiplier
+
+func add_special_level_up_chance_bonus(amount: float) -> void:
+	special_level_up_chance_bonus += max(amount, 0.0)
+	emit_signal("stats_updated")
+
+func get_special_level_up_roll_chance(base_chance: float) -> float:
+	return clamp(base_chance * max(1.0 + special_level_up_chance_bonus, 0.0), 0.0, 1.0)
+
 func enable_shield_protection() -> void:
 	shield_protection_enabled = true
 	shield_cooldown_remaining = 0.0
@@ -403,6 +442,30 @@ func enable_thorn_clothes() -> void:
 func disable_thorn_clothes() -> void:
 	thorn_clothes_enabled = false
 	emit_signal("stats_updated")
+
+func enable_kinetic_reload() -> void:
+	kinetic_reload_enabled = true
+	kinetic_reload_cooldown_remaining = 0.0
+	emit_signal("stats_updated")
+
+func disable_kinetic_reload() -> void:
+	kinetic_reload_enabled = false
+	kinetic_reload_cooldown_remaining = 0.0
+	emit_signal("stats_updated")
+
+func enable_splintered_chamber() -> void:
+	splintered_chamber_enabled = true
+	splintered_chamber_shot_count = 0
+	emit_signal("stats_updated")
+
+func disable_splintered_chamber() -> void:
+	splintered_chamber_enabled = false
+	splintered_chamber_shot_count = 0
+	emit_signal("stats_updated")
+
+func reset_periodic_shot_counters() -> void:
+	wrath_shot_count = 0
+	splintered_chamber_shot_count = 0
 
 func enable_golden_debt() -> void:
 	if greed_cursed_level_enabled:
@@ -504,6 +567,10 @@ func _update_knockback_immunity(delta: float) -> void:
 	if knockback_immunity_remaining > 0.0:
 		knockback_immunity_remaining = max(knockback_immunity_remaining - delta, 0.0)
 
+func _update_kinetic_reload(delta: float) -> void:
+	if kinetic_reload_cooldown_remaining > 0.0:
+		kinetic_reload_cooldown_remaining = max(kinetic_reload_cooldown_remaining - delta, 0.0)
+
 func _grant_knockback_immunity(duration: float) -> void:
 	knockback_immunity_remaining = max(knockback_immunity_remaining, duration)
 
@@ -567,6 +634,7 @@ func _apply_wall_bounce(incoming_velocity: Vector2) -> void:
 		else:
 			velocity = bounced_velocity.limit_length(_get_movement_force_speed_cap())
 		global_position += normal * WALL_BOUNCE_PUSH_OUT
+		_try_trigger_kinetic_reload()
 		return
 
 func _is_wall_collision(collision: KinematicCollision2D) -> bool:
@@ -591,6 +659,7 @@ func _physics_process(delta: float) -> void:
 	_update_shield_protection(delta)
 	_update_movement_force_combo_lock(delta)
 	_update_knockback_immunity(delta)
+	_update_kinetic_reload(delta)
 	_update_shot_cooldown_bar()
 
 	var mouse_pos = get_global_mouse_position()
@@ -654,6 +723,7 @@ func shoot(direction: Vector2) -> void:
 		if envy_mirror_shot_enabled:
 			_spawn_mirror_shot(global_position, final_angle, shot_damage)
 
+	_try_trigger_splintered_chamber(base_angle, shot_damage)
 	_apply_recoil_impulse(direction)
 	if recoil_explosion_enabled:
 		_trigger_recoil_explosion()
@@ -710,6 +780,21 @@ func _get_mirrored_shot_angle(source_angle: float) -> float:
 
 func _spawn_mirror_shot(spawn_position: Vector2, source_angle: float, shot_damage: float) -> void:
 	_spawn_projectile(spawn_position, _get_mirrored_shot_angle(source_angle), shot_damage * MIRROR_SHOT_DAMAGE_MULTIPLIER, false, Color(0.25, 0.95, 1.0, 0.9))
+
+func _try_trigger_splintered_chamber(base_angle: float, shot_damage: float) -> void:
+	if not splintered_chamber_enabled:
+		return
+
+	splintered_chamber_shot_count += 1
+	if splintered_chamber_shot_count < SPLINTERED_CHAMBER_SHOT_INTERVAL:
+		return
+
+	splintered_chamber_shot_count = 0
+	var fragment_damage = shot_damage * SPLINTERED_CHAMBER_DAMAGE_MULTIPLIER
+	var fragment_angle = deg_to_rad(SPLINTERED_CHAMBER_FRAGMENT_ANGLE)
+	_spawn_projectile(global_position, base_angle - fragment_angle, fragment_damage, false, Color(0.95, 0.55, 0.18, 0.9))
+	_spawn_projectile(global_position, base_angle + fragment_angle, fragment_damage, false, Color(0.95, 0.55, 0.18, 0.9))
+	_spawn_burst_particles(global_position, Color(0.95, 0.55, 0.18, 0.82), 12, 0.18, 85.0)
 
 func _update_envy_clone_active(delta: float) -> void:
 	if not is_instance_valid(envy_clone_vfx):
@@ -1268,8 +1353,12 @@ func _update_active_ability_cooldowns(delta: float) -> void:
 			active_ability_cooldown_remaining[slot] = max(active_ability_cooldown_remaining[slot] - delta, 0.0)
 
 func heal(amount: float) -> void:
+	var final_heal = max(amount, 0.0) * healing_received_multiplier
+	if final_heal <= 0.0:
+		return
+
 	var previous_health = current_health
-	current_health = int(min(current_health + amount, max_health))
+	current_health = int(min(current_health + final_heal, max_health))
 	emit_signal("hp_updated", current_health, max_health)
 	if current_health > previous_health:
 		_play_heal_feedback()
@@ -1393,10 +1482,10 @@ func activate_lust_for_perfection() -> void:
 	_spawn_attached_aura(110.0, Color(1.0, 0.82, 0.98, 0.42), 3.0)
 	await get_tree().create_timer(3.0, false).timeout
 	is_invulnerable = false
-	damage_taken_multiplier = 2.0
+	_set_temporary_damage_taken_multiplier(2.0)
 	_spawn_attached_aura(130.0, Color(1.0, 0.16, 0.36, 0.38), 5.0)
 	await get_tree().create_timer(5.0, false).timeout
-	damage_taken_multiplier = 1.0
+	_set_temporary_damage_taken_multiplier(1.0)
 
 func activate_greed_treasure_rain() -> void:
 	_spawn_burst_particles(global_position, Color(1.0, 0.78, 0.08, 0.95), 42, 0.45, 180.0)
@@ -1525,9 +1614,26 @@ func _apply_arena_clamp_bounce(previous_position: Vector2, clamped_position: Vec
 		else:
 			velocity = bounced_velocity.limit_length(_get_movement_force_speed_cap())
 		global_position += inward_normal.normalized() * WALL_BOUNCE_PUSH_OUT
+		_try_trigger_kinetic_reload()
 		return
 
 	_remove_outward_arena_velocity(previous_position, clamped_position)
+
+func _try_trigger_kinetic_reload() -> void:
+	if not kinetic_reload_enabled or kinetic_reload_cooldown_remaining > 0.0 or is_dashing:
+		return
+	if shoot_timer == null or shoot_timer.is_stopped() or can_shoot:
+		return
+
+	var remaining_cooldown = shoot_timer.time_left
+	if remaining_cooldown <= 0.01:
+		return
+
+	var new_remaining_cooldown = max(remaining_cooldown * (1.0 - KINETIC_RELOAD_REMAINING_COOLDOWN_REDUCTION), 0.01)
+	shoot_timer.start(new_remaining_cooldown)
+	kinetic_reload_cooldown_remaining = KINETIC_RELOAD_INTERNAL_COOLDOWN
+	_update_shot_cooldown_bar()
+	_spawn_burst_particles(global_position, Color(0.42, 0.95, 1.0, 0.78), 10, 0.16, 75.0)
 
 func _get_current_arena_edge_normal(point: Vector2) -> Vector2:
 	var scene = _get_current_game_scene()
@@ -1755,7 +1861,7 @@ func _ensure_double_dash_vfx() -> Node2D:
 	for i in range(2):
 		var dot = Polygon2D.new()
 		dot.name = "DashChargeDot%d" % i
-		dot.polygon = _build_circle_points(3.6, false)
+		dot.polygon = _build_circle_points(4.5, false)
 		dot.color = PASSIVE_RING_DOT_COLOR
 		dot.position = Vector2(28.0, 0.0).rotated(PI * float(i))
 		vfx.add_child(dot)

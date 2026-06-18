@@ -9,7 +9,7 @@ const OPTION_BUTTON_COUNT: int = 3
 const SLOT_ROLL_BASE_TICKS: int = 14
 const SLOT_ROLL_STOP_TICK_STEP: int = 6
 const SLOT_ROLL_INTERVAL: float = 0.075
-const SPECIAL_LEVEL_UP_ROLL_CHANCE: float = 0.08
+const SPECIAL_LEVEL_UP_ROLL_CHANCE: float = 0.10
 const SPECIAL_LEVEL_UP_EPIC_TIER: String = "epic"
 const SPECIAL_LEVEL_UP_LEGENDARY_TIER: String = "legendary"
 const SPECIAL_LEVEL_UP_LEGENDARY_SHARE: float = 0.3
@@ -366,15 +366,21 @@ func _make_level_up_roll_data(final_options: Array, pools: Array) -> Dictionary:
 
 func _roll_special_level_up_options(options: Array) -> Array:
 	var rolled_options = []
+	var special_roll_chance = _get_special_level_up_roll_chance()
 	for option in options:
 		var rolled_option = option.duplicate(true)
-		if _can_roll_special_level_up(rolled_option) and randf() <= SPECIAL_LEVEL_UP_ROLL_CHANCE:
+		if _can_roll_special_level_up(rolled_option) and randf() <= special_roll_chance:
 			var tier = _roll_special_level_up_tier()
 			rolled_option["special_level_up"] = true
 			rolled_option["special_level_up_tier"] = tier
 			rolled_option["stat_multiplier"] = _get_special_level_up_tier_multiplier(tier)
 		rolled_options.append(rolled_option)
 	return rolled_options
+
+func _get_special_level_up_roll_chance() -> float:
+	if player and player.has_method("get_special_level_up_roll_chance"):
+		return player.get_special_level_up_roll_chance(SPECIAL_LEVEL_UP_ROLL_CHANCE)
+	return SPECIAL_LEVEL_UP_ROLL_CHANCE
 
 func _roll_special_level_up_tier() -> String:
 	return SPECIAL_LEVEL_UP_LEGENDARY_TIER if randf() <= SPECIAL_LEVEL_UP_LEGENDARY_SHARE else SPECIAL_LEVEL_UP_EPIC_TIER

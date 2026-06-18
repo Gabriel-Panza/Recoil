@@ -347,6 +347,23 @@ func _apply_effect(option) -> void:
 		"fast_but_small":
 			player.add_attack_speed_bonus(0.3 * stat_multiplier)
 			player.add_projectile_size_bonus(-0.3 * stat_multiplier)
+		"blood_tax":
+			player.attack_damage += player.attack_damage * 0.6 * stat_multiplier
+			if player.has_method("add_healing_received_multiplier_bonus"):
+				player.add_healing_received_multiplier_bonus(-0.5 * stat_multiplier)
+		"cursed_luck":
+			if player.has_method("add_special_level_up_chance_bonus"):
+				player.add_special_level_up_chance_bonus(0.75)
+			if player.has_method("add_damage_taken_multiplier_bonus"):
+				player.add_damage_taken_multiplier_bonus(0.3 * stat_multiplier)
+			else:
+				player.damage_taken_multiplier *= 1.0 + 0.3 * stat_multiplier
+		"thin_blood":
+			player.max_health = int(player.max_health * _get_remaining_stat_multiplier(0.8, stat_multiplier))
+			player.current_health = min(player.current_health, player.max_health)
+			if player.has_method("add_healing_received_multiplier_bonus"):
+				player.add_healing_received_multiplier_bonus(2.0 * stat_multiplier)
+			_on_hp_updated(player.current_health, player.max_health)
 		"sloth_slow_aura":
 			player.sloth_slow_aura_enabled = true
 		"gluttony_heal_kill":
@@ -466,6 +483,16 @@ func _apply_rare_effect(option: String) -> void:
 				player.enable_thorn_clothes()
 			else:
 				player.thorn_clothes_enabled = true
+		"Kinetic_Reload":
+			if player.has_method("enable_kinetic_reload"):
+				player.enable_kinetic_reload()
+			else:
+				player.kinetic_reload_enabled = true
+		"Splintered_Chamber":
+			if player.has_method("enable_splintered_chamber"):
+				player.enable_splintered_chamber()
+			else:
+				player.splintered_chamber_enabled = true
 
 func _remove_rare_effect(option: String) -> void:
 	match option:
@@ -489,6 +516,18 @@ func _remove_rare_effect(option: String) -> void:
 				player.disable_thorn_clothes()
 			else:
 				player.thorn_clothes_enabled = false
+		"Kinetic_Reload":
+			if player.has_method("disable_kinetic_reload"):
+				player.disable_kinetic_reload()
+			else:
+				player.kinetic_reload_enabled = false
+				player.kinetic_reload_cooldown_remaining = 0.0
+		"Splintered_Chamber":
+			if player.has_method("disable_splintered_chamber"):
+				player.disable_splintered_chamber()
+			else:
+				player.splintered_chamber_enabled = false
+				player.splintered_chamber_shot_count = 0
 
 func _finish_effect_application() -> void:
 	if player.pause_control:

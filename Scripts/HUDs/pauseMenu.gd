@@ -23,6 +23,7 @@ var atk_speed_label: Label
 var recoil_label: Label
 var heal_after_wave_label: Label
 var dash_cooldown_label: Label
+var healing_received_label: Label
 var active_skill_e_label: Label
 var active_skill_r_label: Label
 var game_over: Panel
@@ -41,6 +42,7 @@ func _ready() -> void:
 	recoil_label = get_node_or_null(RECOIL_LABEL_PATH)
 	_setup_heal_after_wave_label()
 	_setup_dash_cooldown_label()
+	_setup_healing_received_label()
 	active_skill_e_label = get_node_or_null(ACTIVE_SKILL_E_LABEL_PATH)
 	active_skill_r_label = get_node_or_null(ACTIVE_SKILL_R_LABEL_PATH)
 	game_over = get_node_or_null(GAME_OVER_PATH)
@@ -95,6 +97,28 @@ func _setup_dash_cooldown_label() -> void:
 		stats_container.move_child(dash_cooldown_label, insert_after.get_index() + 1)
 
 	dash_cooldown_label.visible = false
+
+func _setup_healing_received_label() -> void:
+	if recoil_label == null:
+		return
+
+	var stats_container = recoil_label.get_parent()
+	if stats_container == null:
+		return
+
+	healing_received_label = stats_container.get_node_or_null("HealingReceived")
+	if healing_received_label == null:
+		healing_received_label = Label.new()
+		healing_received_label.name = "HealingReceived"
+		healing_received_label.layout_mode = 2
+		healing_received_label.mouse_filter = Control.MOUSE_FILTER_STOP
+		healing_received_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		healing_received_label.add_theme_color_override("font_color", Color(1.0, 0.259, 0.2, 1.0))
+		healing_received_label.add_theme_constant_override("outline_size", 4)
+		healing_received_label.add_theme_font_size_override("font_size", 20)
+		stats_container.add_child(healing_received_label)
+		var insert_after = dash_cooldown_label if dash_cooldown_label != null else heal_after_wave_label if heal_after_wave_label != null else recoil_label
+		stats_container.move_child(healing_received_label, insert_after.get_index() + 1)
 	
 func _process(_delta: float) -> void:
 	update_status_labels()
@@ -203,6 +227,10 @@ func update_status_labels() -> void:
 				var current_dash_cooldown = player.get_dash_cooldown() if player.has_method("get_dash_cooldown") else player.dash_cooldown
 				dash_cooldown_label.text = "Dash CD: -%.1f%%" % dash_cooldown_reduction_percent
 				dash_cooldown_label.tooltip_text = "Reduces dash recharge cooldown by %.1f%%. Base cooldown: %.2fs. Current cooldown: %.2fs. Maximum reduction: %.1f%%." % [dash_cooldown_reduction_percent, base_dash_cooldown, current_dash_cooldown, max_dash_cooldown_reduction_percent]
+		if healing_received_label:
+			var healing_received_percent = player.get_healing_received_percent() if player.has_method("get_healing_received_percent") else 100.0
+			healing_received_label.text = "Heal Received: %.0f%%" % healing_received_percent
+			healing_received_label.tooltip_text = "Multiplier applied to all healing received."
 		_update_active_skill_labels()
 
 func _update_active_skill_labels() -> void:

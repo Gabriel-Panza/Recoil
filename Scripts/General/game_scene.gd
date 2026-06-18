@@ -825,9 +825,10 @@ func _get_arena_profile(arena_index: int) -> Dictionary:
 				"round_border_joints": true
 			}
 		5:
+			var serpent_size = Vector2(base_size.x * 0.84, base_size.y * 1.02)
 			return {
 				"shape": ARENA_SHAPE_SERPENT,
-				"size": Vector2(base_size.x * 0.78, base_size.y * 1.02),
+				"size": serpent_size,
 				"tile_set": ARENA_TILESET_HELL,
 				"strict_tile_clip": true,
 				"floor_bleed": 1.04,
@@ -836,7 +837,7 @@ func _get_arena_profile(arena_index: int) -> Dictionary:
 				"border_color": Color(0.09, 0.018, 0.035, 1.0),
 				"border_backer_color": Color(0.028, 0.004, 0.012, 1.0),
 				"round_border_joints": true,
-				"anchors": _build_serpent_anchor_points(Vector2(base_size.x * 0.78, base_size.y * 1.02))
+				"anchors": _build_serpent_anchor_points(serpent_size)
 			}
 		6:
 			return {
@@ -956,7 +957,7 @@ func _build_serpent_points(size: Vector2) -> PackedVector2Array:
 	var samples = 38
 	var amplitude = size.x * 0.26
 	var half_height = size.y * 0.5
-	var thickness = min(size.x * 0.11, 96.0)
+	var thickness = min(size.x * 0.115, 106.0)
 	var left_side = []
 	var right_side = []
 
@@ -1531,6 +1532,7 @@ func _on_boss_died() -> void:
 	boss_phase = false
 	is_wave_active = false
 	current_wave_index = 0
+	_reset_player_periodic_shot_counters()
 	_heal_player_after_boss()
 
 	if Global.pecado == 8:
@@ -1542,6 +1544,10 @@ func _on_boss_died() -> void:
 	await _wait_for_level_up_selection()
 	await _transition_player_to(ENEMY_ARENA_PLAYER_POSITION)
 	start_next_wave()
+
+func _reset_player_periodic_shot_counters() -> void:
+	if $Player != null and $Player.has_method("reset_periodic_shot_counters"):
+		$Player.reset_periodic_shot_counters()
 
 func _heal_player_after_boss() -> void:
 	var player = get_tree().get_first_node_in_group(Global.GROUP_PLAYER)
