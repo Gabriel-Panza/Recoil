@@ -46,6 +46,11 @@ const PASSIVE_RING_Z_INDEX: int = 10
 const PASSIVE_RING_COLOR: Color = Color(0.78, 0.54, 0.18, 0.58)
 const PASSIVE_RING_SOFT_COLOR: Color = Color(0.78, 0.54, 0.18, 0.42)
 const PASSIVE_RING_DOT_COLOR: Color = Color(0.95, 0.7, 0.24, 0.95)
+const DASH_CHARGE_RING_RADIUS: float = 24.0
+const DASH_CHARGE_RING_WIDTH: float = 1.2
+const DASH_CHARGE_PROGRESS_RING_WIDTH: float = 2.0
+const DASH_CHARGE_ORB_RADIUS: float = 4.5
+const DASH_CHARGE_ORB_ORBIT_RADIUS: float = 27.0
 const AREA_FILL_ALPHA_MULTIPLIER: float = 0.2
 const SHOT_COOLDOWN_BAR_SIZE: Vector2 = Vector2(28.0, 4.0)
 const SHOT_COOLDOWN_BAR_OFFSET: Vector2 = Vector2(-14.0, -36.0)
@@ -1856,14 +1861,21 @@ func _ensure_double_dash_vfx() -> Node2D:
 	vfx.z_as_relative = false
 	add_child(vfx)
 	move_child(vfx, 0)
-	_add_circular_ring_to_node(vfx, 25.0, PASSIVE_RING_SOFT_COLOR, 1.2)
+	_add_circular_ring_to_node(vfx, DASH_CHARGE_RING_RADIUS, PASSIVE_RING_SOFT_COLOR, DASH_CHARGE_RING_WIDTH)
+
+	var progress_ring = Line2D.new()
+	progress_ring.name = "DashCooldownProgressRing"
+	progress_ring.width = DASH_CHARGE_PROGRESS_RING_WIDTH
+	progress_ring.default_color = PASSIVE_RING_DOT_COLOR
+	progress_ring.points = _build_dash_cooldown_progress_points(1.0)
+	vfx.add_child(progress_ring)
 
 	for i in range(2):
 		var dot = Polygon2D.new()
 		dot.name = "DashChargeDot%d" % i
-		dot.polygon = _build_circle_points(4.5, false)
+		dot.polygon = _build_circle_points(DASH_CHARGE_ORB_RADIUS, false)
 		dot.color = PASSIVE_RING_DOT_COLOR
-		dot.position = Vector2(28.0, 0.0).rotated(PI * float(i))
+		dot.position = Vector2(DASH_CHARGE_ORB_ORBIT_RADIUS, 0.0).rotated(PI * float(i))
 		vfx.add_child(dot)
 
 	passive_status_vfx["double_dash"] = vfx
@@ -1872,10 +1884,23 @@ func _ensure_double_dash_vfx() -> Node2D:
 
 func _update_double_dash_vfx(vfx: Node2D) -> void:
 	var visible_charges = clamp(double_dash_charges, 0, max_dash_charges)
+	var progress_ring = vfx.get_node_or_null("DashCooldownProgressRing") as Line2D
+	if progress_ring:
+		progress_ring.points = _build_dash_cooldown_progress_points(_get_dash_recharge_progress())
+
 	for i in range(2):
 		var dot = vfx.get_node_or_null("DashChargeDot%d" % i)
 		if dot is CanvasItem:
 			dot.visible = i < visible_charges
+
+func _get_dash_recharge_progress() -> float:
+	if double_dash_charges >= max_dash_charges:
+		return 1.0
+	if dash_cd_timer == null or dash_cd_timer.is_stopped():
+		return 0.0
+
+	var cooldown = max(dash_cooldown, 0.001)
+	return clampf(1.0 - dash_cd_timer.time_left / cooldown, 0.0, 1.0)
 
 func _remove_passive_status_vfx(vfx_id: String) -> void:
 	var vfx = passive_status_vfx.get(vfx_id, null)
@@ -1917,6 +1942,23 @@ func _build_circle_points(radius: float, closed: bool) -> PackedVector2Array:
 	for i in range(point_count):
 		var angle = TAU * float(i % segment_count) / float(segment_count)
 		points.append(Vector2(cos(angle), sin(angle)) * radius)
+	return points
+
+func _build_dash_cooldown_progress_points(progress: float) -> PackedVector2Array:
+	var points = PackedVector2Array()
+	var clamped_progress = clampf(progress, 0.0, 1.0)
+	if clamped_progress <= 0.0:
+		return points
+
+	var segment_count = 48
+	var point_count = int(ceil(float(segment_count) * clamped_progress)) + 1
+	point_count = min(max(point_count, 2), segment_count + 1)
+
+	for i in range(point_count):
+		var progress_at_point = min(float(i) / float(segment_count), clamped_progress)
+		var angle = -PI * 0.5 + TAU * progress_at_point
+		points.append(Vector2(cos(angle), sin(angle)) * DASH_CHARGE_RING_RADIUS)
+
 	return points
 
 func _build_iso_ellipse_points(radius: float, closed: bool) -> PackedVector2Array:

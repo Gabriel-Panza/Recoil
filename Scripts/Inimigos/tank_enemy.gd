@@ -4,7 +4,7 @@ class_name TankEnemy
 const TANK_SPRITESHEET: String = "res://Sprites/demonho_tank.png"
 const TANK_FRAME_SIZE: Vector2i = Vector2i(48, 48)
 const TANK_FRAMES_PER_ROW: int = 4
-const CONTACT_KNOCKBACK_MULTIPLIER: float = 0.35
+const CONTACT_KNOCKBACK_MULTIPLIER: float = 0.315
 const TANK_ROW_BY_PECADO = {
 	1: 4,
 	2: 4,
