@@ -42,6 +42,13 @@ const SLOTH_BOSS_ZONE_DPS: float = 2.0
 const SLOTH_BOSS_ENEMY_SLOW_EFFECT_RATIO: float = 0.1
 const SLOTH_BOSS_ENEMY_SLOW_REFERENCE_DASH_MULTIPLIER: float = 0.45
 const GLUTTONY_FOOD_SPAWN_INTERVAL: float = 1.75
+const GLUTTONY_FOOD_SPEED_PHASE_1: float = 142.0
+const GLUTTONY_FOOD_SPEED_PHASE_2: float = 175.0
+const GLUTTONY_FOOD_HEAL_MULTIPLIER: float = 1.25
+const GLUTTONY_FOOD_DASH_DURATION: float = 0.28
+const GLUTTONY_FOOD_DASH_DISTANCE_PHASE_1: float = 190.0
+const GLUTTONY_FOOD_DASH_DISTANCE_PHASE_2: float = 230.0
+const GLUTTONY_FOOD_DASH_ARENA_MARGIN: float = 32.0
 const GLUTTONY_STRESS_DURATION_PHASE_1: float = 7.5
 const GLUTTONY_STRESS_DURATION_PHASE_2: float = 10.0
 const ENVY_CLONE_MAX_HEALTH: float = 180.0
@@ -84,12 +91,12 @@ const DAMAGE_FEEDBACK_COLOR: Color = Color(1.0, 0.08, 0.08, 1.0)
 const HEAL_FEEDBACK_COLOR: Color = Color(0.18, 1.0, 0.32, 1.0)
 
 const BOSS_CONFIG = {
-	1: { "max_health": 400, "speed": 0.0, "damage": 40, "state": BossState.SLOTH, "animation": "pecado1" },
-	2: { "max_health": 700, "speed": 90.0, "damage": 45, "state": BossState.GLUTTONY, "animation": "pecado2", "visual_scale": Vector2(2.15, 2.15) },
-	3: { "max_health": 1000, "speed": 90.0, "damage": 50, "state": BossState.ENVY, "animation": "pecado3" },
-	4: { "max_health": 1500, "speed": 90.0, "damage": 60, "state": BossState.WRATH, "animation": "pecado4" },
-	5: { "max_health": 2000, "speed": 80.0, "damage": 50, "state": BossState.LUST, "animation": "pecado5" },
-	6: { "max_health": 2750, "speed": 80.0, "damage": 45, "state": BossState.GREED, "animation": "pecado6" },
+	1: { "max_health": 450, "speed": 0.0, "damage": 40, "state": BossState.SLOTH, "animation": "pecado1" },
+	2: { "max_health": 1500, "speed": 100.0, "damage": 60, "state": BossState.GLUTTONY, "animation": "pecado2", "visual_scale": Vector2(2.15, 2.15) },
+	3: { "max_health": 1200, "speed": 90.0, "damage": 50, "state": BossState.ENVY, "animation": "pecado3" },
+	4: { "max_health": 1600, "speed": 90.0, "damage": 65, "state": BossState.WRATH, "animation": "pecado4" },
+	5: { "max_health": 2200, "speed": 80.0, "damage": 50, "state": BossState.LUST, "animation": "pecado5" },
+	6: { "max_health": 2850, "speed": 80.0, "damage": 60, "state": BossState.GREED, "animation": "pecado6" },
 	7: { "max_health": 3500, "speed": 80.0, "damage": 80, "state": BossState.PRIDE, "animation": "pecado7" },
 }
 
@@ -118,6 +125,8 @@ var sloth_boss_zone_damage_accumulator: float = 0.0
 var boss_summons: Array = []
 var gluttony_foods: Array = []
 var gluttony_stress_timers: Array = []
+var gluttony_food_dash_tween: Tween
+var is_gluttony_food_dashing: bool = false
 var active_lust_walls: Array = []
 var lust_invulnerability_cooldown: float = 4.0
 var lust_invulnerability_active: bool = false
@@ -252,6 +261,10 @@ func handle_sloth(delta: float) -> void:
 			_start_sloth_slow_zones(4)
 
 func handle_gluttony(delta: float) -> void:
+	if is_gluttony_food_dashing:
+		velocity = Vector2.ZERO
+		return
+
 	_move_toward_player(delta, 0.82)
 	if not _can_start_action():
 		return
@@ -586,7 +599,7 @@ func _spawn_gluttony_food() -> void:
 	parent.add_child(food)
 	food.global_position = _get_random_arena_edge_position()
 	food.player = self
-	food.speed = 155.0 if phase == 1 else 190.0
+	food.speed = GLUTTONY_FOOD_SPEED_PHASE_1 if phase == 1 else GLUTTONY_FOOD_SPEED_PHASE_2
 	food.max_health = 45 if phase == 1 else 60
 	food.current_health = food.max_health
 	food.damage = 10
@@ -608,10 +621,40 @@ func _update_gluttony_foods(_delta: float) -> void:
 		if food.global_position.distance_to(global_position) <= 40.0:
 			food.set_meta("gluttony_delivered", true)
 			gluttony_foods.erase(food)
-			var heal_amount = max_health * (0.18 if phase == 1 else 0.11)
+			var heal_amount = max_health * (0.18 if phase == 1 else 0.11) * GLUTTONY_FOOD_HEAL_MULTIPLIER
 			heal(heal_amount)
 			_spawn_heal_particles(food.global_position)
+			_start_gluttony_food_dash()
 			food.queue_free()
+
+func _start_gluttony_food_dash() -> void:
+	if player == null or is_dead or is_cleaning_up:
+		return
+
+	var dash_direction = global_position.direction_to(player.global_position)
+	if dash_direction == Vector2.ZERO:
+		dash_direction = Vector2.RIGHT
+
+	var dash_distance = GLUTTONY_FOOD_DASH_DISTANCE_PHASE_1 if phase == 1 else GLUTTONY_FOOD_DASH_DISTANCE_PHASE_2
+	var dash_target = _clamp_to_current_arena(global_position + dash_direction * dash_distance, GLUTTONY_FOOD_DASH_ARENA_MARGIN)
+	if dash_target == global_position:
+		return
+
+	if gluttony_food_dash_tween != null:
+		gluttony_food_dash_tween.kill()
+
+	is_gluttony_food_dashing = true
+	velocity = Vector2.ZERO
+	_spawn_burst_particles(global_position, _with_alpha(GLUTTONY_COLOR, 0.72), 14, 0.18, 95.0)
+	gluttony_food_dash_tween = create_tween().bind_node(self)
+	gluttony_food_dash_tween.tween_property(self, "global_position", dash_target, GLUTTONY_FOOD_DASH_DURATION).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	gluttony_food_dash_tween.tween_callback(Callable(self, "_finish_gluttony_food_dash").bind(gluttony_food_dash_tween))
+
+func _finish_gluttony_food_dash(tween: Tween) -> void:
+	if gluttony_food_dash_tween == tween:
+		gluttony_food_dash_tween = null
+	is_gluttony_food_dashing = false
+	velocity = Vector2.ZERO
 
 func _on_gluttony_food_exited(food: Node) -> void:
 	if is_cleaning_up or is_dead:
