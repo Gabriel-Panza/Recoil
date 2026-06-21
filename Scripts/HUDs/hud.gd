@@ -353,7 +353,7 @@ func _apply_effect(option) -> void:
 				player.add_healing_received_multiplier_bonus(-0.5 * stat_multiplier)
 		"cursed_luck":
 			if player.has_method("add_special_level_up_chance_bonus"):
-				player.add_special_level_up_chance_bonus(0.75)
+				player.add_special_level_up_chance_bonus(0.8)
 			if player.has_method("add_damage_taken_multiplier_bonus"):
 				player.add_damage_taken_multiplier_bonus(0.3 * stat_multiplier)
 			else:
