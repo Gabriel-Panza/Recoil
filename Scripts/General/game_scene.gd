@@ -1566,3 +1566,28 @@ func _on_pecado_changed(new_pecado: int) -> void:
 		var player = get_tree().get_first_node_in_group(Global.GROUP_PLAYER)
 		if player and player.has_method("win"):
 			player.win()
+			
+func _unhandled_input(event: InputEvent) -> void: # Modo Debug
+	if OS.is_debug_build() and event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_SEMICOLON:
+			
+			# Cancela o spawn de inimigos normais
+			enemies_left_to_spawn = 0
+			
+			# Apaga todos os inimigos normais
+			for enemy in get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
+				enemy.queue_free()
+				
+			# Verifica e apaga o Boss
+			var matou_boss = false
+			for boss in get_tree().get_nodes_in_group(Global.GROUP_BOSS):
+				boss.queue_free()
+				matou_boss = true
+				
+			# Se matou o boss ou o jogo já estava na fase do boss:
+			if matou_boss or boss_phase:
+				Global.pecado += 1       # Sobe o nível do pecado para a próxima fase[cite: 1]
+				_on_boss_died()          # Força a transição da câmera e da arena
+			else:
+				# Se era uma wave normal
+				call_deferred("_try_finish_wave")
