@@ -73,7 +73,10 @@ const ARENA_LAVA_PATCHES = [
 var fade_layer: CanvasLayer
 var fade_rect: ColorRect
 var starting_arm_layer: CanvasLayer
+var tutorial_layer: CanvasLayer
 var is_transitioning: bool = false
+var movement_tutorial_seen: bool = false
+var elite_tutorial_seen: bool = false
 
 var arena_tile_sets: Dictionary = {}
 
@@ -177,6 +180,7 @@ func _ready() -> void:
 	set_waves_based_on_pecado()
 	_update_camera_limits()
 	await _show_starting_arm_selection()
+	await _show_movement_tutorial()
 	Global.start_run_timer()
 	start_next_wave()
 
@@ -292,6 +296,163 @@ func _make_starting_arm_style(bg_color: Color, border_color: Color, border_width
 	style.content_margin_right = 14
 	style.content_margin_bottom = 12
 	return style
+
+func _show_movement_tutorial() -> void:
+	if movement_tutorial_seen:
+		return
+
+	movement_tutorial_seen = true
+	await _show_tutorial_popup(
+		TutorialAnimation.MODE_MOVEMENT,
+		"Movimentação Infernal",
+		[
+			"------------------------------------------------------------",
+			"Clique para atirar. O tiro vai na direcao do mouse e empurra o player para o lado oposto.",
+			"Use esse recuo para fugir, frear e reposicionar entre um disparo e outro.",
+			"Dash: aperte Espaco/Shift para avancar na direcao do mouse quando precisar cortar perigo.",
+			"------------------------------------------------------------"
+		],
+		"Ok"
+	)
+
+func _show_elite_tutorial() -> void:
+	await _show_tutorial_popup(
+		TutorialAnimation.MODE_ELITES,
+		"Elite Enemies",
+		[
+			"------------------------------------------------------------",
+			"Blindado: outline cinza claro. Toma menos dano.",
+			"Instavel: outline laranja amarelado. Explode ao morrer; saia da area.",
+			"Vampirico: outline vermelho sangue. Cura quando causa dano no player.",
+			"------------------------------------------------------------"
+		],
+		"Ok"
+	)
+
+func _show_tutorial_popup(animation_mode: String, title_text: String, info_lines: Array, button_text: String) -> void:
+	if tutorial_layer != null:
+		return
+
+	var was_paused = get_tree().paused
+	get_tree().paused = true
+
+	tutorial_layer = CanvasLayer.new()
+	tutorial_layer.name = "TutorialPopupLayer"
+	tutorial_layer.layer = 150
+	tutorial_layer.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	add_child(tutorial_layer)
+
+	var overlay = Control.new()
+	overlay.name = "TutorialPopup"
+	overlay.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	tutorial_layer.add_child(overlay)
+
+	var backdrop = ColorRect.new()
+	backdrop.color = PopupStyle.OVERLAY_COLOR
+	backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
+	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)
+	overlay.add_child(backdrop)
+
+	var panel = PanelContainer.new()
+	panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	var viewport_size = get_viewport_rect().size
+	var panel_size = Vector2(min(viewport_size.x - 96.0, 960.0), min(viewport_size.y - 120.0, 500.0))
+	panel.custom_minimum_size = panel_size
+	panel.size = panel_size
+	panel.position = ((viewport_size - panel_size) * 0.5).round()
+	PopupStyle.apply_panel(panel)
+	overlay.add_child(panel)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 28)
+	margin.add_theme_constant_override("margin_top", 24)
+	margin.add_theme_constant_override("margin_right", 28)
+	margin.add_theme_constant_override("margin_bottom", 24)
+	panel.add_child(margin)
+
+	var layout = VBoxContainer.new()
+	layout.add_theme_constant_override("separation", 16)
+	margin.add_child(layout)
+
+	var title = Label.new()
+	title.text = title_text
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 25)
+	PopupStyle.apply_title(title)
+	layout.add_child(title)
+
+	var content = HBoxContainer.new()
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	content.add_theme_constant_override("separation", 22)
+	layout.add_child(content)
+
+	content.add_child(_create_tutorial_animation_area(animation_mode))
+
+	var text_box = VBoxContainer.new()
+	text_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	text_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	text_box.add_theme_constant_override("separation", 12)
+	content.add_child(text_box)
+
+	for line in info_lines:
+		var label = Label.new()
+		label.text = "- %s" % str(line)
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		label.add_theme_font_size_override("font_size", 17)
+		PopupStyle.apply_text(label)
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		text_box.add_child(label)
+
+	var continue_button = Button.new()
+	continue_button.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	continue_button.text = button_text
+	continue_button.custom_minimum_size = Vector2(150.0, 42.0)
+	continue_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	continue_button.add_theme_font_size_override("font_size", 18)
+	PopupStyle.apply_button(continue_button)
+	layout.add_child(continue_button)
+
+	await continue_button.pressed
+
+	if tutorial_layer != null:
+		tutorial_layer.queue_free()
+		tutorial_layer = null
+	get_tree().paused = was_paused
+
+func _create_tutorial_animation_area(animation_mode: String) -> Control:
+	if animation_mode != TutorialAnimation.MODE_MOVEMENT:
+		var single_animation = TutorialAnimation.new()
+		single_animation.mode = animation_mode
+		single_animation.custom_minimum_size = Vector2(360.0, 230.0)
+		single_animation.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		single_animation.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		return single_animation
+
+	var animation_stack = VBoxContainer.new()
+	animation_stack.custom_minimum_size = Vector2(360.0, 300.0)
+	animation_stack.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	animation_stack.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	animation_stack.add_theme_constant_override("separation", 7)
+	_add_tutorial_animation_window(animation_stack, "Tiro / Recoil", TutorialAnimation.MODE_RECOIL)
+	_add_tutorial_animation_window(animation_stack, "Dash", TutorialAnimation.MODE_DASH)
+	return animation_stack
+
+func _add_tutorial_animation_window(parent: VBoxContainer, label_text: String, animation_mode: String) -> void:
+	var title = Label.new()
+	title.text = label_text
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 14)
+	PopupStyle.apply_title(title)
+	parent.add_child(title)
+
+	var animation = TutorialAnimation.new()
+	animation.mode = animation_mode
+	animation.custom_minimum_size = Vector2(340.0, 126.0)
+	animation.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	animation.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	parent.add_child(animation)
 
 func _setup_fade_overlay() -> void:
 	fade_layer = CanvasLayer.new()
@@ -1233,6 +1394,9 @@ func _try_apply_elite_variant(enemy: Node) -> void:
 	var variants = ["armored", "unstable", "vampiric"]
 	variants.shuffle()
 	enemy.call("apply_elite_variant", variants[0])
+	if not elite_tutorial_seen:
+		elite_tutorial_seen = true
+		call_deferred("_show_elite_tutorial")
 
 func _apply_contract_modifiers_to_enemy(enemy: Node, target_key: String) -> void:
 	if active_contract.is_empty() or enemy == null:
@@ -1409,7 +1573,7 @@ func _create_contract_offer_layer(contract: Dictionary) -> void:
 	add_child(contract_offer_layer)
 
 	var overlay = ColorRect.new()
-	overlay.color = Color(0.015, 0.006, 0.01, 0.86)
+	overlay.color = PopupStyle.OVERLAY_COLOR
 	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
 	contract_offer_layer.add_child(overlay)
@@ -1419,7 +1583,7 @@ func _create_contract_offer_layer(contract: Dictionary) -> void:
 	panel.custom_minimum_size = Vector2(680.0, 320.0)
 	panel.size = panel.custom_minimum_size
 	panel.position = ((_get_design_viewport_size() - panel.size) * 0.5).round()
-	panel.add_theme_stylebox_override("panel", _make_starting_arm_style(Color(0.10, 0.035, 0.035, 0.98), Color(0.95, 0.25, 0.12, 0.95), 3))
+	PopupStyle.apply_panel(panel)
 	contract_offer_layer.add_child(panel)
 
 	var margin = MarginContainer.new()
@@ -1470,6 +1634,7 @@ func _make_contract_button(text: String) -> Button:
 	button.custom_minimum_size = Vector2(160.0, 44.0)
 	button.text = text
 	button.add_theme_font_size_override("font_size", 18)
+	PopupStyle.apply_button(button)
 	return button
 
 func _on_contract_button_pressed(accepted: bool) -> void:
@@ -1851,8 +2016,18 @@ func _on_boss_died() -> void:
 	set_waves_based_on_pecado()
 	_update_camera_limits()
 	await _wait_for_level_up_selection()
+	_try_apply_arm_mutation_after_boss()
 	await _transition_player_to(ENEMY_ARENA_PLAYER_POSITION)
 	start_next_wave()
+
+func _try_apply_arm_mutation_after_boss() -> void:
+	var defeated_sins = clampi(Global.pecado - 1, 0, 7)
+	if defeated_sins != 2 and defeated_sins != 4 and defeated_sins != 6:
+		return
+
+	var mutation_tier = int(defeated_sins / 2)
+	if $Player != null and $Player.has_method("apply_arm_mutation"):
+		$Player.apply_arm_mutation(mutation_tier)
 
 func _reset_player_periodic_shot_counters() -> void:
 	if $Player != null and $Player.has_method("reset_periodic_shot_counters"):
@@ -1961,6 +2136,7 @@ func _setup_debug_panel() -> void:
 	debug_panel.visible = false
 	debug_panel.custom_minimum_size = Vector2(280.0, 320.0)
 	debug_panel.position = Vector2(850.0, 72.0)
+	PopupStyle.apply_panel(debug_panel)
 	debug_layer.add_child(debug_panel)
 
 	var margin = MarginContainer.new()
@@ -1978,11 +2154,13 @@ func _setup_debug_panel() -> void:
 	title.text = "DEBUG / BALANCE"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 18)
+	PopupStyle.apply_title(title)
 	layout.add_child(title)
 
 	debug_status_label = Label.new()
 	debug_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	debug_status_label.add_theme_font_size_override("font_size", 13)
+	PopupStyle.apply_text(debug_status_label)
 	layout.add_child(debug_status_label)
 
 	layout.add_child(_make_debug_button("Skip encounter (;)", "_debug_skip_current_encounter"))
@@ -1998,6 +2176,7 @@ func _make_debug_button(text: String, method_name: String) -> Button:
 	button.process_mode = Node.PROCESS_MODE_ALWAYS
 	button.text = text
 	button.custom_minimum_size = Vector2(0.0, 32.0)
+	PopupStyle.apply_button(button)
 	button.pressed.connect(Callable(self, method_name))
 	return button
 

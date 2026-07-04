@@ -4,15 +4,17 @@ const PLAYER_PATH: NodePath = "/root/GameScene/Player"
 const GAME_SCENE_PATH: NodePath = "/root/GameScene"
 const HEAL_AFTER_WAVE_COMMON_ROLL_CHANCE: float = 0.3
 const DASH_COOLDOWN_COMMON_ROLL_CHANCE: float = 0.5
+const CONTRACT_EXTRA_CURSED_ROLL_CHANCE: float = 0.1
 const DEFAULT_VIEWPORT_SIZE: Vector2 = Vector2(1152.0, 648.0)
 const OPTION_BUTTON_COUNT: int = 3
+const OPTION_LABEL_FONT_SIZE: int = 32
 const REROLL_BUTTON_SIZE: Vector2 = Vector2(72.0, 42.0)
 const REROLL_BUTTON_RIGHT_MARGIN: float = 8.0
 const REROLL_BUTTON_TEXT: String = "Reroll"
 const SLOT_ROLL_BASE_TICKS: int = 14
 const SLOT_ROLL_STOP_TICK_STEP: int = 6
 const SLOT_ROLL_INTERVAL: float = 0.075
-const SPECIAL_LEVEL_UP_ROLL_CHANCE: float = 0.125
+const SPECIAL_LEVEL_UP_ROLL_CHANCE: float = 0.10
 const SPECIAL_LEVEL_UP_EPIC_TIER: String = "epic"
 const SPECIAL_LEVEL_UP_LEGENDARY_TIER: String = "legendary"
 const SPECIAL_LEVEL_UP_LEGENDARY_SHARE: float = 0.4
@@ -33,6 +35,8 @@ const CONFETTI_MIN_VELOCITY: float = 80.0
 const CONFETTI_MAX_VELOCITY: float = 180.0
 const CONFETTI_SCALE_MIN: float = 6.0
 const CONFETTI_SCALE_MAX: float = 14.0
+const STYLED_BACKGROUND_NODE_NAME: String = "StyledPopupBackground"
+const POPUP_CENTER_OFFSET: Vector2 = Vector2(24.0, 0.0)
 
 var player
 var game_scene
@@ -66,6 +70,7 @@ func _ready() -> void:
 	_setup_title_label()
 	_setup_skip_button()
 	_connect_buttons()
+	_apply_popup_style()
 	visible = false
 
 func _setup_title_label() -> void:
@@ -73,13 +78,14 @@ func _setup_title_label() -> void:
 	if title_label == null:
 		title_label = Label.new()
 		title_label.name = "TitleLabel"
-		title_label.offset_left = 4
+		title_label.offset_left = 16
 		title_label.offset_top = -48
-		title_label.offset_right = 644
+		title_label.offset_right = 632
 		title_label.offset_bottom = -10
 		title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		title_label.add_theme_font_size_override("font_size", 20)
 		add_child(title_label)
+	PopupStyle.apply_title(title_label)
 	title_label.visible = false
 
 func _setup_skip_button() -> void:
@@ -95,6 +101,7 @@ func _setup_skip_button() -> void:
 		skip_button.add_theme_font_size_override("font_size", 16)
 		add_child(skip_button)
 
+	PopupStyle.apply_button(skip_button)
 	skip_button.tooltip_text = "Skip this level up"
 	var skip_callable = Callable(self, "_on_skip_button_pressed")
 	if not skip_button.pressed.is_connected(skip_callable):
@@ -112,6 +119,46 @@ func _connect_buttons() -> void:
 			button.pressed.connect(callable)
 		if button.get_child_count() > 0 and button.get_child(0) is Control:
 			button.get_child(0).mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+func _apply_popup_style() -> void:
+	var frame = get_node_or_null("NinePatchRect")
+	if frame is CanvasItem:
+		(frame as CanvasItem).visible = false
+
+	var background = get_node_or_null(STYLED_BACKGROUND_NODE_NAME)
+	if background == null:
+		background = Panel.new()
+		background.name = STYLED_BACKGROUND_NODE_NAME
+		background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		background.z_index = -1
+		add_child(background)
+		move_child(background, 0)
+
+	if background is Control and frame is Control:
+		var background_control = background as Control
+		var frame_control = frame as Control
+		background_control.position = frame_control.position
+		background_control.size = frame_control.size
+		background_control.anchor_left = frame_control.anchor_left
+		background_control.anchor_top = frame_control.anchor_top
+		background_control.anchor_right = frame_control.anchor_right
+		background_control.anchor_bottom = frame_control.anchor_bottom
+		background_control.offset_left = frame_control.offset_left
+		background_control.offset_top = frame_control.offset_top
+		background_control.offset_right = frame_control.offset_right
+		background_control.offset_bottom = frame_control.offset_bottom
+		background_control.grow_horizontal = frame_control.grow_horizontal
+		background_control.grow_vertical = frame_control.grow_vertical
+		PopupStyle.apply_panel(background_control)
+
+	var container = get_node_or_null("VBoxContainer")
+	if container != null:
+		for child in container.get_children():
+			if child is Button:
+				PopupStyle.apply_button(child as Button)
+				var label = _get_button_label(child as Button)
+				if label != null:
+					label.add_theme_font_size_override("font_size", OPTION_LABEL_FONT_SIZE)
 
 ## Shows the correct level-up option set for a normal, pre-boss, or boss reward.
 func show_popup(context: String = "normal", boss_pecado: int = 0) -> void:
@@ -254,12 +301,25 @@ func _build_boss_roll_data(boss_pecado: int) -> Dictionary:
 func _build_contract_extra_roll_data() -> Dictionary:
 	var passive_pool = _get_available_passive_options()
 	var cursed_pool = _get_cursed_passive_options()
-	var combined_pool = passive_pool + cursed_pool
-	combined_pool.shuffle()
-	var final_options = combined_pool.slice(0, OPTION_BUTTON_COUNT)
+	var passive_options = passive_pool.duplicate(true)
+	var cursed_options = cursed_pool.duplicate(true)
+	passive_options.shuffle()
+	cursed_options.shuffle()
+
+	var final_options = []
 	var pools = []
-	for _option in final_options:
-		pools.append(combined_pool)
+	for _i in range(OPTION_BUTTON_COUNT):
+		var should_roll_cursed = not cursed_options.is_empty() and (passive_options.is_empty() or randf() <= CONTRACT_EXTRA_CURSED_ROLL_CHANCE)
+		if should_roll_cursed:
+			final_options.append(cursed_options.pop_back())
+			pools.append(cursed_pool)
+		elif not passive_options.is_empty():
+			final_options.append(passive_options.pop_back())
+			pools.append(passive_pool)
+		elif not cursed_options.is_empty():
+			final_options.append(cursed_options.pop_back())
+			pools.append(cursed_pool)
+
 	return _make_level_up_roll_data(final_options, pools)
 
 func _build_normal_options() -> Array:
@@ -496,13 +556,18 @@ func _apply_option_to_button(button: Button, option: Dictionary, is_blocked: boo
 	var label = _get_button_label(button)
 	if label:
 		label.text = _get_option_button_text(option)
+		var rarity_color = _get_option_text_color(option, is_blocked)
+		label.add_theme_font_size_override("font_size", OPTION_LABEL_FONT_SIZE)
+		label.add_theme_color_override("font_color", PopupStyle.DISABLED_TEXT_COLOR if is_blocked else rarity_color)
+		label.add_theme_color_override("font_outline_color", Color(rarity_color.r * 0.35, rarity_color.g * 0.25, rarity_color.b * 0.2, 1.0))
 	button.tooltip_text = tooltip
 	if is_blocked:
 		var blocked_tooltip = "Bloqueado neste level up porque voce recusou esta opcao."
 		button.tooltip_text = blocked_tooltip if tooltip == "" else "%s\n%s" % [tooltip, blocked_tooltip]
 	if label:
 		label.tooltip_text = button.tooltip_text
-	button.self_modulate = _get_option_button_color(option, is_blocked)
+	button.self_modulate = Color(0.62, 0.62, 0.62, 1.0) if is_blocked else Color.WHITE
+	PopupStyle.apply_button(button)
 	_set_special_level_up_button_effect(button, option, is_blocked)
 	_layout_option_button_label(button)
 
@@ -550,7 +615,7 @@ func _get_or_create_reroll_button(button: Button, option_index: int) -> Button:
 	reroll_button.offset_right = -REROLL_BUTTON_RIGHT_MARGIN
 	reroll_button.offset_bottom = REROLL_BUTTON_SIZE.y * 0.5
 	reroll_button.add_theme_font_size_override("font_size", 16)
-	reroll_button.add_theme_color_override("font_color", Color(1.0, 0.92, 0.35, 1.0))
+	PopupStyle.apply_button(reroll_button)
 	reroll_button.pressed.connect(Callable(self, "_on_reroll_button_pressed").bind(option_index))
 	button.add_child(reroll_button)
 	return reroll_button
@@ -652,7 +717,7 @@ func _center_popup() -> void:
 	if not has_bounds:
 		return
 
-	position = (_get_design_viewport_size() * 0.5 - popup_bounds.get_center()).round()
+	position = (_get_design_viewport_size() * 0.5 - popup_bounds.get_center() + POPUP_CENTER_OFFSET).round()
 
 func _get_design_viewport_size() -> Vector2:
 	return Vector2(
@@ -675,11 +740,18 @@ func _get_option_tooltip(option: Dictionary) -> String:
 
 func _get_special_level_up_tooltip(option: Dictionary) -> String:
 	var tier = _get_special_level_up_tier(option)
+	var base_text = str(option.get("text", option.get("name", option.get("id", ""))))
+	var final_values = _get_special_level_up_text(base_text, _get_option_stat_multiplier(option))
+	var final_values_line = "\nFinal values: " + final_values if final_values != base_text else ""
 	if tier == SPECIAL_LEVEL_UP_LEGENDARY_TIER:
-		return "Lucky Legendary: numeric values are doubled."
-	return "Lucky Epic: numeric values are increased by 50%."
+		return "Lucky Legendary: numeric values are increased by 100%." + final_values_line
+	return "Lucky Epic: numeric values are increased by 50%." + final_values_line
 
 func _get_special_level_up_text(text: String, multiplier: float) -> String:
+	var multiplier_text = _apply_special_level_up_multiplier_text(text, multiplier)
+	return _apply_special_level_up_percent_text(multiplier_text, multiplier)
+
+func _apply_special_level_up_percent_text(text: String, multiplier: float) -> String:
 	var regex = RegEx.new()
 	if regex.compile("([+-])([0-9]+(?:\\.[0-9]+)?)%") != OK:
 		return text
@@ -695,6 +767,26 @@ func _get_special_level_up_text(text: String, multiplier: float) -> String:
 		var sign = groups[1]
 		var value = float(groups[2]) * multiplier
 		result += "%s%s%%" % [sign, _format_special_percent_value(value)]
+		last_end = match_result.get_end()
+
+	result += text.substr(last_end)
+	return result
+
+func _apply_special_level_up_multiplier_text(text: String, multiplier: float) -> String:
+	var regex = RegEx.new()
+	if regex.compile("\\bx([0-9]+(?:\\.[0-9]+)?)\\b") != OK:
+		return text
+
+	var result = ""
+	var last_end = 0
+	for match_result in regex.search_all(text):
+		result += text.substr(last_end, match_result.get_start() - last_end)
+		var groups = match_result.get_strings()
+		if groups.size() < 2:
+			last_end = match_result.get_end()
+			continue
+		var value = float(groups[1]) * multiplier
+		result += "x%s" % _format_special_percent_value(value)
 		last_end = match_result.get_end()
 
 	result += text.substr(last_end)
@@ -739,9 +831,17 @@ func _get_color_for_rarity(rarity: String) -> Color:
 		"passive_rare":
 			return Color(0.1, 0.0, 1, 1.0)
 		"passive_cursed":
-			return Color(0.6, 0.0, 0.6, 1.0)
+			return Color(0.78, 0.05, 0.58, 1.0)
+		"active_sin", "passive_sin":
+			return Color(1.0, 0.28, 0.08, 1.0)
 		_:
 			return Color(1, 0, 0.1, 1)
+
+func _get_option_text_color(option: Dictionary, is_blocked: bool) -> Color:
+	var color = _get_color_for_rarity(str(option.get("rarity", "")))
+	if is_blocked:
+		return Color(color.r * 0.28, color.g * 0.28, color.b * 0.28, 0.78)
+	return color
 
 func _get_option_button_color(option: Dictionary, is_blocked: bool) -> Color:
 	var color = _get_color_for_rarity(str(option.get("rarity", "")))
@@ -765,7 +865,7 @@ func _on_reroll_button_pressed(option_index: int) -> void:
 		return
 	if option_index < 0 or option_index >= current_options.size():
 		return
-	var replacement = _roll_any_level_up_option_for_reroll()
+	var replacement = _roll_same_type_level_up_option_for_reroll(current_options[option_index])
 	if replacement.is_empty():
 		return
 	if player == null or not player.has_method("consume_reroll_token") or not player.consume_reroll_token():
@@ -780,8 +880,8 @@ func _on_reroll_button_pressed(option_index: int) -> void:
 	if _is_legendary_special_level_up_option(replacement):
 		_spawn_special_level_up_confetti()
 
-func _roll_any_level_up_option_for_reroll() -> Dictionary:
-	var pool = _get_any_reroll_option_pool()
+func _roll_same_type_level_up_option_for_reroll(current_option: Dictionary) -> Dictionary:
+	var pool = _get_same_type_reroll_option_pool(current_option)
 	if pool.is_empty():
 		return {}
 
@@ -791,15 +891,32 @@ func _roll_any_level_up_option_for_reroll() -> Dictionary:
 		return pool[0].duplicate(true)
 	return rolled_options[0]
 
-func _get_any_reroll_option_pool() -> Array:
+func _get_same_type_reroll_option_pool(current_option: Dictionary) -> Array:
+	var rarity = str(current_option.get("rarity", ""))
 	var pool = []
-	pool.append_array(_get_available_passive_options())
-	pool.append_array(_get_cursed_passive_options())
-	pool.append_array(_get_available_rare_options())
+	match rarity:
+		"passive_common":
+			pool = _get_available_passive_options()
+		"passive_cursed":
+			pool = _get_cursed_passive_options()
+		"passive_rare":
+			pool = _get_available_rare_options()
+		"active_sin", "passive_sin":
+			pool = _get_available_boss_reroll_options()
+		_:
+			pool = _get_available_passive_options()
 
+	return _filter_reroll_pool(pool, str(current_option.get("id", "")))
+
+func _get_available_boss_reroll_options() -> Array:
 	var active_slots = player.get_active_ability_slots() if player and player.has_method("get_active_ability_slots") else {}
 	var equipped_boss_passives = player.get_boss_passive_options() if player and player.has_method("get_boss_passive_options") else []
-	for option in Global.BOSS_REWARD_OPTIONS:
+	var source_options = _get_boss_reward_options(current_popup_boss_pecado)
+	if source_options.is_empty():
+		source_options = Global.BOSS_REWARD_OPTIONS.duplicate(true)
+
+	var pool = []
+	for option in source_options:
 		var option_id = str(option.get("id", ""))
 		if option_id in blocked_level_option_ids:
 			continue
@@ -810,6 +927,17 @@ func _get_any_reroll_option_pool() -> Array:
 		pool.append(option.duplicate(true))
 
 	return pool
+
+func _filter_reroll_pool(pool: Array, current_option_id: String) -> Array:
+	var filtered_pool = []
+	for option in pool:
+		var option_id = str(option.get("id", ""))
+		if option_id == current_option_id:
+			continue
+		if option_id in blocked_level_option_ids:
+			continue
+		filtered_pool.append(option.duplicate(true))
+	return filtered_pool
 
 func _on_option_button_pressed(index: int) -> void:
 	if is_rolling_options:

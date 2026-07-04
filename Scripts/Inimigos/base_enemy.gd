@@ -2,7 +2,7 @@ extends CharacterBody2D
 class_name BaseEnemy 
 
 @export var max_health: int = 100
-@export var speed: float = 130.0
+@export var speed: float = 132.0
 @export var damage: int = 15
 @export var xp_drop: int = 1
 
@@ -71,9 +71,9 @@ func _ready() -> void:
 	var player_arm_id = str(player.get("current_arm_id")) if player != null and player.get("current_arm_id") != null else ""
 	match player_arm_id:
 		"fast":
-			speed = 140
+			speed = 142
 		"heavy":
-			speed = 127
+			speed = 126
 		"unstable":
 			speed = 132
 	add_to_group(Global.GROUP_ENEMY)

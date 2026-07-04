@@ -27,10 +27,10 @@ const STARTING_ARM_DATA = {
 	"fast": {
 		"name": "Braco rapido",
 		"description": "Tiros fracos, cadencia alta e recuo curto para controlar melhor o personagem.",
-		"attack_damage": 25.0,
+		"attack_damage": 27.5,
 		"base_fire_rate": 0.5,
 		"min_fire_rate": 0.3,
-		"base_recoil_force": 375.0,
+		"base_recoil_force": 380.0,
 		"friction": 900.0,
 		"attack_speed_upgrade_multiplier": 0.3,
 		"unstable_projectiles": false
@@ -39,22 +39,22 @@ const STARTING_ARM_DATA = {
 		"name": "Braco pesado",
 		"description": "Tiros lentos com dano alto e recuo forte para reposicionamentos grandes.",
 		"attack_damage": 70.0,
-		"base_fire_rate": 2.0,
-		"min_fire_rate": 1.35,
+		"base_fire_rate": 2.1,
+		"min_fire_rate": 1.75,
 		"base_recoil_force": 750.0,
 		"friction": 600.0,
-		"attack_speed_upgrade_multiplier": 0.5,
+		"attack_speed_upgrade_multiplier": 0.7,
 		"unstable_projectiles": false
 	},
 	"unstable": {
 		"name": "Braco instavel",
 		"description": "Projeteis atravessam um alvo e ricocheteiam uma vez, mas voltam perigosos.",
 		"attack_damage": 35.0,
-		"base_fire_rate": 1.2,
-		"min_fire_rate": 0.75,
+		"base_fire_rate": 1.3,
+		"min_fire_rate": 0.8,
 		"base_recoil_force": 575.0,
 		"friction": 750.0,
-		"attack_speed_upgrade_multiplier": 0.7,
+		"attack_speed_upgrade_multiplier": 0.5,
 		"unstable_projectiles": true
 	}
 }
@@ -91,21 +91,20 @@ const PASSIVE_UPGRADE_OPTIONS = [
 ]
 
 const CURSED_PASSIVE_OPTIONS = [
-	{ "id": "glass_canon", "text": "Attack (+50%), Health (-25%)", "description": "Greatly increases damage, but lowers your maximum health. Strong if you can avoid hits.", "rarity": "passive_cursed" },
-	{ "id": "tanky", "text": "Health (+40%), Attack (-40%)", "description": "Greatly increases survivability, but lowers your damage output.", "rarity": "passive_cursed" },
-	{ "id": "deadly_slow", "text": "Recoil Force (-25%), Attack (+60%)", "description": "Greatly increases damage, but weakens your recoil movement by cutting pushback force.", "rarity": "passive_cursed" },
+	{ "id": "glass_canon", "text": "Attack (+50%), Health (-30%)", "description": "Greatly increases damage, but lowers your maximum health. Strong if you can avoid hits.", "rarity": "passive_cursed" },
+	{ "id": "tanky", "text": "Health (+50%), Attack (-30%)", "description": "Greatly increases survivability, but lowers your damage output.", "rarity": "passive_cursed" },
+	{ "id": "deadly_slow", "text": "Recoil Force (-20%), Attack (+40%)", "description": "Greatly increases damage, but weakens your recoil movement by cutting pushback force.", "rarity": "passive_cursed" },
 	{ "id": "fast_but_small", "text": "Bullet Size (-30%), Atk-Speed (+30%)", "description": "Adds +30% attack speed before the chosen arm's tuning, but reduces bullet size by 30%. Bullet size cannot drop below 50%.", "rarity": "passive_cursed" },
-	{ "id": "blood_tax", "text": "Attack (+60%), Heal (-50%)", "description": "Greatly increases damage, but all healing you receive is reduced by 50%.", "rarity": "passive_cursed" },
-	{ "id": "cursed_luck", "text": "Lucky Level Up Chance Up, Damage Taken (+30%)", "description": "Increases the chance for lucky level ups, but all damage you take is increased by 30%.", "rarity": "passive_cursed" },
-	{ "id": "thin_blood", "text": "Health (-80%), Heal (+200%)", "description": "Massively lowers your maximum health, but triples all healing you receive.", "rarity": "passive_cursed" }
+	{ "id": "blood_tax", "text": "Attack (+40%), Heal (-45%)", "description": "Greatly increases damage, but all healing you receive is reduced by 45%.", "rarity": "passive_cursed" },
+	{ "id": "cursed_luck", "text": "Luck (x2), Damage Taken (+30%)", "description": "Luck multiplies your chance to roll lucky level ups, but all damage you take is increased by 30%.", "rarity": "passive_cursed" },
+	{ "id": "thin_blood", "text": "Health (-40%), Heal (+100%)", "description": "Greatly lowers your maximum health, but increase all healing you receive.", "rarity": "passive_cursed" }
 ]
 
 const RARE_PASSIVE_OPTIONS = [
 	{ "id": "Shield_Protection", "text": "Gain a one-hit shield", "description": "Grants a shield that blocks the next damage instance. You can equip up to two rare passives.", "rarity": "passive_rare" },
-	{ "id": "Recoil_Explosion", "text": "Your recoil creates a small shockwave", "description": "Every shot creates a 180px shockwave that deals 35% of your attack damage. You can equip up to two rare passives.", "rarity": "passive_rare" },
-	{ "id": "Double_Dash", "text": "You have two charges of dash", "description": "Gives you two dash charges. Each spent charge recharges one at a time. You can equip up to two rare passives.", "rarity": "passive_rare" },
+	{ "id": "Recoil_Explosion", "text": "Recoil Explosion", "description": "Every shot creates a 180px shockwave that deals 35% of your attack damage. You can equip up to two rare passives.", "rarity": "passive_rare" },
+	{ "id": "Double_Dash", "text": "Double Dash", "description": "Gives you two dash charges. Each spent charge recharges one at a time. You can equip up to two rare passives.", "rarity": "passive_rare" },
 	{ "id": "Offensive_Dash", "text": "Offensive Dash", "description": "Dashing blocks damage and releases a 180px shockwave at the end of the dash, dealing 75% of your attack damage. You can equip up to two rare passives.", "rarity": "passive_rare" },
-	{ "id": "Thorn_Clothes", "text": "Thorn Clothes", "description": "Reflects 40% of contact damage taken back to the enemy that touched you. Ranged damage does not trigger it. You can equip up to two rare passives.", "rarity": "passive_rare" },
 	{ "id": "Kinetic_Reload", "text": "Kinetic Reload", "description": "Recoil bounces against arena limits reduce 35% of your remaining shot cooldown. This can trigger once every 0.35 seconds. You can equip up to two rare passives.", "rarity": "passive_rare" },
 	{ "id": "Splintered_Chamber", "text": "Splintered Chamber", "description": "Every 8th shot fires 2 side fragments, each dealing 35% of that shot's damage. Overheat damage applies to these fragments. You can equip up to two rare passives.", "rarity": "passive_rare" }
 ]
@@ -190,10 +189,6 @@ const PASSIVE_STATUS_DATA = {
 		"name": "Offensive Dash",
 		"description": "Dashing blocks damage and releases a 180px shockwave for 75% attack damage."
 	},
-	"Thorn_Clothes": {
-		"name": "Thorn Clothes",
-		"description": "Reflects 40% of contact damage taken back to the enemy."
-	},
 	"Kinetic_Reload": {
 		"name": "Kinetic Reload",
 		"description": "Recoil bounces against arena limits reduce 35% of your remaining shot cooldown."
@@ -228,7 +223,7 @@ const PASSIVE_STATUS_DATA = {
 	},
 }
 
-const RARE_OPTION_IDS = ["Shield_Protection", "Recoil_Explosion", "Double_Dash", "Offensive_Dash", "Thorn_Clothes", "Kinetic_Reload", "Splintered_Chamber"]
+const RARE_OPTION_IDS = ["Shield_Protection", "Recoil_Explosion", "Double_Dash", "Offensive_Dash", "Kinetic_Reload", "Splintered_Chamber"]
 const SIN_PASSIVE_IDS = [
 	"sloth_slow_aura",
 	"gluttony_heal_kill",

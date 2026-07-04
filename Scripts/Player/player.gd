@@ -61,7 +61,6 @@ const SLOTH_FIELD_TICK_INTERVAL: float = 0.1
 const SLOTH_PLAYER_DOT_META: String = "player_sloth_dot_accumulator"
 const DASH_COOLDOWN_REDUCTION_STEP: float = 0.05
 const MAX_DASH_COOLDOWN_REDUCTION: float = 0.4
-const THORN_CLOTHES_DAMAGE_RETURN_MULTIPLIER: float = 0.4
 const KINETIC_RELOAD_REMAINING_COOLDOWN_REDUCTION: float = 0.35
 const KINETIC_RELOAD_INTERNAL_COOLDOWN: float = 0.35
 const SPLINTERED_CHAMBER_SHOT_INTERVAL: int = 8
@@ -83,6 +82,82 @@ const GOLDEN_DEBT_WAVE_HEALTH_RATIO: float = 0.05
 const MAX_PROJECTILE_SIZE_MULTIPLIER: float = 2.0
 const MIN_PROJECTILE_SIZE_MULTIPLIER: float = 0.5
 const MAX_HEAL_AFTER_WAVE_BONUS: float = 0.15
+const ARM_MUTATION_DATA = {
+	"fast": {
+		1: {
+			"name": "Mira Nervosa",
+			"description": "Tiros marcam inimigos por alguns segundos. Projeteis proximos curvam levemente para alvos marcados."
+		},
+		2: {
+			"name": "Perfuracao por Ritmo",
+			"description": "A cada 6 tiros em sequencia, o proximo disparo atravessa um alvo adicional."
+		},
+		3: {
+			"name": "Metralha Sinaptica",
+			"description": "Alternar bastante a mira cria um disparo extra que repete o angulo anterior com dano reduzido."
+		}
+	},
+	"heavy": {
+		1: {
+			"name": "Estilhaco de Impacto",
+			"description": "O primeiro impacto de cada tiro pesado solta fragmentos em cone para tras."
+		},
+		2: {
+			"name": "Tranco de Execucao",
+			"description": "Abates com tiros pesados geram uma onda curta que empurra e fere inimigos proximos."
+		},
+		3: {
+			"name": "Canhao de Penitencia",
+			"description": "Atirar logo que o cooldown termina cria um disparo grande que atravessa e arrasta inimigos."
+		}
+	},
+	"unstable": {
+		1: {
+			"name": "Memoria Balistica",
+			"description": "Ricochetes deixam um eco atrasado que repete parte da trajetoria com dano baixo."
+		},
+		2: {
+			"name": "Ressonancia Instavel",
+			"description": "Atingir um alvo depois de ricochetear deixa uma ressonancia. Outro tiro no alvo detona uma explosao curta."
+		},
+		3: {
+			"name": "Paradoxo Vivo",
+			"description": "Todo terceiro projetil cria um eco espelhado no primeiro impacto ou ricochete. O eco e lento e perigoso para todos."
+		}
+	}
+}
+const FAST_MARK_META: String = "fast_nervous_mark_until_msec"
+const FAST_MARK_DURATION_MSEC: int = 3000
+const FAST_HOMING_RANGE: float = 420.0
+const FAST_HOMING_TURN_RATE: float = 5.4
+const FAST_RHYTHM_SHOT_WINDOW_MSEC: int = 1000
+const FAST_RHYTHM_SHOTS_REQUIRED: int = 6
+const FAST_RHYTHM_PIERCE_BONUS: int = 1
+const FAST_SYNAPTIC_MIN_ANGLE_DELTA: float = 0.52
+const FAST_SYNAPTIC_STACKS_REQUIRED: int = 3
+const FAST_SYNAPTIC_DAMAGE_MULTIPLIER: float = 0.55
+const HEAVY_IMPACT_SHARD_COUNT: int = 3
+const HEAVY_IMPACT_SHARD_DAMAGE_MULTIPLIER: float = 0.28
+const HEAVY_IMPACT_SHARD_ANGLE_SPREAD: float = 42.0
+const HEAVY_EXECUTION_RADIUS: float = 128.0
+const HEAVY_EXECUTION_DAMAGE_MULTIPLIER: float = 0.22
+const HEAVY_EXECUTION_KNOCKBACK_FORCE: float = 340.0
+const HEAVY_PENITENCE_READY_WINDOW: float = 0.34
+const HEAVY_PENITENCE_DAMAGE_MULTIPLIER: float = 1.1
+const HEAVY_PENITENCE_PIERCE_BONUS: int = 2
+const HEAVY_PENITENCE_DRAG_RADIUS: float = 145.0
+const HEAVY_PENITENCE_DRAG_DAMAGE_MULTIPLIER: float = 0.18
+const HEAVY_PENITENCE_DRAG_FORCE: float = 260.0
+const UNSTABLE_RESONANCE_META: String = "unstable_resonance_until_msec"
+const UNSTABLE_MEMORY_ECHO_DELAY: float = 0.12
+const UNSTABLE_MEMORY_ECHO_DAMAGE_MULTIPLIER: float = 0.35
+const UNSTABLE_MEMORY_ECHO_SPEED_MULTIPLIER: float = 0.72
+const UNSTABLE_RESONANCE_DURATION_MSEC: int = 2500
+const UNSTABLE_RESONANCE_RADIUS: float = 105.0
+const UNSTABLE_RESONANCE_DAMAGE_MULTIPLIER: float = 0.55
+const UNSTABLE_PARADOX_INTERVAL: int = 3
+const UNSTABLE_PARADOX_DAMAGE_MULTIPLIER: float = 0.45
+const UNSTABLE_PARADOX_SPEED_MULTIPLIER: float = 0.62
 
 # --- TIRO ---
 @export var pistol_bullet_scene: PackedScene
@@ -93,6 +168,14 @@ var heal_after_wave_bonus: float = 0.0
 var current_arm_id: String = ""
 var arm_attack_speed_upgrade_multiplier: float = 1.0
 var unstable_arm_projectiles_enabled: bool = false
+var arm_mutation_tier: int = 0
+var fast_rhythm_combo: int = 0
+var fast_last_shot_msec: int = -1
+var fast_previous_shot_angle: float = 0.0
+var fast_has_previous_shot_angle: bool = false
+var fast_synaptic_charge: int = 0
+var heavy_perfect_window_remaining: float = 0.0
+var unstable_paradox_projectile_counter: int = 0
 
 var active_abilities = {
 	"E": "",
@@ -119,7 +202,6 @@ var shield_cooldown_remaining: float = 0.0
 var shield_vfx: Node2D
 var recoil_explosion_enabled: bool = false
 var offensive_dash_enabled: bool = false
-var thorn_clothes_enabled: bool = false
 var kinetic_reload_enabled: bool = false
 var kinetic_reload_cooldown_remaining: float = 0.0
 var splintered_chamber_enabled: bool = false
@@ -255,6 +337,8 @@ func apply_starting_arm(arm_id: String) -> void:
 	friction = float(arm_data["friction"])
 	arm_attack_speed_upgrade_multiplier = float(arm_data["attack_speed_upgrade_multiplier"])
 	unstable_arm_projectiles_enabled = bool(arm_data["unstable_projectiles"])
+	arm_mutation_tier = 0
+	_reset_arm_mutation_runtime_state()
 	_recalculate_fire_rate()
 	_recalculate_recoil_force()
 	emit_signal("stats_updated")
@@ -293,6 +377,79 @@ func get_current_arm_name() -> String:
 	if Global.STARTING_ARM_DATA.has(current_arm_id):
 		return str(Global.STARTING_ARM_DATA[current_arm_id].get("name", current_arm_id))
 	return "Base"
+
+func apply_arm_mutation(target_tier: int) -> bool:
+	if current_arm_id == "" or not ARM_MUTATION_DATA.has(current_arm_id):
+		return false
+
+	var clamped_tier = clampi(target_tier, 1, 3)
+	if clamped_tier <= arm_mutation_tier:
+		return false
+
+	for tier in range(arm_mutation_tier + 1, clamped_tier + 1):
+		arm_mutation_tier = tier
+		_record_arm_mutation_unlock(tier)
+
+	_reset_arm_mutation_runtime_state()
+	_spawn_burst_particles(global_position, _get_arm_mutation_color(current_arm_id), 34, 0.38, 170.0)
+	emit_signal("stats_updated")
+	return true
+
+func get_arm_mutation_summaries() -> Array:
+	var summaries: Array = []
+	if current_arm_id == "" or not ARM_MUTATION_DATA.has(current_arm_id):
+		return summaries
+
+	for tier in range(1, arm_mutation_tier + 1):
+		var mutation_data = _get_arm_mutation_data(current_arm_id, tier)
+		if mutation_data.is_empty():
+			continue
+		summaries.append({
+			"id": "arm_mutation_%s_%d" % [current_arm_id, tier],
+			"name": str(mutation_data.get("name", "Mutation")),
+			"description": str(mutation_data.get("description", ""))
+		})
+	return summaries
+
+func _record_arm_mutation_unlock(tier: int) -> void:
+	var mutation_data = _get_arm_mutation_data(current_arm_id, tier)
+	if mutation_data.is_empty():
+		return
+
+	record_upgrade({
+		"id": "arm_mutation_%s_%d" % [current_arm_id, tier],
+		"text": "Arm Mutation %d: %s" % [tier, str(mutation_data.get("name", "Mutation"))],
+		"description": str(mutation_data.get("description", "")),
+		"rarity": "arm_mutation"
+	})
+
+func _get_arm_mutation_data(arm_id: String, tier: int) -> Dictionary:
+	if not ARM_MUTATION_DATA.has(arm_id):
+		return {}
+
+	var arm_data = ARM_MUTATION_DATA[arm_id]
+	if not arm_data.has(tier):
+		return {}
+	return arm_data[tier]
+
+func _reset_arm_mutation_runtime_state() -> void:
+	fast_rhythm_combo = 0
+	fast_last_shot_msec = -1
+	fast_previous_shot_angle = 0.0
+	fast_has_previous_shot_angle = false
+	fast_synaptic_charge = 0
+	heavy_perfect_window_remaining = 0.0
+	unstable_paradox_projectile_counter = 0
+
+func _get_arm_mutation_color(arm_id: String) -> Color:
+	match arm_id:
+		"fast":
+			return Color(0.92, 0.95, 0.22, 0.9)
+		"heavy":
+			return Color(0.95, 0.5, 0.2, 0.9)
+		"unstable":
+			return Color(0.72, 0.28, 1.0, 0.92)
+	return Color(1.0, 0.75, 0.3, 0.9)
 
 func get_shot_cooldown() -> float:
 	return fire_rate
@@ -530,14 +687,6 @@ func is_shield_ready() -> bool:
 func get_shield_cooldown_remaining() -> float:
 	return shield_cooldown_remaining
 
-func enable_thorn_clothes() -> void:
-	thorn_clothes_enabled = true
-	emit_signal("stats_updated")
-
-func disable_thorn_clothes() -> void:
-	thorn_clothes_enabled = false
-	emit_signal("stats_updated")
-
 func enable_kinetic_reload() -> void:
 	kinetic_reload_enabled = true
 	kinetic_reload_cooldown_remaining = 0.0
@@ -561,6 +710,7 @@ func disable_splintered_chamber() -> void:
 func reset_periodic_shot_counters() -> void:
 	wrath_shot_count = 0
 	splintered_chamber_shot_count = 0
+	_reset_arm_mutation_runtime_state()
 
 func enable_golden_debt() -> void:
 	if greed_cursed_level_enabled:
@@ -758,6 +908,8 @@ func _physics_process(delta: float) -> void:
 	_update_movement_force_combo_lock(delta)
 	_update_knockback_immunity(delta)
 	_update_kinetic_reload(delta)
+	if heavy_perfect_window_remaining > 0.0:
+		heavy_perfect_window_remaining = max(heavy_perfect_window_remaining - delta, 0.0)
 	_update_shot_cooldown_bar()
 
 	var mouse_pos = get_global_mouse_position()
@@ -770,7 +922,7 @@ func _physics_process(delta: float) -> void:
 			perform_dash(look_direction)
 
 		# Atirar / Movimentação por Recuo
-		if Input.is_action_just_pressed("shoot") and can_shoot and not is_dashing:
+		if Input.is_action_pressed("shoot") and can_shoot and not is_dashing:
 			shoot(look_direction)
 
 		if Input.is_action_just_pressed("active_e"):
@@ -811,20 +963,108 @@ func shoot(direction: Vector2) -> void:
 	type_animation = _get_animation_for_direction(base_direction)
 	var base_angle = base_direction.angle()
 	var shot_damage = _get_current_shot_damage()
+	var mutation_shot = _prepare_arm_mutation_shot(base_angle, shot_damage)
+	shot_damage = float(mutation_shot.get("damage", shot_damage))
+	var projectile_flags: Dictionary = mutation_shot.get("projectile_flags", {})
 	
 	for i in range(shot_count):
 		# Calcula o deslocamento do ângulo dado que podemos ter multiplos tiros
 		var angle_offset = deg_to_rad((i - (shot_count - 1) / 2.0) * spread_angle)
 		var final_angle = base_angle + angle_offset
-		_spawn_projectile(global_position, final_angle, shot_damage)
+		_spawn_projectile(global_position, final_angle, shot_damage, false, Color(0.0, 0.0, 0.0, 0.0), projectile_flags.duplicate())
 
 		if envy_mirror_shot_enabled:
 			_spawn_mirror_shot(global_position, final_angle, shot_damage)
+
+	for extra_projectile in mutation_shot.get("extra_projectiles", []):
+		if not (extra_projectile is Dictionary):
+			continue
+		var extra_flags: Dictionary = extra_projectile.get("projectile_flags", {})
+		_spawn_projectile(
+			global_position,
+			float(extra_projectile.get("angle", base_angle)),
+			shot_damage * float(extra_projectile.get("damage_multiplier", 1.0)),
+			false,
+			extra_projectile.get("color", Color(0.0, 0.0, 0.0, 0.0)),
+			extra_flags.duplicate()
+		)
 
 	_try_trigger_splintered_chamber(base_angle, shot_damage)
 	_apply_recoil_impulse(direction)
 	if recoil_explosion_enabled:
 		_trigger_recoil_explosion()
+
+func _prepare_arm_mutation_shot(base_angle: float, shot_damage: float) -> Dictionary:
+	var result = {
+		"damage": shot_damage,
+		"projectile_flags": {},
+		"extra_projectiles": []
+	}
+
+	match current_arm_id:
+		"fast":
+			_prepare_fast_mutation_shot(result, base_angle)
+		"heavy":
+			_prepare_heavy_mutation_shot(result)
+	return result
+
+func _prepare_fast_mutation_shot(result: Dictionary, base_angle: float) -> void:
+	if arm_mutation_tier < 2:
+		return
+
+	var projectile_flags: Dictionary = result["projectile_flags"]
+	var now_msec = Time.get_ticks_msec()
+	if fast_last_shot_msec >= 0 and now_msec - fast_last_shot_msec <= FAST_RHYTHM_SHOT_WINDOW_MSEC:
+		fast_rhythm_combo += 1
+	else:
+		fast_rhythm_combo = 1
+	fast_last_shot_msec = now_msec
+
+	if fast_rhythm_combo >= FAST_RHYTHM_SHOTS_REQUIRED:
+		fast_rhythm_combo = 0
+		projectile_flags["pierce_remaining_bonus"] = int(projectile_flags.get("pierce_remaining_bonus", 0)) + FAST_RHYTHM_PIERCE_BONUS
+		projectile_flags["vfx_color"] = Color(0.95, 1.0, 0.24, 0.95)
+		_spawn_burst_particles(global_position, Color(0.92, 1.0, 0.28, 0.72), 10, 0.16, 70.0)
+
+	if arm_mutation_tier < 3:
+		fast_previous_shot_angle = base_angle
+		fast_has_previous_shot_angle = true
+		return
+
+	if fast_has_previous_shot_angle:
+		var angle_delta = abs(wrapf(base_angle - fast_previous_shot_angle, -PI, PI))
+		if angle_delta >= FAST_SYNAPTIC_MIN_ANGLE_DELTA:
+			fast_synaptic_charge = min(fast_synaptic_charge + 1, FAST_SYNAPTIC_STACKS_REQUIRED)
+		else:
+			fast_synaptic_charge = max(fast_synaptic_charge - 1, 0)
+
+		if fast_synaptic_charge >= FAST_SYNAPTIC_STACKS_REQUIRED:
+			result["extra_projectiles"].append({
+				"angle": fast_previous_shot_angle,
+				"damage_multiplier": FAST_SYNAPTIC_DAMAGE_MULTIPLIER,
+				"color": Color(0.25, 0.95, 1.0, 0.92),
+				"projectile_flags": {
+					"synaptic_echo": true,
+					"projectile_speed_multiplier": 1.12
+				}
+			})
+
+	fast_previous_shot_angle = base_angle
+	fast_has_previous_shot_angle = true
+
+func _prepare_heavy_mutation_shot(result: Dictionary) -> void:
+	if arm_mutation_tier < 3 or heavy_perfect_window_remaining <= 0.0:
+		return
+
+	heavy_perfect_window_remaining = 0.0
+	result["damage"] = float(result.get("damage", attack_damage)) * HEAVY_PENITENCE_DAMAGE_MULTIPLIER
+	var projectile_flags: Dictionary = result["projectile_flags"]
+	projectile_flags["heavy_penitence"] = true
+	projectile_flags["pierce_remaining_bonus"] = int(projectile_flags.get("pierce_remaining_bonus", 0)) + HEAVY_PENITENCE_PIERCE_BONUS
+	projectile_flags["scale_multiplier"] = float(projectile_flags.get("scale_multiplier", 1.0)) * 1.35
+	projectile_flags["projectile_speed_multiplier"] = float(projectile_flags.get("projectile_speed_multiplier", 1.0)) * 0.92
+	projectile_flags["vfx_color"] = Color(1.0, 0.82, 0.34, 0.96)
+	_spawn_burst_particles(global_position, Color(1.0, 0.78, 0.28, 0.9), 18, 0.22, 120.0)
 
 func _update_direction_animation(direction: Vector2) -> void:
 	if not aparencia:
@@ -969,7 +1209,7 @@ func _get_envy_clone_shot_damage() -> float:
 		damage *= 1.75
 	return damage
 
-func _spawn_projectile(spawn_position: Vector2, angle: float, projectile_damage: float, can_hit_player: bool = false, projectile_vfx_color: Color = Color(0.0, 0.0, 0.0, 0.0)) -> Node:
+func _spawn_projectile(spawn_position: Vector2, angle: float, projectile_damage: float, can_hit_player: bool = false, projectile_vfx_color: Color = Color(0.0, 0.0, 0.0, 0.0), projectile_flags: Dictionary = {}) -> Node:
 	if not pistol_bullet_scene:
 		return null
 
@@ -983,8 +1223,9 @@ func _spawn_projectile(spawn_position: Vector2, angle: float, projectile_damage:
 		bullet.set_meta("vfx_color", projectile_vfx_color)
 	if can_hit_player:
 		bullet.add_to_group(Global.GROUP_ENEMY_PROJECTILE)
-	elif unstable_arm_projectiles_enabled:
-		_configure_unstable_projectile(bullet)
+	elif not bool(projectile_flags.get("skip_arm_mutations", false)):
+		_configure_current_arm_projectile(bullet)
+	_apply_projectile_flags(bullet, projectile_flags)
 
 	var projectile_parent = _get_vfx_parent()
 	if projectile_parent == null:
@@ -994,11 +1235,352 @@ func _spawn_projectile(spawn_position: Vector2, angle: float, projectile_damage:
 	projectile_parent.add_child(bullet)
 	return bullet
 
+func _configure_current_arm_projectile(bullet: Node) -> void:
+	match current_arm_id:
+		"fast":
+			_configure_fast_projectile(bullet)
+		"heavy":
+			_configure_heavy_projectile(bullet)
+		"unstable":
+			if unstable_arm_projectiles_enabled:
+				_configure_unstable_projectile(bullet)
+
+func _configure_fast_projectile(bullet: Node) -> void:
+	if arm_mutation_tier < 1:
+		return
+
+	bullet.set_meta("fast_mark_on_hit", true)
+	bullet.set_meta("fast_homing_enabled", true)
+	bullet.set_meta("vfx_color", Color(0.95, 0.95, 0.24, 0.92))
+
+func _configure_heavy_projectile(bullet: Node) -> void:
+	if arm_mutation_tier >= 1:
+		bullet.set_meta("heavy_impact_shards_enabled", true)
+	if arm_mutation_tier >= 2:
+		bullet.set_meta("heavy_execution_blast_enabled", true)
+
 func _configure_unstable_projectile(bullet: Node) -> void:
 	bullet.set_meta("pierce_remaining", 1)
 	bullet.set_meta("ricochet_remaining", 1)
 	bullet.set_meta("risk_after_ricochet", true)
 	bullet.set_meta("vfx_color", Color(0.6, 0.2, 1.0, 0.95))
+	if arm_mutation_tier >= 1:
+		bullet.set_meta("unstable_memory_echo", true)
+	if arm_mutation_tier >= 2:
+		bullet.set_meta("unstable_resonance_enabled", true)
+	if arm_mutation_tier >= 3 and _consume_unstable_paradox_projectile():
+		bullet.set_meta("unstable_paradox_enabled", true)
+
+func _apply_projectile_flags(bullet: Node, projectile_flags: Dictionary) -> void:
+	if projectile_flags.is_empty():
+		return
+
+	if projectile_flags.has("pierce_remaining_bonus"):
+		var pierce_bonus = int(projectile_flags.get("pierce_remaining_bonus", 0))
+		if pierce_bonus != 0:
+			bullet.set_meta("pierce_remaining", int(bullet.get_meta("pierce_remaining", 0)) + pierce_bonus)
+
+	if projectile_flags.has("scale_multiplier"):
+		bullet.scale *= float(projectile_flags.get("scale_multiplier", 1.0))
+
+	if projectile_flags.has("projectile_speed_multiplier"):
+		bullet.set_meta("projectile_speed_multiplier", float(projectile_flags.get("projectile_speed_multiplier", 1.0)))
+
+	for key in projectile_flags.keys():
+		var key_name = str(key)
+		if key_name in ["skip_arm_mutations", "pierce_remaining_bonus", "scale_multiplier", "projectile_speed_multiplier"]:
+			continue
+		bullet.set_meta(key_name, projectile_flags[key])
+
+func _consume_unstable_paradox_projectile() -> bool:
+	unstable_paradox_projectile_counter += 1
+	if unstable_paradox_projectile_counter < UNSTABLE_PARADOX_INTERVAL:
+		return false
+
+	unstable_paradox_projectile_counter = 0
+	return true
+
+func get_fast_mutation_homing_direction(projectile_position: Vector2, current_direction: Vector2, delta: float) -> Vector2:
+	if current_arm_id != "fast" or arm_mutation_tier < 1 or current_direction == Vector2.ZERO:
+		return current_direction
+
+	var target = _get_best_fast_marked_target(projectile_position, current_direction)
+	if target == null:
+		return current_direction
+
+	var target_direction = projectile_position.direction_to(target.global_position)
+	if target_direction == Vector2.ZERO:
+		return current_direction
+
+	var turn_amount = clampf(FAST_HOMING_TURN_RATE * delta, 0.0, 0.24)
+	return current_direction.lerp(target_direction, turn_amount).normalized()
+
+func _get_best_fast_marked_target(projectile_position: Vector2, current_direction: Vector2) -> Node2D:
+	var now_msec = Time.get_ticks_msec()
+	var best_target: Node2D = null
+	var best_score = INF
+	var max_distance_sq = FAST_HOMING_RANGE * FAST_HOMING_RANGE
+
+	for enemy in get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
+		if not is_instance_valid(enemy) or not (enemy is Node2D):
+			continue
+		if enemy.get("is_dead") != null and bool(enemy.get("is_dead")):
+			continue
+
+		var mark_until = int(enemy.get_meta(FAST_MARK_META, 0))
+		if mark_until <= now_msec:
+			if enemy.has_meta(FAST_MARK_META):
+				enemy.remove_meta(FAST_MARK_META)
+			continue
+
+		var enemy_node = enemy as Node2D
+		var to_enemy = projectile_position.direction_to(enemy_node.global_position)
+		if to_enemy == Vector2.ZERO:
+			continue
+
+		var distance_sq = projectile_position.distance_squared_to(enemy_node.global_position)
+		if distance_sq > max_distance_sq:
+			continue
+
+		var alignment = current_direction.normalized().dot(to_enemy)
+		if alignment < -0.2:
+			continue
+
+		var score = distance_sq / max(alignment + 1.1, 0.1)
+		if score < best_score:
+			best_score = score
+			best_target = enemy_node
+
+	return best_target
+
+func on_player_projectile_hit_enemy(enemy: Node, projectile: Node, dealt_damage: float) -> void:
+	if not is_instance_valid(enemy) or not is_instance_valid(projectile):
+		return
+
+	var hit_position = _get_node_global_position(enemy, global_position)
+	if bool(projectile.get_meta("fast_mark_on_hit", false)):
+		_apply_fast_nervous_mark(enemy)
+
+	if bool(projectile.get_meta("heavy_impact_shards_enabled", false)):
+		_try_spawn_heavy_impact_shards(projectile, hit_position, dealt_damage)
+
+	if bool(projectile.get_meta("heavy_execution_blast_enabled", false)) and _is_enemy_dead(enemy):
+		_trigger_heavy_execution_blast(hit_position, dealt_damage)
+
+	if bool(projectile.get_meta("heavy_penitence", false)):
+		_trigger_heavy_penitence_drag(hit_position, _get_projectile_direction(projectile), dealt_damage)
+
+	if bool(projectile.get_meta("unstable_resonance_enabled", false)):
+		_handle_unstable_resonance_hit(enemy, projectile, dealt_damage)
+
+	if bool(projectile.get_meta("unstable_paradox_enabled", false)):
+		spawn_unstable_paradox_echo(projectile, hit_position, _get_projectile_direction(projectile), dealt_damage)
+
+func on_player_projectile_ricochet(projectile: Node, ricochet_position: Vector2, incoming_direction: Vector2, outgoing_direction: Vector2) -> void:
+	if not is_instance_valid(projectile):
+		return
+
+	projectile.set_meta("unstable_has_ricocheted", true)
+	if bool(projectile.get_meta("unstable_memory_echo", false)):
+		spawn_unstable_memory_echo(ricochet_position, incoming_direction, projectile.get("damage"))
+
+	if bool(projectile.get_meta("unstable_paradox_enabled", false)):
+		spawn_unstable_paradox_echo(projectile, ricochet_position, outgoing_direction, projectile.get("damage"))
+
+func _apply_fast_nervous_mark(enemy: Node) -> void:
+	enemy.set_meta(FAST_MARK_META, Time.get_ticks_msec() + FAST_MARK_DURATION_MSEC)
+	if enemy.has_meta("fast_nervous_mark_feedback_msec"):
+		var next_feedback = int(enemy.get_meta("fast_nervous_mark_feedback_msec", 0))
+		if next_feedback > Time.get_ticks_msec():
+			return
+
+	enemy.set_meta("fast_nervous_mark_feedback_msec", Time.get_ticks_msec() + 280)
+	if enemy is Node2D:
+		_spawn_burst_particles((enemy as Node2D).global_position, Color(0.95, 1.0, 0.24, 0.78), 6, 0.14, 55.0)
+
+func _try_spawn_heavy_impact_shards(projectile: Node, hit_position: Vector2, dealt_damage: float) -> void:
+	if bool(projectile.get_meta("heavy_impact_shards_spent", false)):
+		return
+
+	projectile.set_meta("heavy_impact_shards_spent", true)
+	var projectile_direction = _get_projectile_direction(projectile)
+	var base_angle = (-projectile_direction.normalized()).angle()
+	var spread = deg_to_rad(HEAVY_IMPACT_SHARD_ANGLE_SPREAD)
+	var shard_damage = max(dealt_damage * HEAVY_IMPACT_SHARD_DAMAGE_MULTIPLIER, 1.0)
+
+	for i in range(HEAVY_IMPACT_SHARD_COUNT):
+		var t = 0.0 if HEAVY_IMPACT_SHARD_COUNT <= 1 else float(i) / float(HEAVY_IMPACT_SHARD_COUNT - 1) - 0.5
+		var shard_angle = base_angle + spread * t
+		var shard_direction = Vector2(cos(shard_angle), sin(shard_angle))
+		_spawn_projectile(
+			hit_position + shard_direction * 10.0,
+			shard_angle,
+			shard_damage,
+			false,
+			Color(1.0, 0.55, 0.24, 0.92),
+			{
+				"skip_arm_mutations": true,
+				"projectile_speed_multiplier": 0.78,
+				"scale_multiplier": 0.65
+			}
+		)
+	_spawn_burst_particles(hit_position, Color(1.0, 0.5, 0.2, 0.78), 12, 0.18, 90.0)
+
+func _trigger_heavy_execution_blast(center: Vector2, dealt_damage: float) -> void:
+	var blast_damage = max(dealt_damage * HEAVY_EXECUTION_DAMAGE_MULTIPLIER, attack_damage * 0.12)
+	_spawn_ring_vfx(center, HEAVY_EXECUTION_RADIUS, Color(1.0, 0.46, 0.18, 0.44), 0.24)
+	_spawn_burst_particles(center, Color(1.0, 0.45, 0.18, 0.86), 22, 0.24, 150.0)
+
+	for enemy in get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
+		if not _can_mutation_affect_enemy(enemy):
+			continue
+		if (enemy as Node2D).global_position.distance_to(center) > HEAVY_EXECUTION_RADIUS:
+			continue
+		enemy.take_damage(blast_damage)
+		var push_direction = center.direction_to((enemy as Node2D).global_position)
+		_apply_enemy_impulse(enemy, push_direction * HEAVY_EXECUTION_KNOCKBACK_FORCE)
+
+func _trigger_heavy_penitence_drag(center: Vector2, projectile_direction: Vector2, dealt_damage: float) -> void:
+	if projectile_direction == Vector2.ZERO:
+		return
+
+	var drag_direction = projectile_direction.normalized()
+	var drag_damage = max(dealt_damage * HEAVY_PENITENCE_DRAG_DAMAGE_MULTIPLIER, attack_damage * 0.08)
+	_spawn_ring_vfx(center, HEAVY_PENITENCE_DRAG_RADIUS, Color(1.0, 0.78, 0.3, 0.34), 0.18)
+
+	for enemy in get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
+		if not _can_mutation_affect_enemy(enemy):
+			continue
+		if (enemy as Node2D).global_position.distance_to(center) > HEAVY_PENITENCE_DRAG_RADIUS:
+			continue
+		enemy.take_damage(drag_damage)
+		_apply_enemy_impulse(enemy, drag_direction * HEAVY_PENITENCE_DRAG_FORCE)
+
+func _handle_unstable_resonance_hit(enemy: Node, projectile: Node, dealt_damage: float) -> void:
+	if not is_instance_valid(enemy):
+		return
+
+	var now_msec = Time.get_ticks_msec()
+	var resonance_until = int(enemy.get_meta(UNSTABLE_RESONANCE_META, 0))
+	if resonance_until > now_msec:
+		enemy.remove_meta(UNSTABLE_RESONANCE_META)
+		_trigger_unstable_resonance(_get_node_global_position(enemy, global_position), dealt_damage)
+		return
+
+	if bool(projectile.get_meta("unstable_has_ricocheted", false)):
+		enemy.set_meta(UNSTABLE_RESONANCE_META, now_msec + UNSTABLE_RESONANCE_DURATION_MSEC)
+		_spawn_burst_particles(_get_node_global_position(enemy, global_position), Color(0.72, 0.28, 1.0, 0.82), 10, 0.18, 75.0)
+
+func _trigger_unstable_resonance(center: Vector2, dealt_damage: float) -> void:
+	var resonance_damage = max(dealt_damage * UNSTABLE_RESONANCE_DAMAGE_MULTIPLIER, attack_damage * 0.35)
+	_spawn_ring_vfx(center, UNSTABLE_RESONANCE_RADIUS, Color(0.72, 0.28, 1.0, 0.46), 0.26)
+	_spawn_burst_particles(center, Color(0.72, 0.28, 1.0, 0.9), 28, 0.28, 160.0)
+
+	for enemy in get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
+		if not _can_mutation_affect_enemy(enemy):
+			continue
+		if (enemy as Node2D).global_position.distance_to(center) <= UNSTABLE_RESONANCE_RADIUS:
+			enemy.take_damage(resonance_damage)
+
+func spawn_unstable_memory_echo(source_position: Vector2, echo_direction: Vector2, source_damage) -> void:
+	if current_arm_id != "unstable" or arm_mutation_tier < 1 or echo_direction == Vector2.ZERO:
+		return
+
+	var tree = get_tree()
+	if tree == null:
+		return
+	await tree.create_timer(UNSTABLE_MEMORY_ECHO_DELAY, false).timeout
+	if not is_inside_tree():
+		return
+
+	var damage_value = float(source_damage) if source_damage != null else attack_damage
+	var direction = echo_direction.normalized()
+	_spawn_projectile(
+		source_position + direction * 12.0,
+		direction.angle(),
+		max(damage_value * UNSTABLE_MEMORY_ECHO_DAMAGE_MULTIPLIER, 4.0),
+		false,
+		Color(0.55, 0.45, 1.0, 0.64),
+		{
+			"skip_arm_mutations": true,
+			"projectile_speed_multiplier": UNSTABLE_MEMORY_ECHO_SPEED_MULTIPLIER,
+			"scale_multiplier": 0.78
+		}
+	)
+
+func spawn_unstable_paradox_echo(projectile: Node, source_position: Vector2, source_direction: Vector2, source_damage) -> void:
+	if current_arm_id != "unstable" or arm_mutation_tier < 3 or source_direction == Vector2.ZERO:
+		return
+	if is_instance_valid(projectile) and bool(projectile.get_meta("unstable_paradox_triggered", false)):
+		return
+	if is_instance_valid(projectile):
+		projectile.set_meta("unstable_paradox_triggered", true)
+
+	var tree = get_tree()
+	if tree == null:
+		return
+	await tree.create_timer(0.07, false).timeout
+	if not is_inside_tree():
+		return
+
+	var echo_direction = (-source_direction.normalized()).normalized()
+	var damage_value = float(source_damage) if source_damage != null else attack_damage
+	var echo = _spawn_projectile(
+		source_position + echo_direction * 14.0,
+		echo_direction.angle(),
+		max(damage_value * UNSTABLE_PARADOX_DAMAGE_MULTIPLIER, 8.0),
+		true,
+		Color(1.0, 0.18, 0.84, 0.95),
+		{
+			"skip_arm_mutations": true,
+			"projectile_speed_multiplier": UNSTABLE_PARADOX_SPEED_MULTIPLIER,
+			"scale_multiplier": 0.9,
+			"damage_source": self,
+			"paradox_echo": true
+		}
+	)
+	if echo != null:
+		_spawn_burst_particles(source_position, Color(1.0, 0.18, 0.84, 0.82), 12, 0.18, 90.0)
+
+func _can_mutation_affect_enemy(enemy: Node) -> bool:
+	if not is_instance_valid(enemy) or not enemy.has_method("take_damage") or not (enemy is Node2D):
+		return false
+	if enemy.get("is_dead") != null and bool(enemy.get("is_dead")):
+		return false
+	return true
+
+func _is_enemy_dead(enemy: Node) -> bool:
+	if not is_instance_valid(enemy):
+		return true
+	if enemy.get("is_dead") != null and bool(enemy.get("is_dead")):
+		return true
+	if enemy.get("current_health") != null and float(enemy.get("current_health")) <= 0.0:
+		return true
+	return false
+
+func _apply_enemy_impulse(enemy: Node, impulse: Vector2) -> void:
+	if not is_instance_valid(enemy) or impulse == Vector2.ZERO or enemy.get("velocity") == null:
+		return
+
+	var current_velocity = enemy.get("velocity")
+	if current_velocity is Vector2:
+		var velocity_vector: Vector2 = current_velocity
+		enemy.set("velocity", velocity_vector + impulse)
+
+func _get_node_global_position(node: Node, fallback: Vector2) -> Vector2:
+	if node is Node2D:
+		return (node as Node2D).global_position
+	return fallback
+
+func _get_projectile_direction(projectile: Node) -> Vector2:
+	if not is_instance_valid(projectile):
+		return Vector2.RIGHT
+
+	var projectile_direction = projectile.get("direction")
+	if projectile_direction is Vector2 and projectile_direction != Vector2.ZERO:
+		return projectile_direction.normalized()
+	return Vector2.RIGHT
+
 
 func _can_perform_dash() -> bool:
 	return can_dash and double_dash_charges > 0 and not is_dashing
@@ -1076,7 +1658,6 @@ func take_damage(amount: float, attacker_position: Vector2 = Vector2.ZERO, knock
 	current_health -= damage_taken
 	_record_damage_taken(damage_taken, contact_source)
 	emit_signal("hp_updated", current_health, max_health)
-	_return_thorn_contact_damage(contact_source, damage_taken)
 	if is_instance_valid(contact_source) and contact_source.has_method("on_player_damage_dealt"):
 		contact_source.call("on_player_damage_dealt", float(damage_taken), self)
 	_play_damage_feedback()
@@ -1127,6 +1708,8 @@ func _finish_current_run() -> void:
 
 func _on_shoot_timer_timeout() -> void:
 	can_shoot = true
+	if current_arm_id == "heavy" and arm_mutation_tier >= 3:
+		heavy_perfect_window_remaining = HEAVY_PENITENCE_READY_WINDOW
 	_update_shot_cooldown_bar()
 
 func _setup_shot_cooldown_bar() -> void:
@@ -1210,14 +1793,6 @@ func _on_contact_damage_timer_timeout() -> void:
 	else:
 		contact_damage_timer.stop()
 
-func _return_thorn_contact_damage(contact_source: Node, damage_taken: int) -> void:
-	if not thorn_clothes_enabled or damage_taken <= 0:
-		return
-	if not is_instance_valid(contact_source) or not contact_source.has_method("take_damage"):
-		return
-
-	contact_source.take_damage(float(damage_taken) * THORN_CLOTHES_DAMAGE_RETURN_MULTIPLIER)
-
 func _get_contact_damage(enemy: Node) -> float:
 	if enemy and enemy.get("damage") != null:
 		return float(enemy.get("damage"))
@@ -1284,6 +1859,8 @@ func get_equipped_passive_summaries() -> Array:
 			"name": str(arm_data["name"]),
 			"description": str(arm_data["description"])
 		})
+	for summary in get_arm_mutation_summaries():
+		summaries.append(summary)
 
 	for summary in get_equipped_boss_passive_summaries():
 		summaries.append(summary)
@@ -1601,6 +2178,8 @@ func _format_recap_rarity(rarity: String) -> String:
 			return "boss active"
 		"contract_reward":
 			return "contract"
+		"arm_mutation":
+			return "arm mutation"
 	return rarity if rarity != "" else "unknown"
 
 func _record_damage_taken(amount: int, contact_source: Node) -> void:

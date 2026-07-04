@@ -15,7 +15,7 @@ var active_skill_e_label: Label
 var active_skill_r_label: Label
 var passive_status_label: Label
 var skill_status_top_background: TextureRect
-var skill_status_list_background: TextureRect
+var skill_status_list_background: NinePatchRect
 const SKILL_STATUS_TOP_TEXTURE = preload("res://Sprites/Menu/hud_skills_and_passives.png")
 const SKILL_STATUS_LIST_TEXTURE = preload("res://Sprites/Menu/hud_list_of_passives.png")
 const HUD_PIXEL_FONT = preload("res://Fonts/cg-pixel-4x5.otf")
@@ -24,8 +24,11 @@ const SKILL_STATUS_SCALE = 3.0
 const SKILL_STATUS_TOP_SIZE = Vector2(69.0, 40.0) * SKILL_STATUS_SCALE
 const SKILL_STATUS_LIST_WIDTH = 69.0 * SKILL_STATUS_SCALE
 const SKILL_STATUS_LIST_MIN_HEIGHT = 10.0 * SKILL_STATUS_SCALE
-const SKILL_STATUS_LIST_VERTICAL_PADDING = 18.0
-const SKILL_STATUS_PASSIVE_LINE_HEIGHT = 24.0
+const SKILL_STATUS_LIST_VERTICAL_PADDING = 10.0
+const SKILL_STATUS_PASSIVE_LINE_HEIGHT = 17.0
+const SKILL_STATUS_LIST_PATCH_LEFT = 3
+const SKILL_STATUS_LIST_PATCH_RIGHT = 6
+const SKILL_STATUS_LIST_PATCH_BOTTOM = 6
 const ACTIVE_SKILL_TITLE_OFFSET = Vector2(10.0, 4.0)
 const ACTIVE_SKILL_E_OFFSET = Vector2(46.0, 28.0)
 const ACTIVE_SKILL_R_OFFSET = Vector2(46.0, 62.0)
@@ -93,13 +96,17 @@ func _setup_skill_status_background() -> void:
 	skill_status_top_background.size = SKILL_STATUS_TOP_SIZE
 	skill_status_top_background.texture = SKILL_STATUS_TOP_TEXTURE
 	skill_status_top_background.stretch_mode = TextureRect.STRETCH_SCALE
+	skill_status_top_background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	skill_status_top_background.self_modulate = Color(1.0, 1.0, 1.0, SKILL_STATUS_BACKGROUND_ALPHA)
 
-	skill_status_list_background = _get_or_create_skill_status_texture_rect("SkillStatusListBackground")
+	skill_status_list_background = _get_or_create_skill_status_nine_patch("SkillStatusListBackground")
 	skill_status_list_background.position = SKILL_STATUS_POSITION + Vector2(0.0, SKILL_STATUS_TOP_SIZE.y)
 	skill_status_list_background.size = Vector2(SKILL_STATUS_LIST_WIDTH, SKILL_STATUS_LIST_MIN_HEIGHT)
 	skill_status_list_background.texture = SKILL_STATUS_LIST_TEXTURE
-	skill_status_list_background.stretch_mode = TextureRect.STRETCH_SCALE
+	skill_status_list_background.patch_margin_left = SKILL_STATUS_LIST_PATCH_LEFT
+	skill_status_list_background.patch_margin_right = SKILL_STATUS_LIST_PATCH_RIGHT
+	skill_status_list_background.patch_margin_bottom = SKILL_STATUS_LIST_PATCH_BOTTOM
+	skill_status_list_background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	skill_status_list_background.self_modulate = Color(1.0, 1.0, 1.0, SKILL_STATUS_BACKGROUND_ALPHA)
 
 	move_child(skill_status_top_background, 0)
@@ -121,6 +128,22 @@ func _get_or_create_skill_status_texture_rect(node_name: String) -> TextureRect:
 	add_child(texture_rect)
 	return texture_rect
 
+func _get_or_create_skill_status_nine_patch(node_name: String) -> NinePatchRect:
+	var existing_node = get_node_or_null(node_name)
+	if existing_node is NinePatchRect:
+		return existing_node as NinePatchRect
+
+	if existing_node != null:
+		remove_child(existing_node)
+		existing_node.queue_free()
+
+	var nine_patch = NinePatchRect.new()
+	nine_patch.name = node_name
+	nine_patch.z_index = 0
+	nine_patch.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(nine_patch)
+	return nine_patch
+
 func _setup_passive_status_label() -> void:
 	passive_status_label = get_node_or_null("PassiveStatusHud")
 	if passive_status_label != null:
@@ -136,7 +159,8 @@ func _setup_passive_status_label() -> void:
 	passive_status_label.mouse_filter = Control.MOUSE_FILTER_PASS
 	passive_status_label.add_theme_color_override("font_color", Color(1.0, 1.0, 0.3, 1.0))
 	passive_status_label.add_theme_constant_override("outline_size", 3)
-	passive_status_label.add_theme_font_size_override("font_size", 13)
+	passive_status_label.add_theme_font_size_override("font_size", 12)
+	passive_status_label.add_theme_constant_override("line_spacing", 0)
 	passive_status_label.text = "- None"
 	passive_status_label.tooltip_text = "No passive skills equipped"
 	_apply_skill_status_label_alpha(passive_status_label)
@@ -205,7 +229,15 @@ func _update_passive_status_label() -> void:
 	if player.has_method("get_equipped_rare_passive_summaries"):
 		rare_summaries = player.get_equipped_rare_passive_summaries()
 
+	var mutation_summaries: Array = []
+	if player.has_method("get_arm_mutation_summaries"):
+		mutation_summaries = player.get_arm_mutation_summaries()
+
 	var passive_lines := PackedStringArray([
+		"ARM MUTATIONS:",
+		_get_special_passive_slot_text(mutation_summaries, 0),
+		_get_special_passive_slot_text(mutation_summaries, 1),
+		_get_special_passive_slot_text(mutation_summaries, 2),
 		"BOSS PASSIVES:",
 		_get_special_passive_slot_text(boss_summaries, 0),
 		_get_special_passive_slot_text(boss_summaries, 1),
@@ -214,6 +246,7 @@ func _update_passive_status_label() -> void:
 		_get_special_passive_slot_text(rare_summaries, 1)
 	])
 	var tooltip_lines := PackedStringArray()
+	_append_passive_tooltip_lines(tooltip_lines, "Arm Mutations", mutation_summaries)
 	_append_passive_tooltip_lines(tooltip_lines, "Boss Passives", boss_summaries)
 	_append_passive_tooltip_lines(tooltip_lines, "Rare Passives", rare_summaries)
 
@@ -287,6 +320,7 @@ func _apply_effect(option) -> void:
 	var option_data = option if option is Dictionary else {}
 	var option_id = str(option_data.get("id", option))
 	var stat_multiplier = _get_option_stat_multiplier(option_data)
+	var percent_effects = _get_option_percent_effects(option_data, option_id, stat_multiplier)
 
 	if player.has_method("is_active_ability_id") and player.is_active_ability_id(option_id):
 		if not player.learn_active_ability(option_id):
@@ -335,40 +369,32 @@ func _apply_effect(option) -> void:
 		"option_7":
 			player.add_dash_cooldown_reduction_bonus(0.05 * stat_multiplier)
 		"glass_canon":
-			player.attack_damage += player.attack_damage * 0.5 * stat_multiplier
-			player.max_health = int(player.max_health * _get_remaining_stat_multiplier(0.25, stat_multiplier))
-			player.current_health = min(player.current_health, player.max_health)
-			_on_hp_updated(player.current_health, player.max_health)
+			_apply_attack_percent(float(percent_effects.get("attack", 0.5 * stat_multiplier)))
+			_apply_max_health_percent(float(percent_effects.get("health", -0.3 * stat_multiplier)))
 		"tanky":
-			var max_health_multiplier = 1.0 + 0.25 * stat_multiplier
-			var health_gain = player.current_health * (max_health_multiplier - 1.0)
-			player.max_health = int(player.max_health * max_health_multiplier)
-			player.heal(health_gain)
-			player.attack_damage *= _get_remaining_stat_multiplier(0.5, stat_multiplier)
-			_on_hp_updated(player.current_health, player.max_health)
+			_apply_max_health_percent(float(percent_effects.get("health", 0.5 * stat_multiplier)))
+			_apply_attack_percent(float(percent_effects.get("attack", -0.3 * stat_multiplier)))
 		"deadly_slow":
-			player.multiply_base_recoil_force(_get_remaining_stat_multiplier(0.25, stat_multiplier))
-			player.attack_damage += player.attack_damage * 0.75 * stat_multiplier
+			_apply_recoil_force_percent(float(percent_effects.get("recoil_force", -0.2 * stat_multiplier)))
+			_apply_attack_percent(float(percent_effects.get("attack", 0.4 * stat_multiplier)))
 		"fast_but_small":
-			player.add_attack_speed_bonus(0.3 * stat_multiplier)
-			player.add_projectile_size_bonus(-0.3 * stat_multiplier)
+			player.add_attack_speed_bonus(float(percent_effects.get("atk_speed", 0.3 * stat_multiplier)))
+			player.add_projectile_size_bonus(float(percent_effects.get("bullet_size", -0.3 * stat_multiplier)))
 		"blood_tax":
-			player.attack_damage += player.attack_damage * 0.6 * stat_multiplier
+			_apply_attack_percent(float(percent_effects.get("attack", 0.4 * stat_multiplier)))
 			if player.has_method("add_healing_received_multiplier_bonus"):
-				player.add_healing_received_multiplier_bonus(-0.5 * stat_multiplier)
+				player.add_healing_received_multiplier_bonus(float(percent_effects.get("heal", -0.45 * stat_multiplier)))
 		"cursed_luck":
 			if player.has_method("add_special_level_up_chance_bonus"):
-				player.add_special_level_up_chance_bonus(0.8)
+				player.add_special_level_up_chance_bonus(max(2.0 * stat_multiplier - 1.0, 0.0))
 			if player.has_method("add_damage_taken_multiplier_bonus"):
-				player.add_damage_taken_multiplier_bonus(0.3 * stat_multiplier)
+				player.add_damage_taken_multiplier_bonus(float(percent_effects.get("damage_taken", 0.3 * stat_multiplier)))
 			else:
-				player.damage_taken_multiplier *= 1.0 + 0.3 * stat_multiplier
+				player.damage_taken_multiplier *= _get_safe_stat_multiplier(float(percent_effects.get("damage_taken", 0.3 * stat_multiplier)))
 		"thin_blood":
-			player.max_health = int(player.max_health * _get_remaining_stat_multiplier(0.8, stat_multiplier))
-			player.current_health = min(player.current_health, player.max_health)
+			_apply_max_health_percent(float(percent_effects.get("health", -0.4 * stat_multiplier)))
 			if player.has_method("add_healing_received_multiplier_bonus"):
-				player.add_healing_received_multiplier_bonus(2.0 * stat_multiplier)
-			_on_hp_updated(player.current_health, player.max_health)
+				player.add_healing_received_multiplier_bonus(float(percent_effects.get("heal", 1.0 * stat_multiplier)))
 		"sloth_slow_aura":
 			player.sloth_slow_aura_enabled = true
 		"gluttony_heal_kill":
@@ -387,6 +413,59 @@ func _apply_effect(option) -> void:
 
 func _get_option_stat_multiplier(option_data: Dictionary) -> float:
 	return max(float(option_data.get("stat_multiplier", 1.0)), 0.0)
+
+func _get_option_percent_effects(option_data: Dictionary, option_id: String, stat_multiplier: float) -> Dictionary:
+	var source_data = option_data
+	if source_data.is_empty():
+		source_data = _get_option_by_id(option_id)
+
+	var text = str(source_data.get("text", ""))
+	var effects = {}
+	var regex = RegEx.new()
+	if regex.compile("([^,()]+)\\s*\\(([+-])([0-9]+(?:\\.[0-9]+)?)%\\)") != OK:
+		return effects
+
+	for match_result in regex.search_all(text):
+		var groups = match_result.get_strings()
+		if groups.size() < 4:
+			continue
+
+		var effect_key = _normalize_percent_effect_label(groups[1])
+		if effect_key == "":
+			continue
+
+		var sign_multiplier = -1.0 if groups[2] == "-" else 1.0
+		effects[effect_key] = sign_multiplier * float(groups[3]) * 0.01 * stat_multiplier
+
+	return effects
+
+func _normalize_percent_effect_label(raw_label: String) -> String:
+	return raw_label.strip_edges().to_lower().replace("-", "_").replace(" ", "_")
+
+func _apply_attack_percent(percent: float) -> void:
+	player.attack_damage *= _get_safe_stat_multiplier(percent)
+
+func _apply_recoil_force_percent(percent: float) -> void:
+	if percent >= 0.0:
+		player.add_recoil_force_bonus(percent)
+		return
+
+	player.multiply_base_recoil_force(_get_safe_stat_multiplier(percent))
+
+func _apply_max_health_percent(percent: float) -> void:
+	var health_multiplier = _get_safe_stat_multiplier(percent)
+	if percent >= 0.0:
+		var health_gain = float(player.current_health) * percent
+		player.max_health = max(1, int(round(float(player.max_health) * health_multiplier)))
+		player.heal(health_gain)
+	else:
+		player.max_health = max(1, int(round(float(player.max_health) * health_multiplier)))
+		player.current_health = min(player.current_health, player.max_health)
+
+	_on_hp_updated(player.current_health, player.max_health)
+
+func _get_safe_stat_multiplier(percent: float) -> float:
+	return max(1.0 + percent, 0.01)
 
 func _record_applied_upgrade(option_data: Dictionary) -> void:
 	if player and player.has_method("record_upgrade"):

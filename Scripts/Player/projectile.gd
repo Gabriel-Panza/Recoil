@@ -26,9 +26,13 @@ func _ready() -> void:
 		collision_layer = 0
 		collision_mask = (Global.ENEMY_LAYER_MASK | Global.PLAYER_LAYER_MASK) if self.is_in_group(Global.GROUP_PROJECTILE) else Global.PLAYER_LAYER_MASK
 
+	if has_meta("projectile_speed_multiplier"):
+		speed *= float(get_meta("projectile_speed_multiplier"))
+
 	_configure_projectile_vfx()
 
 func _process(delta: float) -> void:
+	_apply_projectile_mutations(delta)
 	position += direction * speed * delta
 	_process_hit_queue()
 
@@ -77,6 +81,7 @@ func _process_hit_queue() -> void:
 
 			var enemy_damage = damage if damage != null else player.attack_damage
 			target.take_damage(enemy_damage)
+			_notify_player_projectile_enemy_hit(target, enemy_damage)
 			pierced_targets.append(target)
 		elif target.is_in_group(Global.GROUP_PLAYER) and target.has_method("take_damage"):
 			var player_damage = damage if damage != null else 20.0
@@ -111,6 +116,7 @@ func _try_ricochet_from_body(body: Node) -> bool:
 		return false
 
 	set_meta("ricochet_remaining", remaining - 1)
+	var incoming_direction = direction
 	var bounce_normal = _get_arena_bounce_normal()
 	direction = direction.bounce(bounce_normal).normalized()
 	rotation = direction.angle()
@@ -123,7 +129,31 @@ func _try_ricochet_from_body(body: Node) -> bool:
 		set_meta("vfx_color", Color(1.0, 0.78, 0.08, 0.95))
 		_configure_projectile_vfx()
 
+	_notify_player_projectile_ricochet(incoming_direction, direction)
 	return true
+
+func _apply_projectile_mutations(delta: float) -> void:
+	if not self.is_in_group(Global.GROUP_PROJECTILE) or not bool(get_meta("fast_homing_enabled", false)):
+		return
+	if not is_instance_valid(player) or not player.has_method("get_fast_mutation_homing_direction"):
+		return
+
+	var adjusted_direction = player.call("get_fast_mutation_homing_direction", global_position, direction, delta)
+	if adjusted_direction is Vector2 and adjusted_direction != Vector2.ZERO:
+		direction = adjusted_direction.normalized()
+		rotation = direction.angle()
+
+func _notify_player_projectile_enemy_hit(target: Node, enemy_damage: float) -> void:
+	if not is_instance_valid(player) or not player.has_method("on_player_projectile_hit_enemy"):
+		return
+
+	player.call("on_player_projectile_hit_enemy", target, self, enemy_damage)
+
+func _notify_player_projectile_ricochet(incoming_direction: Vector2, outgoing_direction: Vector2) -> void:
+	if not is_instance_valid(player) or not player.has_method("on_player_projectile_ricochet"):
+		return
+
+	player.call("on_player_projectile_ricochet", self, global_position, incoming_direction, outgoing_direction)
 
 func _is_wall_body(body: Node) -> bool:
 	if body == null:
