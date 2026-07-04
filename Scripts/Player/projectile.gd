@@ -80,7 +80,11 @@ func _process_hit_queue() -> void:
 			pierced_targets.append(target)
 		elif target.is_in_group(Global.GROUP_PLAYER) and target.has_method("take_damage"):
 			var player_damage = damage if damage != null else 20.0
-			target.take_damage(player_damage)
+			var damage_source = get_meta("damage_source", null)
+			if is_instance_valid(damage_source):
+				target.take_damage(player_damage, global_position, 1.0, damage_source)
+			else:
+				target.take_damage(player_damage, global_position)
 
 		_spawn_hit_particles(global_position)
 

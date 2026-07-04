@@ -6,10 +6,13 @@ const HEAL_AFTER_WAVE_COMMON_ROLL_CHANCE: float = 0.3
 const DASH_COOLDOWN_COMMON_ROLL_CHANCE: float = 0.5
 const DEFAULT_VIEWPORT_SIZE: Vector2 = Vector2(1152.0, 648.0)
 const OPTION_BUTTON_COUNT: int = 3
+const REROLL_BUTTON_SIZE: Vector2 = Vector2(72.0, 42.0)
+const REROLL_BUTTON_RIGHT_MARGIN: float = 8.0
+const REROLL_BUTTON_TEXT: String = "Reroll"
 const SLOT_ROLL_BASE_TICKS: int = 14
 const SLOT_ROLL_STOP_TICK_STEP: int = 6
 const SLOT_ROLL_INTERVAL: float = 0.075
-const SPECIAL_LEVEL_UP_ROLL_CHANCE: float = 0.10
+const SPECIAL_LEVEL_UP_ROLL_CHANCE: float = 0.125
 const SPECIAL_LEVEL_UP_EPIC_TIER: String = "epic"
 const SPECIAL_LEVEL_UP_LEGENDARY_TIER: String = "legendary"
 const SPECIAL_LEVEL_UP_LEGENDARY_SHARE: float = 0.4
@@ -39,6 +42,8 @@ var saved_level_options: Array = []
 var slot_roll_pools: Array = []
 var blocked_level_option_ids: Array = []
 var current_mode: String = "level_up"
+var current_popup_context: String = "normal"
+var current_popup_boss_pecado: int = 0
 var is_rolling_options: bool = false
 var slot_roll_generation: int = 0
 var pending_active_option: String = ""
@@ -114,6 +119,8 @@ func show_popup(context: String = "normal", boss_pecado: int = 0) -> void:
 	await get_tree().create_timer(0.25, true).timeout
 
 	current_mode = "level_up"
+	current_popup_context = context
+	current_popup_boss_pecado = boss_pecado
 	pending_active_option = ""
 	pending_old_rare_option = ""
 	pending_rare_options = []
@@ -214,6 +221,8 @@ func _build_level_up_roll_data(context: String, boss_pecado: int) -> Dictionary:
 		return _build_pre_boss_roll_data()
 	if context == "boss":
 		return _build_boss_roll_data(boss_pecado)
+	if context == "contract_extra":
+		return _build_contract_extra_roll_data()
 	return _build_normal_roll_data()
 
 func _build_normal_roll_data() -> Dictionary:
@@ -240,6 +249,17 @@ func _build_boss_roll_data(boss_pecado: int) -> Dictionary:
 	var pools = []
 	for option in final_options:
 		pools.append(_get_level_up_roll_pool_for_option(option, [], [], boss_pool, cursed_pool))
+	return _make_level_up_roll_data(final_options, pools)
+
+func _build_contract_extra_roll_data() -> Dictionary:
+	var passive_pool = _get_available_passive_options()
+	var cursed_pool = _get_cursed_passive_options()
+	var combined_pool = passive_pool + cursed_pool
+	combined_pool.shuffle()
+	var final_options = combined_pool.slice(0, OPTION_BUTTON_COUNT)
+	var pools = []
+	for _option in final_options:
+		pools.append(combined_pool)
 	return _make_level_up_roll_data(final_options, pools)
 
 func _build_normal_options() -> Array:
@@ -409,10 +429,12 @@ func _render_options(options: Array, show_skip: bool) -> void:
 			var option_id = str(option.get("id", ""))
 			var is_blocked = current_mode == "level_up" and option_id in blocked_level_option_ids
 			_apply_option_to_button(button, option, is_blocked, is_rolling_options)
+			_update_reroll_button(button, i, is_blocked, show_skip)
 		else:
 			button.visible = false
 			button.disabled = false
 			button.tooltip_text = ""
+			_hide_reroll_button(button)
 			_clear_special_level_up_button_effect(button)
 
 	_center_popup()
@@ -482,6 +504,66 @@ func _apply_option_to_button(button: Button, option: Dictionary, is_blocked: boo
 		label.tooltip_text = button.tooltip_text
 	button.self_modulate = _get_option_button_color(option, is_blocked)
 	_set_special_level_up_button_effect(button, option, is_blocked)
+	_layout_option_button_label(button)
+
+func _layout_option_button_label(button: Button) -> void:
+	var label = _get_button_label(button)
+	if label == null:
+		return
+
+	label.anchor_left = 0.0
+	label.anchor_top = 0.0
+	label.anchor_right = 1.0
+	label.anchor_bottom = 1.0
+	label.offset_left = 0.0
+	label.offset_top = 0.0
+	label.offset_right = -88.0
+	label.offset_bottom = 0.0
+
+func _update_reroll_button(button: Button, option_index: int, is_blocked: bool, show_skip: bool) -> void:
+	var reroll_button = _get_or_create_reroll_button(button, option_index)
+	var rerolls_left = _get_player_reroll_tokens()
+	var can_show = current_mode == "level_up" and show_skip and not is_rolling_options and not is_blocked and rerolls_left > 0
+	reroll_button.visible = can_show
+	reroll_button.disabled = not can_show
+	reroll_button.tooltip_text = "Reroll this upgrade. Rerolls left: %d" % rerolls_left
+
+func _get_or_create_reroll_button(button: Button, option_index: int) -> Button:
+	var reroll_button_name = "RerollButton%d" % option_index
+	var reroll_button = button.get_node_or_null(reroll_button_name)
+	if reroll_button is Button:
+		return reroll_button as Button
+
+	reroll_button = Button.new()
+	reroll_button.name = reroll_button_name
+	reroll_button.text = REROLL_BUTTON_TEXT
+	reroll_button.focus_mode = Control.FOCUS_NONE
+	reroll_button.mouse_filter = Control.MOUSE_FILTER_STOP
+	reroll_button.custom_minimum_size = REROLL_BUTTON_SIZE
+	reroll_button.size = REROLL_BUTTON_SIZE
+	reroll_button.anchor_left = 1.0
+	reroll_button.anchor_top = 0.5
+	reroll_button.anchor_right = 1.0
+	reroll_button.anchor_bottom = 0.5
+	reroll_button.offset_left = -REROLL_BUTTON_SIZE.x - REROLL_BUTTON_RIGHT_MARGIN
+	reroll_button.offset_top = -REROLL_BUTTON_SIZE.y * 0.5
+	reroll_button.offset_right = -REROLL_BUTTON_RIGHT_MARGIN
+	reroll_button.offset_bottom = REROLL_BUTTON_SIZE.y * 0.5
+	reroll_button.add_theme_font_size_override("font_size", 16)
+	reroll_button.add_theme_color_override("font_color", Color(1.0, 0.92, 0.35, 1.0))
+	reroll_button.pressed.connect(Callable(self, "_on_reroll_button_pressed").bind(option_index))
+	button.add_child(reroll_button)
+	return reroll_button
+
+func _hide_reroll_button(button: Button) -> void:
+	for child in button.get_children():
+		if child is Button and str(child.name).begins_with("RerollButton"):
+			(child as Button).visible = false
+
+func _get_player_reroll_tokens() -> int:
+	if player and player.has_method("get_reroll_tokens"):
+		return int(player.get_reroll_tokens())
+	return 0
 
 func _get_button_label(button: Button) -> Label:
 	for child in button.get_children():
@@ -677,6 +759,57 @@ func _get_option_by_id(option_id: String) -> Dictionary:
 				return option.duplicate()
 
 	return { "id": option_id, "text": option_id, "description": "Unknown upgrade effect.", "rarity": "passive_common" }
+
+func _on_reroll_button_pressed(option_index: int) -> void:
+	if is_rolling_options or current_mode != "level_up":
+		return
+	if option_index < 0 or option_index >= current_options.size():
+		return
+	var replacement = _roll_any_level_up_option_for_reroll()
+	if replacement.is_empty():
+		return
+	if player == null or not player.has_method("consume_reroll_token") or not player.consume_reroll_token():
+		return
+
+	current_options[option_index] = replacement
+	if option_index < saved_level_options.size():
+		saved_level_options[option_index] = replacement
+
+	_clear_special_level_up_confetti()
+	_render_options(current_options, true)
+	if _is_legendary_special_level_up_option(replacement):
+		_spawn_special_level_up_confetti()
+
+func _roll_any_level_up_option_for_reroll() -> Dictionary:
+	var pool = _get_any_reroll_option_pool()
+	if pool.is_empty():
+		return {}
+
+	pool.shuffle()
+	var rolled_options = _roll_special_level_up_options([pool[0]])
+	if rolled_options.is_empty():
+		return pool[0].duplicate(true)
+	return rolled_options[0]
+
+func _get_any_reroll_option_pool() -> Array:
+	var pool = []
+	pool.append_array(_get_available_passive_options())
+	pool.append_array(_get_cursed_passive_options())
+	pool.append_array(_get_available_rare_options())
+
+	var active_slots = player.get_active_ability_slots() if player and player.has_method("get_active_ability_slots") else {}
+	var equipped_boss_passives = player.get_boss_passive_options() if player and player.has_method("get_boss_passive_options") else []
+	for option in Global.BOSS_REWARD_OPTIONS:
+		var option_id = str(option.get("id", ""))
+		if option_id in blocked_level_option_ids:
+			continue
+		if option_id in equipped_boss_passives:
+			continue
+		if active_slots.values().has(option_id):
+			continue
+		pool.append(option.duplicate(true))
+
+	return pool
 
 func _on_option_button_pressed(index: int) -> void:
 	if is_rolling_options:

@@ -26,11 +26,11 @@ const AREA_AURA_VFX_DARKENING: float = 0.15
 const STARTING_ARM_DATA = {
 	"fast": {
 		"name": "Braco rapido",
-		"description": "Tiros fracos, cadencia alta e recuo curto para controlar melhor o medico.",
-		"attack_damage": 30.0,
-		"base_fire_rate": 0.55,
-		"min_fire_rate": 0.35,
-		"base_recoil_force": 400.0,
+		"description": "Tiros fracos, cadencia alta e recuo curto para controlar melhor o personagem.",
+		"attack_damage": 25.0,
+		"base_fire_rate": 0.5,
+		"min_fire_rate": 0.3,
+		"base_recoil_force": 375.0,
 		"friction": 900.0,
 		"attack_speed_upgrade_multiplier": 0.3,
 		"unstable_projectiles": false
@@ -38,7 +38,7 @@ const STARTING_ARM_DATA = {
 	"heavy": {
 		"name": "Braco pesado",
 		"description": "Tiros lentos com dano alto e recuo forte para reposicionamentos grandes.",
-		"attack_damage": 66.0,
+		"attack_damage": 70.0,
 		"base_fire_rate": 2.0,
 		"min_fire_rate": 1.35,
 		"base_recoil_force": 750.0,
@@ -50,8 +50,8 @@ const STARTING_ARM_DATA = {
 		"name": "Braco instavel",
 		"description": "Projeteis atravessam um alvo e ricocheteiam uma vez, mas voltam perigosos.",
 		"attack_damage": 35.0,
-		"base_fire_rate": 1.1,
-		"min_fire_rate": 0.6,
+		"base_fire_rate": 1.2,
+		"min_fire_rate": 0.75,
 		"base_recoil_force": 575.0,
 		"friction": 750.0,
 		"attack_speed_upgrade_multiplier": 0.7,
@@ -83,7 +83,7 @@ const STARTING_ARM_OPTIONS = [
 const PASSIVE_UPGRADE_OPTIONS = [
 	{ "id": "option_1", "text": "Recoil Force (+5%)", "description": "+5% recoil force is additive from your base recoil, not your current recoil. Does not appear for the heavy arm and stops appearing at 8.0 recoil force.", "rarity": "passive_common" },
 	{ "id": "option_2", "text": "Health (+5%)", "description": "Increases your maximum health and heals you slightly based on your current health.", "rarity": "passive_common" },
-	{ "id": "option_3", "text": "Attack (+10%)", "description": "Increases the damage dealt by your bullets and damage-based effects.", "rarity": "passive_common" },
+	{ "id": "option_3", "text": "Attack (+12%)", "description": "Increases the damage dealt by your bullets and damage-based effects.", "rarity": "passive_common" },
 	{ "id": "option_4", "text": "Atk-Speed (+5%)", "description": "+5% attack speed before the chosen arm's tuning. Does not appear for the fast arm; heavy and unstable arms each have their own safe cooldown floor.", "rarity": "passive_common" },
 	{ "id": "option_5", "text": "Bullet Size (+5%)", "description": "+5% bullet size for friendly projectiles. Bonus is additive and stops at 200% bullet size.", "rarity": "passive_common" },
 	{ "id": "option_6", "text": "Heal After Wave (+3%)", "description": "Heal 3% max health after each enemy wave. This upgrade stops appearing at 15%.", "rarity": "passive_common" },
@@ -138,37 +138,37 @@ const ACTIVE_ABILITY_DATA = {
 	"sloth_field": {
 		"name": "Sloth Field",
 		"description": "Create a 180px field for 5 seconds. Enemies inside drop to 35% speed, but your dash speed drops to 75% during the field.",
-		"cooldown": 15.0,
+		"cooldown": 20.0,
 		"method": "activate_sloth_field"
 	},
 	"gluttony_devour": {
 		"name": "Devour",
 		"description": "Consume up to two enemies within 180px. Green motes fly back and heal up to 12.5% max health when they arrive, but your dash speed is halved for 5 seconds.",
-		"cooldown": 35.0,
+		"cooldown": 45.0,
 		"method": "activate_gluttony_devour"
 	},
 	"envy_mirror_clone": {
 		"name": "Mirror Clone",
 		"description": "Summon a mirror clone that fires random risky shots with you for a short time. Clone bullets can hit anything, including you.",
-		"cooldown": 25.0,
+		"cooldown": 37.5,
 		"method": "activate_envy_mirror_clone"
 	},
 	"wrath_burst": {
 		"name": "Wrath Burst",
 		"description": "Fire 16 radial bullets for 120% attack damage each, then take 20 damage.",
-		"cooldown": 30.0,
+		"cooldown": 45.0,
 		"method": "activate_wrath_burst"
 	},
 	"lust_for_perfection": {
 		"name": "Perfection",
 		"description": "Become invulnerable for 3 seconds, then take double damage for 5 seconds.",
-		"cooldown": 35.0,
+		"cooldown": 60.0,
 		"method": "activate_lust_for_perfection"
 	},
 	"greed_treasure_rain": {
 		"name": "Treasure Rain",
 		"description": "Rain golden projectiles from above. Each projectile deals 120% attack damage only when it collides, including with you.",
-		"cooldown": 25.0,
+		"cooldown": 45.0,
 		"method": "activate_greed_treasure_rain"
 	},
 }

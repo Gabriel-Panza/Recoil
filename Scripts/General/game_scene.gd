@@ -84,48 +84,58 @@ const SPREAD_ENEMY = preload("res://Cenas/Inimigos/spread_enemy.tscn")
 const TANK_ENEMY = preload("res://Cenas/Inimigos/tank_enemy.tscn")
 const AGILE_ENEMY = preload("res://Cenas/Inimigos/agile_enemy.tscn")
 const BOSS_ENEMY = preload("res://Cenas/Inimigos/boss.tscn")
+const ELITE_SPAWN_CHANCE_BASE: float = 0.08
+const ELITE_SPAWN_CHANCE_PER_PECADO: float = 0.01
+const ELITE_SPAWN_CHANCE_MAX: float = 0.15
+const CONTRACT_REWARD_EXTRA_LEVEL: String = "extra_level"
+const CONTRACT_REWARD_REROLLS: String = "rerolls"
+const CONTRACT_REWARD_STAT: String = "stat"
+const CONTRACT_BUFF_HEALTH: String = "health"
+const CONTRACT_BUFF_DAMAGE: String = "damage"
+const CONTRACT_BUFF_SPEED: String = "speed"
+const CONTRACT_REWARD_REROLL_AMOUNT: int = 5
 
 const WAVE_SETS = {
 	1: [  # Sloth
 		{"melee": 3, "ranged": 0, "agile": 0, "tank": 0, "spread": 0},
 		{"melee": 3, "ranged": 1, "agile": 0, "tank": 0, "spread": 0},
-		{"melee": 4, "ranged": 2, "agile": 0, "tank": 0, "spread": 0},
-		{"melee": 5, "ranged": 3, "agile": 0, "tank": 0, "spread": 0}
+		{"melee": 4, "ranged": 1, "agile": 0, "tank": 0, "spread": 0},
+		{"melee": 4, "ranged": 2, "agile": 0, "tank": 0, "spread": 0}
 	],
 	2: [  # Gluttony
 		{"melee": 3, "ranged": 1, "agile": 0, "tank": 1, "spread": 0},
 		{"melee": 4, "ranged": 2, "agile": 0, "tank": 1, "spread": 0},
-		{"melee": 5, "ranged": 3, "agile": 0, "tank": 2, "spread": 0},
+		{"melee": 4, "ranged": 3, "agile": 0, "tank": 2, "spread": 0},
 		{"melee": 5, "ranged": 3, "agile": 0, "tank": 2, "spread": 0}
 	],
 	3: [  # Envy
 		{"melee": 4, "ranged": 2, "agile": 1, "tank": 1, "spread": 0},
 		{"melee": 5, "ranged": 3, "agile": 1, "tank": 1, "spread": 0},
-		{"melee": 6, "ranged": 3, "agile": 2, "tank": 2, "spread": 0},
+		{"melee": 5, "ranged": 3, "agile": 2, "tank": 2, "spread": 0},
 		{"melee": 6, "ranged": 4, "agile": 2, "tank": 2, "spread": 0}
 	],
 	4: [  # Wrath
 		{"melee": 4, "ranged": 3, "agile": 1, "tank": 1, "spread": 1},
 		{"melee": 5, "ranged": 3, "agile": 2, "tank": 1, "spread": 1},
-		{"melee": 6, "ranged": 4, "agile": 2, "tank": 2, "spread": 2},
+		{"melee": 5, "ranged": 4, "agile": 2, "tank": 2, "spread": 2},
 		{"melee": 6, "ranged": 4, "agile": 3, "tank": 3, "spread": 2}
 	],
 	5: [  # Lust
 		{"melee": 5, "ranged": 3, "agile": 2, "tank": 1, "spread": 1},
 		{"melee": 6, "ranged": 4, "agile": 2, "tank": 2, "spread": 2},
-		{"melee": 7, "ranged": 4, "agile": 3, "tank": 2, "spread": 2},
-		{"melee": 7, "ranged": 4, "agile": 3, "tank": 3, "spread": 3}
+		{"melee": 6, "ranged": 4, "agile": 3, "tank": 2, "spread": 2},
+		{"melee": 7, "ranged": 4, "agile": 3, "tank": 2, "spread": 3}
 	],
 	6: [  # Greed
 		{"melee": 5, "ranged": 4, "agile": 2, "tank": 2, "spread": 2},
 		{"melee": 6, "ranged": 4, "agile": 3, "tank": 2, "spread": 2},
-		{"melee": 7, "ranged": 4, "agile": 3, "tank": 3, "spread": 3},
-		{"melee": 7, "ranged": 4, "agile": 4, "tank": 3, "spread": 3}
+		{"melee": 6, "ranged": 4, "agile": 3, "tank": 2, "spread": 3},
+		{"melee": 7, "ranged": 5, "agile": 4, "tank": 3, "spread": 3}
 	],
 	7: [  # Pride
-		{"melee": 6, "ranged": 4, "agile": 3, "tank": 3, "spread": 2},
-		{"melee": 7, "ranged": 4, "agile": 3, "tank": 3, "spread": 3},
-		{"melee": 8, "ranged": 5, "agile": 4, "tank": 3, "spread": 3},
+		{"melee": 6, "ranged": 4, "agile": 3, "tank": 2, "spread": 2},
+		{"melee": 7, "ranged": 4, "agile": 3, "tank": 2, "spread": 3},
+		{"melee": 7, "ranged": 5, "agile": 4, "tank": 3, "spread": 3},
 		{"melee": 8, "ranged": 5, "agile": 4, "tank": 3, "spread": 4}
 	]
 }
@@ -137,8 +147,16 @@ var boss_phase: bool = false
 var enemies_left_to_spawn: int = 0
 var run_finished: bool = false
 var wave_finish_pending: bool = false
+var active_contract: Dictionary = {}
+var contract_offer_layer: CanvasLayer
+var contract_choice_made: bool = false
+var contract_choice_accepted: bool = false
+var debug_layer: CanvasLayer
+var debug_panel: PanelContainer
+var debug_status_label: Label
 
 signal starting_arm_selected
+signal contract_offer_selected(accepted)
 
 const BOSS_CLEAR_HEAL_RATIO: float = 0.20
 const BOSS_SPAWN_DELAY_AFTER_ARENA_ARRIVAL: float = 0.5
@@ -155,6 +173,7 @@ func _ready() -> void:
 	_setup_arena_tile_visuals()
 	current_arena = arena_nodes[0]
 	_setup_fade_overlay()
+	_setup_debug_panel()
 	set_waves_based_on_pecado()
 	_update_camera_limits()
 	await _show_starting_arm_selection()
@@ -1092,6 +1111,7 @@ func start_next_wave() -> void:
 	if current_wave_index >= waves.size():
 		if current_arena == arena_nodes[0]:
 			print("4 waves concluidas na arena principal! Indo para arena do pecado {0}.".format([Global.pecado]))
+			await _offer_contract_before_boss()
 			current_arena = arena_nodes[Global.pecado] if Global.pecado <= arena_nodes.size() - 1 else arena_nodes[1]
 			_update_camera_limits()
 			boss_phase = true
@@ -1162,17 +1182,17 @@ func spawn_boss() -> void:
 	await get_tree().process_frame
 
 	var boss = BOSS_ENEMY.instantiate()
-	_apply_enemy_spawn_modifiers(boss)
 	var spawn_margin = _get_body_spawn_margin(boss)
 	boss.global_position = get_camera_top_center_position(spawn_margin)
 	boss.add_to_group(Global.GROUP_BOSS)
 	boss.connect("boss_defeated", Callable(self, "_on_boss_died"))
 	add_child(boss)
+	_apply_enemy_spawn_modifiers(boss)
 
 func spawn_enemy(enemy_scene: PackedScene) -> void:
 	var enemy = enemy_scene.instantiate()
-	_apply_enemy_spawn_modifiers(enemy)
 	add_child(enemy)
+	_apply_enemy_spawn_modifiers(enemy)
 
 	var spawn_margin = _get_body_spawn_margin(enemy)
 	enemy.global_position = get_random_camera_edge_position(spawn_margin)
@@ -1180,8 +1200,296 @@ func spawn_enemy(enemy_scene: PackedScene) -> void:
 	# Monitora a morte do inimigo
 	enemy.tree_exited.connect(_on_enemy_died)
 
-func _apply_enemy_spawn_modifiers(_enemy: Node) -> void:
-	pass
+func _apply_enemy_spawn_modifiers(enemy: Node) -> void:
+	if enemy == null:
+		return
+
+	if enemy.is_in_group(Global.GROUP_BOSS):
+		_apply_contract_modifiers_to_enemy(enemy, "boss")
+		return
+
+	if bool(enemy.get_meta("boss_summon", false)):
+		_apply_contract_modifiers_to_enemy(enemy, "minion")
+		return
+
+	_try_apply_elite_variant(enemy)
+
+func apply_contract_to_boss_summon(enemy: Node) -> void:
+	if enemy == null:
+		return
+
+	_apply_contract_modifiers_to_enemy(enemy, "minion")
+
+func _try_apply_elite_variant(enemy: Node) -> void:
+	if enemy == null or not enemy.has_method("apply_elite_variant"):
+		return
+	if bool(enemy.get_meta("boss_summon", false)) or enemy.is_in_group(Global.GROUP_BOSS):
+		return
+
+	var elite_chance = min(ELITE_SPAWN_CHANCE_BASE + float(max(Global.pecado - 1, 0)) * ELITE_SPAWN_CHANCE_PER_PECADO, ELITE_SPAWN_CHANCE_MAX)
+	if randf() > elite_chance:
+		return
+
+	var variants = ["armored", "unstable", "vampiric"]
+	variants.shuffle()
+	enemy.call("apply_elite_variant", variants[0])
+
+func _apply_contract_modifiers_to_enemy(enemy: Node, target_key: String) -> void:
+	if active_contract.is_empty() or enemy == null:
+		return
+
+	var contract_id = str(active_contract.get("id", ""))
+	if contract_id == "" or str(enemy.get_meta("contract_id", "")) == contract_id:
+		return
+
+	var modifiers: Dictionary = active_contract.get("modifiers", {})
+	var health_multiplier = float(modifiers.get("%s_%s" % [target_key, CONTRACT_BUFF_HEALTH], 1.0))
+	var damage_multiplier = float(modifiers.get("%s_%s" % [target_key, CONTRACT_BUFF_DAMAGE], 1.0))
+	var speed_multiplier = float(modifiers.get("%s_%s" % [target_key, CONTRACT_BUFF_SPEED], 1.0))
+
+	if health_multiplier > 1.0:
+		_multiply_enemy_health(enemy, health_multiplier)
+	if damage_multiplier > 1.0:
+		_multiply_enemy_damage(enemy, damage_multiplier)
+	if speed_multiplier > 1.0:
+		_multiply_enemy_speed(enemy, speed_multiplier)
+
+	enemy.set_meta("contract_id", contract_id)
+	enemy.set_meta("contract_name", str(active_contract.get("name", "Contract")))
+
+func _multiply_enemy_health(enemy: Node, multiplier: float) -> void:
+	if enemy.get("max_health") == null:
+		return
+
+	var previous_max = max(float(enemy.get("max_health")), 1.0)
+	var previous_current = float(enemy.get("current_health")) if enemy.get("current_health") != null else previous_max
+	var health_ratio = clamp(previous_current / previous_max, 0.0, 1.0)
+	var new_max = int(round(previous_max * multiplier))
+	enemy.set("max_health", new_max)
+	if enemy.get("current_health") != null:
+		enemy.set("current_health", int(round(float(new_max) * health_ratio)))
+	if enemy.has_method("_update_health_bar"):
+		enemy.call("_update_health_bar")
+
+func _multiply_enemy_damage(enemy: Node, multiplier: float) -> void:
+	if enemy.get("base_damage") != null:
+		enemy.set("base_damage", int(round(float(enemy.get("base_damage")) * multiplier)))
+	if enemy.get("damage") != null:
+		enemy.set("damage", int(round(float(enemy.get("damage")) * multiplier)))
+
+func _multiply_enemy_speed(enemy: Node, multiplier: float) -> void:
+	if enemy.get("base_speed") != null:
+		enemy.set("base_speed", float(enemy.get("base_speed")) * multiplier)
+	if enemy.get("speed") != null:
+		enemy.set("speed", float(enemy.get("speed")) * multiplier)
+
+func _offer_contract_before_boss() -> void:
+	active_contract = {}
+	if Global.pecado > 7:
+		return
+
+	var contract = _generate_contract_offer(Global.pecado)
+	var accepted = await _show_contract_offer(contract)
+	if $Player != null and $Player.has_method("record_contract_decision"):
+		$Player.record_contract_decision(contract, accepted)
+
+	if not accepted:
+		active_contract = {}
+		return
+
+	active_contract = contract
+	await _grant_contract_reward(contract)
+
+func _generate_contract_offer(pecado_id: int) -> Dictionary:
+	var modifiers = {}
+	var boss_buff_types = [CONTRACT_BUFF_HEALTH, CONTRACT_BUFF_DAMAGE]
+	if pecado_id > 1:
+		boss_buff_types.append(CONTRACT_BUFF_SPEED)
+	var minion_buff_types = [CONTRACT_BUFF_HEALTH, CONTRACT_BUFF_DAMAGE, CONTRACT_BUFF_SPEED]
+	boss_buff_types.shuffle()
+	minion_buff_types.shuffle()
+
+	var boss_buff = boss_buff_types[0]
+	var minion_buff = minion_buff_types[0]
+	modifiers["boss_%s" % boss_buff] = _roll_contract_multiplier(boss_buff, true)
+	modifiers["minion_%s" % minion_buff] = _roll_contract_multiplier(minion_buff, false)
+
+	var reward_types = [CONTRACT_REWARD_EXTRA_LEVEL, CONTRACT_REWARD_REROLLS, CONTRACT_REWARD_STAT]
+	reward_types.shuffle()
+	var reward_type = reward_types[0]
+
+	var contract = {
+		"id": "contract_%d_%d" % [pecado_id, Time.get_ticks_msec()],
+		"name": "Contrato do pecado %d" % pecado_id,
+		"modifiers": modifiers,
+		"reward_type": reward_type,
+	}
+	contract["buff_summary"] = _build_contract_buff_summary(modifiers)
+	contract["reward_summary"] = _get_contract_reward_summary(reward_type)
+	return contract
+
+func _roll_contract_multiplier(buff_type: String, is_boss: bool) -> float:
+	match buff_type:
+		CONTRACT_BUFF_HEALTH:
+			return randf_range(1.26, 1.45) if is_boss else randf_range(1.16, 1.34)
+		CONTRACT_BUFF_DAMAGE:
+			return randf_range(1.15, 1.32) if is_boss else randf_range(1.12, 1.28)
+		CONTRACT_BUFF_SPEED:
+			return randf_range(1.10, 1.22) if is_boss else randf_range(1.10, 1.25)
+	return 1.0
+
+func _build_contract_buff_summary(modifiers: Dictionary) -> String:
+	var parts = PackedStringArray()
+	for key in modifiers.keys():
+		var label = str(key).replace("boss_", "Boss ").replace("minion_", "Minions ")
+		label = label.replace("_", " ").capitalize()
+		parts.append("%s %s" % [label, _format_contract_multiplier(float(modifiers[key]))])
+	return ", ".join(parts)
+
+func _get_contract_reward_summary(reward_type: String) -> String:
+	match reward_type:
+		CONTRACT_REWARD_EXTRA_LEVEL:
+			return "Extra level-up with common/cursed passives"
+		CONTRACT_REWARD_REROLLS:
+			return "+%d rerolls" % CONTRACT_REWARD_REROLL_AMOUNT
+		CONTRACT_REWARD_STAT:
+			return "Random permanent stat increase"
+	return "Unknown reward"
+
+func _format_contract_multiplier(multiplier: float) -> String:
+	return "+%d%%" % int(round((multiplier - 1.0) * 100.0))
+
+func _grant_contract_reward(contract: Dictionary) -> void:
+	var reward_type = str(contract.get("reward_type", ""))
+	match reward_type:
+		CONTRACT_REWARD_EXTRA_LEVEL:
+			if $Player != null and $Player.has_method("grant_bonus_level_up"):
+				$Player.grant_bonus_level_up("contract_extra", Global.pecado)
+				await _wait_for_level_up_selection()
+		CONTRACT_REWARD_REROLLS:
+			if $Player != null and $Player.has_method("add_reroll_tokens"):
+				$Player.add_reroll_tokens(CONTRACT_REWARD_REROLL_AMOUNT)
+				if $Player.has_method("record_upgrade"):
+					$Player.record_upgrade({
+						"id": "contract_rerolls",
+						"text": "Contract: +%d Rerolls" % CONTRACT_REWARD_REROLL_AMOUNT,
+						"description": "Contract reward.",
+						"rarity": "contract_reward"
+					})
+		CONTRACT_REWARD_STAT:
+			_grant_contract_stat_reward()
+
+func _grant_contract_stat_reward() -> void:
+	if $Player == null or not $Player.has_method("get_available_contract_stat_ids") or not $Player.has_method("apply_contract_stat_reward"):
+		return
+
+	var stat_ids: Array = $Player.get_available_contract_stat_ids()
+	if stat_ids.is_empty():
+		return
+
+	stat_ids.shuffle()
+	$Player.apply_contract_stat_reward(str(stat_ids[0]))
+
+func _show_contract_offer(contract: Dictionary) -> bool:
+	contract_choice_made = false
+	contract_choice_accepted = false
+	_create_contract_offer_layer(contract)
+	get_tree().paused = true
+	await contract_offer_selected
+	_destroy_contract_offer_layer()
+	get_tree().paused = false
+	return contract_choice_accepted
+
+func _create_contract_offer_layer(contract: Dictionary) -> void:
+	_destroy_contract_offer_layer()
+	contract_offer_layer = CanvasLayer.new()
+	contract_offer_layer.name = "ContractOfferLayer"
+	contract_offer_layer.layer = 115
+	contract_offer_layer.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	add_child(contract_offer_layer)
+
+	var overlay = ColorRect.new()
+	overlay.color = Color(0.015, 0.006, 0.01, 0.86)
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	contract_offer_layer.add_child(overlay)
+
+	var panel = PanelContainer.new()
+	panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	panel.custom_minimum_size = Vector2(680.0, 320.0)
+	panel.size = panel.custom_minimum_size
+	panel.position = ((_get_design_viewport_size() - panel.size) * 0.5).round()
+	panel.add_theme_stylebox_override("panel", _make_starting_arm_style(Color(0.10, 0.035, 0.035, 0.98), Color(0.95, 0.25, 0.12, 0.95), 3))
+	contract_offer_layer.add_child(panel)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 28)
+	margin.add_theme_constant_override("margin_top", 24)
+	margin.add_theme_constant_override("margin_right", 28)
+	margin.add_theme_constant_override("margin_bottom", 24)
+	panel.add_child(margin)
+
+	var layout = VBoxContainer.new()
+	layout.add_theme_constant_override("separation", 16)
+	margin.add_child(layout)
+
+	var title = Label.new()
+	title.text = str(contract.get("name", "Contrato"))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 26)
+	title.add_theme_color_override("font_color", Color(1.0, 0.72, 0.36, 1.0))
+	layout.add_child(title)
+
+	var body = Label.new()
+	body.text = "Aceitar fortalece o boss deste pecado e seus minions.\n\nBuff: %s\nRecompensa: %s" % [
+		str(contract.get("buff_summary", "")),
+		str(contract.get("reward_summary", ""))
+	]
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	body.add_theme_font_size_override("font_size", 18)
+	body.add_theme_color_override("font_color", Color(0.96, 0.86, 0.75, 1.0))
+	layout.add_child(body)
+
+	var buttons = HBoxContainer.new()
+	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
+	buttons.add_theme_constant_override("separation", 18)
+	layout.add_child(buttons)
+
+	var accept_button = _make_contract_button("Aceitar")
+	accept_button.pressed.connect(Callable(self, "_on_contract_button_pressed").bind(true))
+	buttons.add_child(accept_button)
+
+	var decline_button = _make_contract_button("Recusar")
+	decline_button.pressed.connect(Callable(self, "_on_contract_button_pressed").bind(false))
+	buttons.add_child(decline_button)
+
+func _make_contract_button(text: String) -> Button:
+	var button = Button.new()
+	button.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	button.custom_minimum_size = Vector2(160.0, 44.0)
+	button.text = text
+	button.add_theme_font_size_override("font_size", 18)
+	return button
+
+func _on_contract_button_pressed(accepted: bool) -> void:
+	if contract_choice_made:
+		return
+
+	contract_choice_made = true
+	contract_choice_accepted = accepted
+	contract_offer_selected.emit(accepted)
+
+func _destroy_contract_offer_layer() -> void:
+	if is_instance_valid(contract_offer_layer):
+		contract_offer_layer.queue_free()
+	contract_offer_layer = null
+
+func _get_design_viewport_size() -> Vector2:
+	return Vector2(
+		float(ProjectSettings.get_setting("display/window/size/viewport_width", 1152.0)),
+		float(ProjectSettings.get_setting("display/window/size/viewport_height", 648.0))
+	)
 
 func get_random_camera_edge_position(spawn_margin: float = 0.0) -> Vector2:
 	var camera = get_viewport().get_camera_2d()
@@ -1531,6 +1839,7 @@ func _on_boss_died() -> void:
 
 	boss_phase = false
 	is_wave_active = false
+	active_contract = {}
 	current_wave_index = 0
 	_reset_player_periodic_shot_counters()
 	_heal_player_after_boss()
@@ -1569,7 +1878,12 @@ func _on_pecado_changed(new_pecado: int) -> void:
 			
 func _unhandled_input(event: InputEvent) -> void: # Modo Debug
 	if OS.is_debug_build() and event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode == KEY_F10:
+			_toggle_debug_panel()
+			return
 		if event.keycode == KEY_SEMICOLON:
+			_debug_skip_current_encounter()
+			return
 			
 			# Cancela o spawn de inimigos normais
 			enemies_left_to_spawn = 0
@@ -1586,8 +1900,168 @@ func _unhandled_input(event: InputEvent) -> void: # Modo Debug
 				
 			# Se matou o boss ou o jogo já estava na fase do boss:
 			if matou_boss or boss_phase:
-				Global.pecado += 1       # Sobe o nível do pecado para a próxima fase[cite: 1]
+				Global.pecado += 1       # Sobe o nível do pecado para a próxima fase
 				_on_boss_died()          # Força a transição da câmera e da arena
 			else:
 				# Se era uma wave normal
 				call_deferred("_try_finish_wave")
+
+func _debug_skip_current_encounter() -> void:
+	enemies_left_to_spawn = 0
+	var skipped_boss = boss_phase or not get_tree().get_nodes_in_group(Global.GROUP_BOSS).is_empty()
+	_debug_trigger_level_up_for_skip(skipped_boss)
+
+	for enemy in get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
+		enemy.queue_free()
+
+	var killed_boss = false
+	for boss in get_tree().get_nodes_in_group(Global.GROUP_BOSS):
+		boss.queue_free()
+		killed_boss = true
+
+	if killed_boss or boss_phase:
+		Global.pecado += 1
+		_on_boss_died()
+	else:
+		call_deferred("_try_finish_wave")
+
+func _debug_trigger_level_up_for_skip(skipped_boss: bool) -> void:
+	var player = get_tree().get_first_node_in_group(Global.GROUP_PLAYER)
+	if player == null or not player.has_method("grant_bonus_level_up"):
+		return
+	if bool(player.get("upando")):
+		return
+
+	if skipped_boss:
+		if Global.pecado >= 7:
+			return
+		player.grant_bonus_level_up("boss", Global.pecado)
+		return
+
+	if not is_wave_active:
+		return
+
+	var context = str(player.get("level_up_context")) if player.get("level_up_context") != null else "normal"
+	var boss_pecado = int(player.get("level_up_boss_pecado")) if player.get("level_up_boss_pecado") != null else Global.pecado
+	player.grant_bonus_level_up(context, boss_pecado)
+
+func _setup_debug_panel() -> void:
+	if not OS.is_debug_build() or debug_layer != null:
+		return
+
+	debug_layer = CanvasLayer.new()
+	debug_layer.name = "DebugBalanceLayer"
+	debug_layer.layer = 130
+	debug_layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(debug_layer)
+
+	debug_panel = PanelContainer.new()
+	debug_panel.name = "DebugBalancePanel"
+	debug_panel.process_mode = Node.PROCESS_MODE_ALWAYS
+	debug_panel.visible = false
+	debug_panel.custom_minimum_size = Vector2(280.0, 320.0)
+	debug_panel.position = Vector2(850.0, 72.0)
+	debug_layer.add_child(debug_panel)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 10)
+	margin.add_theme_constant_override("margin_top", 10)
+	margin.add_theme_constant_override("margin_right", 10)
+	margin.add_theme_constant_override("margin_bottom", 10)
+	debug_panel.add_child(margin)
+
+	var layout = VBoxContainer.new()
+	layout.add_theme_constant_override("separation", 8)
+	margin.add_child(layout)
+
+	var title = Label.new()
+	title.text = "DEBUG / BALANCE"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 18)
+	layout.add_child(title)
+
+	debug_status_label = Label.new()
+	debug_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	debug_status_label.add_theme_font_size_override("font_size", 13)
+	layout.add_child(debug_status_label)
+
+	layout.add_child(_make_debug_button("Skip encounter (;)", "_debug_skip_current_encounter"))
+	layout.add_child(_make_debug_button("Go to boss", "_debug_go_to_boss"))
+	layout.add_child(_make_debug_button("Force level up", "_debug_force_level_up"))
+	layout.add_child(_make_debug_button("+5 rerolls", "_debug_add_rerolls"))
+	layout.add_child(_make_debug_button("Toggle invincible", "_debug_toggle_invincible"))
+	layout.add_child(_make_debug_button("Offer contract", "_debug_offer_contract_now"))
+	_refresh_debug_panel()
+
+func _make_debug_button(text: String, method_name: String) -> Button:
+	var button = Button.new()
+	button.process_mode = Node.PROCESS_MODE_ALWAYS
+	button.text = text
+	button.custom_minimum_size = Vector2(0.0, 32.0)
+	button.pressed.connect(Callable(self, method_name))
+	return button
+
+func _toggle_debug_panel() -> void:
+	if debug_panel == null:
+		return
+
+	debug_panel.visible = not debug_panel.visible
+	_refresh_debug_panel()
+
+func _refresh_debug_panel() -> void:
+	if debug_status_label == null:
+		return
+
+	var player = get_tree().get_first_node_in_group(Global.GROUP_PLAYER)
+	var rerolls = player.get_reroll_tokens() if player != null and player.has_method("get_reroll_tokens") else 0
+	var invincible = player.get("debug_invincible_enabled") if player != null and player.get("debug_invincible_enabled") != null else false
+	debug_status_label.text = "Pecado: %d\nWave: %d/%d\nBoss phase: %s\nEnemies spawning: %d\nRerolls: %d\nInvincible: %s" % [
+		Global.pecado,
+		current_wave_index,
+		waves.size(),
+		str(boss_phase),
+		enemies_left_to_spawn,
+		rerolls,
+		str(invincible)
+	]
+
+func _debug_go_to_boss() -> void:
+	if boss_phase:
+		return
+
+	enemies_left_to_spawn = 0
+	is_wave_active = false
+	for enemy in get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
+		enemy.queue_free()
+	current_arena = arena_nodes[0]
+	current_wave_index = waves.size()
+	start_next_wave()
+	_refresh_debug_panel()
+
+func _debug_force_level_up() -> void:
+	var player = get_tree().get_first_node_in_group(Global.GROUP_PLAYER)
+	if player != null and player.has_method("grant_bonus_level_up"):
+		player.grant_bonus_level_up("normal", Global.pecado)
+	_refresh_debug_panel()
+
+func _debug_add_rerolls() -> void:
+	var player = get_tree().get_first_node_in_group(Global.GROUP_PLAYER)
+	if player != null and player.has_method("add_reroll_tokens"):
+		player.add_reroll_tokens(5)
+	_refresh_debug_panel()
+
+func _debug_toggle_invincible() -> void:
+	var player = get_tree().get_first_node_in_group(Global.GROUP_PLAYER)
+	if player == null or not player.has_method("set_debug_invincible_enabled"):
+		return
+
+	var current_value = bool(player.get("debug_invincible_enabled")) if player.get("debug_invincible_enabled") != null else false
+	player.set_debug_invincible_enabled(not current_value)
+	_refresh_debug_panel()
+
+func _debug_offer_contract_now() -> void:
+	if not OS.is_debug_build() or boss_phase:
+		return
+
+	await _offer_contract_before_boss()
+	_refresh_debug_panel()

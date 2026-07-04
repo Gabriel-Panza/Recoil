@@ -28,6 +28,10 @@ var active_skill_e_label: Label
 var active_skill_r_label: Label
 var game_over: Panel
 var game_win: Panel
+var death_recap_background: Panel
+var death_recap_scroll: ScrollContainer
+var death_recap_label: Label
+var death_recap_updated: bool = false
 
 var can_move: bool = true
 
@@ -122,6 +126,8 @@ func _setup_healing_received_label() -> void:
 	
 func _process(_delta: float) -> void:
 	update_status_labels()
+	if game_over and game_over.visible:
+		_update_death_recap()
 	if _is_end_screen_visible():
 		return
 
@@ -151,6 +157,65 @@ func _unpause_game() -> void:
 
 func _is_end_screen_visible() -> bool:
 	return (game_over and game_over.visible) or (game_win and game_win.visible)
+
+func _update_death_recap() -> void:
+	if death_recap_updated:
+		return
+
+	_setup_death_recap_ui()
+	if death_recap_label == null:
+		return
+
+	if player and player.has_method("get_death_recap_text"):
+		death_recap_label.text = player.get_death_recap_text()
+	else:
+		death_recap_label.text = "RUN RECAP\nNo player recap data available."
+	death_recap_updated = true
+
+func _setup_death_recap_ui() -> void:
+	if game_over == null or death_recap_label != null:
+		return
+
+	death_recap_background = game_over.get_node_or_null("DeathRecapBackground")
+	if death_recap_background == null:
+		death_recap_background = Panel.new()
+		death_recap_background.name = "DeathRecapBackground"
+		death_recap_background.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+		death_recap_background.z_index = 2
+		death_recap_background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		death_recap_background.offset_left = 42.0
+		death_recap_background.offset_top = 58.0
+		death_recap_background.offset_right = 724.0
+		death_recap_background.offset_bottom = 560.0
+		var style = StyleBoxFlat.new()
+		style.bg_color = Color(0.0, 0.0, 0.0, 0.62)
+		style.set_corner_radius_all(6)
+		death_recap_background.add_theme_stylebox_override("panel", style)
+		game_over.add_child(death_recap_background)
+
+	death_recap_scroll = game_over.get_node_or_null("DeathRecapScroll")
+	if death_recap_scroll == null:
+		death_recap_scroll = ScrollContainer.new()
+		death_recap_scroll.name = "DeathRecapScroll"
+		death_recap_scroll.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+		death_recap_scroll.z_index = 3
+		death_recap_scroll.offset_left = 56.0
+		death_recap_scroll.offset_top = 76.0
+		death_recap_scroll.offset_right = 704.0
+		death_recap_scroll.offset_bottom = 548.0
+		game_over.add_child(death_recap_scroll)
+
+	death_recap_label = death_recap_scroll.get_node_or_null("DeathRecapLabel")
+	if death_recap_label == null:
+		death_recap_label = Label.new()
+		death_recap_label.name = "DeathRecapLabel"
+		death_recap_label.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+		death_recap_label.custom_minimum_size = Vector2(620.0, 0.0)
+		death_recap_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		death_recap_label.add_theme_font_size_override("font_size", 16)
+		death_recap_label.add_theme_color_override("font_color", Color(0.96, 0.88, 0.76, 1.0))
+		death_recap_label.add_theme_constant_override("outline_size", 3)
+		death_recap_scroll.add_child(death_recap_label)
 
 func _on_options_button_pressed() -> void:
 	options_menu.show()

@@ -126,6 +126,7 @@ var splintered_chamber_enabled: bool = false
 var splintered_chamber_shot_count: int = 0
 var max_dash_charges: int = 1
 var double_dash_charges: int = 1
+var reroll_tokens: int = 1
 var sloth_slow_aura_enabled: bool = false
 var gluttony_heal_kill_enabled: bool = false
 var envy_mirror_shot_enabled: bool = false
@@ -144,6 +145,19 @@ var sloth_aura_vfx: Node2D
 var envy_clone_vfx: Node2D
 var envy_clone_fire_timer: float = 0.0
 var passive_status_vfx: Dictionary = {}
+var debug_invincible_enabled: bool = false
+var run_upgrade_history: Array = []
+var run_contract_history: Array = []
+var run_damage_taken_total: int = 0
+var run_damage_taken_by_source: Dictionary = {}
+var run_kills_total: int = 0
+var run_elite_kills_total: int = 0
+var run_lucky_upgrade_count: int = 0
+var run_cursed_upgrade_count: int = 0
+var run_end_elapsed_seconds: float = 0.0
+var run_end_reason: String = ""
+var last_damage_source_name: String = "None"
+var last_damage_source_amount: int = 0
 
 # --- SISTEMA DE DANO CONTÍNUO ---
 var enemies_in_contact: Array = []
@@ -165,6 +179,7 @@ signal xp_updated(current_xp, xp_to_next_level)
 signal level_updated(level, current_xp, xp_to_next_level)
 signal hp_updated(health, maxHealth)
 signal stats_updated()
+signal rerolls_updated(reroll_tokens)
 
 # --- ESTADOS DO JOGADOR ---
 var can_shoot: bool = true
@@ -417,6 +432,81 @@ func add_special_level_up_chance_bonus(amount: float) -> void:
 func get_special_level_up_roll_chance(base_chance: float) -> float:
 	return clamp(base_chance * max(1.0 + special_level_up_chance_bonus, 0.0), 0.0, 1.0)
 
+func get_reroll_tokens() -> int:
+	return reroll_tokens
+
+func add_reroll_tokens(amount: int) -> void:
+	if amount <= 0:
+		return
+
+	reroll_tokens += amount
+	emit_signal("rerolls_updated", reroll_tokens)
+	emit_signal("stats_updated")
+
+func consume_reroll_token() -> bool:
+	if reroll_tokens <= 0:
+		return false
+
+	reroll_tokens -= 1
+	emit_signal("rerolls_updated", reroll_tokens)
+	emit_signal("stats_updated")
+	return true
+
+func grant_bonus_level_up(context: String = "normal", boss_pecado: int = 0) -> void:
+	if upando:
+		return
+
+	xp_to_next_level = max(xp_to_next_level, 1)
+	current_xp = xp_to_next_level
+	level_up_context = context
+	level_up_boss_pecado = boss_pecado
+	upando = true
+	level_up()
+
+func get_available_contract_stat_ids() -> Array:
+	var stat_ids = ["health", "attack"]
+	if can_roll_attack_speed_upgrade():
+		stat_ids.append("attack_speed")
+	if can_roll_recoil_force_upgrade():
+		stat_ids.append("recoil")
+	return stat_ids
+
+func apply_contract_stat_reward(stat_id: String) -> Dictionary:
+	var reward_data = {
+		"id": "contract_stat_%s" % stat_id,
+		"text": "Contract Stat",
+		"description": "Permanent stat reward from a contract.",
+		"rarity": "contract_reward"
+	}
+
+	match stat_id:
+		"health":
+			var health_bonus = 0.08
+			var health_gain = current_health * health_bonus
+			max_health = int(round(float(max_health) * (1.0 + health_bonus)))
+			heal(health_gain)
+			reward_data["text"] = "Contract: Health (+8%)"
+		"attack":
+			attack_damage += attack_damage * 0.10
+			reward_data["text"] = "Contract: Attack (+10%)"
+		"attack_speed":
+			add_attack_speed_bonus(0.08)
+			reward_data["text"] = "Contract: Atk-Speed (+8%)"
+		"recoil":
+			add_recoil_force_bonus(0.08)
+			reward_data["text"] = "Contract: Recoil Force (+8%)"
+		_:
+			return {}
+
+	record_upgrade(reward_data)
+	emit_signal("hp_updated", current_health, max_health)
+	emit_signal("stats_updated")
+	return reward_data
+
+func set_debug_invincible_enabled(is_enabled: bool) -> void:
+	debug_invincible_enabled = is_enabled
+	emit_signal("stats_updated")
+
 func enable_shield_protection() -> void:
 	shield_protection_enabled = true
 	shield_cooldown_remaining = 0.0
@@ -653,10 +743,13 @@ func _is_wall_collision(collision: KinematicCollision2D) -> bool:
 	return (int(collision_layer) & Global.WALL_LAYER_MASK) != 0
 
 func _take_direct_damage(amount: float) -> void:
-	current_health -= int(round(amount))
+	var damage_taken = int(round(amount))
+	current_health -= damage_taken
+	_record_damage_taken(damage_taken, null)
 	emit_signal("hp_updated", current_health, max_health)
 	_play_damage_feedback()
 	if current_health <= 0:
+		capture_run_end("Defeat")
 		die()
 
 func _physics_process(delta: float) -> void:
@@ -965,7 +1058,7 @@ func _consume_dash_charge() -> bool:
 	return true
 
 func take_damage(amount: float, attacker_position: Vector2 = Vector2.ZERO, knockback_multiplier: float = 1.0, contact_source: Node = null) -> void:
-	if is_invulnerable: 
+	if debug_invincible_enabled or is_invulnerable:
 		return
 
 	if offensive_dash_enabled and is_dashing:
@@ -981,11 +1074,15 @@ func take_damage(amount: float, attacker_position: Vector2 = Vector2.ZERO, knock
 
 	var damage_taken = int(round(amount * damage_taken_multiplier))
 	current_health -= damage_taken
+	_record_damage_taken(damage_taken, contact_source)
 	emit_signal("hp_updated", current_health, max_health)
 	_return_thorn_contact_damage(contact_source, damage_taken)
+	if is_instance_valid(contact_source) and contact_source.has_method("on_player_damage_dealt"):
+		contact_source.call("on_player_damage_dealt", float(damage_taken), self)
 	_play_damage_feedback()
 	
 	if current_health <= 0:
+		capture_run_end("Defeat")
 		die()
 		return
 
@@ -995,6 +1092,7 @@ func take_damage(amount: float, attacker_position: Vector2 = Vector2.ZERO, knock
 	is_invulnerable = false
 
 func die() -> void:
+	capture_run_end("Defeat")
 	_finish_current_run()
 	# aparencia.play("death")
 	for musica in get_tree().get_nodes_in_group(Global.GROUP_MUSIC):
@@ -1006,6 +1104,7 @@ func die() -> void:
 		game_over.visible = true
 
 func win() -> void:
+	capture_run_end("Victory")
 	_finish_current_run()
 	for musica in get_tree().get_nodes_in_group(Global.GROUP_MUSIC):
 		musica.stop()
@@ -1392,20 +1491,142 @@ func _clear_health_feedback_tween(tween: Tween) -> void:
 		health_feedback_tween = null
 
 func on_enemy_killed(_enemy: Node) -> void:
+	run_kills_total += 1
+	if is_instance_valid(_enemy) and _enemy.has_meta("elite_variant") and str(_enemy.get_meta("elite_variant")) != "":
+		run_elite_kills_total += 1
 	if gluttony_heal_kill_enabled and is_instance_valid(_enemy):
 		_spawn_heal_motes(_enemy.global_position, max_health * 0.01, 5)
 
-## Grants an immediate level-up choice without changing the wave XP target.
-func grant_bonus_level_up(context: String = "normal", boss_pecado: int = 0) -> void:
-	if upando:
+func record_upgrade(option_data: Dictionary) -> void:
+	if option_data.is_empty():
 		return
 
-	level_up_context = context
-	level_up_boss_pecado = boss_pecado
-	upando = true
-	level += 1
-	emit_signal("level_updated", level, current_xp, xp_to_next_level)
-	emit_signal("xp_updated", current_xp, xp_to_next_level)
+	var rarity = str(option_data.get("rarity", ""))
+	var upgrade_record = {
+		"id": str(option_data.get("id", "")),
+		"name": str(option_data.get("text", option_data.get("name", option_data.get("id", "Upgrade")))),
+		"rarity": rarity,
+		"lucky": bool(option_data.get("special_level_up", false)),
+		"lucky_tier": str(option_data.get("special_level_up_tier", "")),
+		"stat_multiplier": float(option_data.get("stat_multiplier", 1.0))
+	}
+	run_upgrade_history.append(upgrade_record)
+
+	if bool(upgrade_record["lucky"]):
+		run_lucky_upgrade_count += 1
+	if rarity == "passive_cursed":
+		run_cursed_upgrade_count += 1
+
+func record_contract_decision(contract_data: Dictionary, accepted: bool) -> void:
+	if contract_data.is_empty():
+		return
+
+	run_contract_history.append({
+		"name": str(contract_data.get("name", "Contract")),
+		"accepted": accepted,
+		"buff_summary": str(contract_data.get("buff_summary", "")),
+		"reward_summary": str(contract_data.get("reward_summary", ""))
+	})
+
+func capture_run_end(reason: String) -> void:
+	if run_end_reason != "":
+		return
+
+	run_end_reason = reason
+	if Global.run_start_msec >= 0:
+		run_end_elapsed_seconds = float(Time.get_ticks_msec() - Global.run_start_msec) / 1000.0
+
+func get_death_recap_text() -> String:
+	var lines = PackedStringArray()
+	lines.append("RUN RECAP")
+	lines.append("Result: %s" % (run_end_reason if run_end_reason != "" else "Defeat"))
+	lines.append("Time: %s" % Global.format_run_time(run_end_elapsed_seconds))
+	lines.append("Pecados derrotados: %s" % Global.format_pecados_derrotados(clampi(Global.pecado - 1, 0, 7)))
+	lines.append("Kills: %d (%d elites)" % [run_kills_total, run_elite_kills_total])
+	lines.append("Damage taken: %d" % run_damage_taken_total)
+	lines.append("Final blow: %s (%d)" % [last_damage_source_name, last_damage_source_amount])
+	lines.append("")
+	lines.append("FINAL STATS")
+	lines.append("Health: %d/%d" % [current_health, max_health])
+	lines.append("Attack: %.1f" % attack_damage)
+	lines.append("Atk-Speed: %.1f%%" % get_attack_speed_percent())
+	lines.append("Recoil Force: %.1f" % (recoil_force / 100.0))
+	lines.append("Rerolls left: %d" % reroll_tokens)
+	lines.append("")
+	lines.append("BUILD")
+	lines.append("Lucky upgrades: %d" % run_lucky_upgrade_count)
+	lines.append("Cursed passives: %d" % run_cursed_upgrade_count)
+	if run_upgrade_history.is_empty():
+		lines.append("- No upgrades recorded")
+	else:
+		for upgrade in run_upgrade_history:
+			var lucky_suffix = ""
+			if bool(upgrade.get("lucky", false)):
+				lucky_suffix = " [%s x%.1f]" % [str(upgrade.get("lucky_tier", "lucky")).capitalize(), float(upgrade.get("stat_multiplier", 1.0))]
+			lines.append("- %s (%s)%s" % [str(upgrade.get("name", "Upgrade")), _format_recap_rarity(str(upgrade.get("rarity", ""))), lucky_suffix])
+	lines.append("")
+	lines.append("CONTRACTS")
+	if run_contract_history.is_empty():
+		lines.append("- No contracts offered")
+	else:
+		for contract in run_contract_history:
+			var status = "Accepted" if bool(contract.get("accepted", false)) else "Declined"
+			lines.append("- %s: %s" % [status, str(contract.get("name", "Contract"))])
+			var buff_summary = str(contract.get("buff_summary", ""))
+			var reward_summary = str(contract.get("reward_summary", ""))
+			if buff_summary != "":
+				lines.append("  Boss buff: %s" % buff_summary)
+			if reward_summary != "":
+				lines.append("  Reward: %s" % reward_summary)
+	lines.append("")
+	lines.append("DAMAGE SOURCES")
+	if run_damage_taken_by_source.is_empty():
+		lines.append("- None")
+	else:
+		for source_name in run_damage_taken_by_source.keys():
+			lines.append("- %s: %d" % [str(source_name), int(run_damage_taken_by_source[source_name])])
+	return "\n".join(lines)
+
+func _format_recap_rarity(rarity: String) -> String:
+	match rarity:
+		"passive_common":
+			return "common"
+		"passive_rare":
+			return "rare"
+		"passive_cursed":
+			return "cursed"
+		"passive_sin":
+			return "boss passive"
+		"active_sin":
+			return "boss active"
+		"contract_reward":
+			return "contract"
+	return rarity if rarity != "" else "unknown"
+
+func _record_damage_taken(amount: int, contact_source: Node) -> void:
+	if amount <= 0:
+		return
+
+	var source_name = _get_damage_source_name(contact_source)
+	run_damage_taken_total += amount
+	run_damage_taken_by_source[source_name] = int(run_damage_taken_by_source.get(source_name, 0)) + amount
+	last_damage_source_name = source_name
+	last_damage_source_amount = amount
+
+func _get_damage_source_name(contact_source: Node) -> String:
+	if not is_instance_valid(contact_source):
+		return "Direct damage"
+
+	if contact_source.is_in_group(Global.GROUP_BOSS):
+		return "Boss"
+
+	var source_name = str(contact_source.name)
+	if contact_source.has_method("get_elite_display_name"):
+		var elite_name = str(contact_source.call("get_elite_display_name"))
+		if elite_name != "":
+			return "%s %s" % [elite_name, source_name]
+
+	return source_name
 
 func activate_sloth_field() -> void:
 	var field_position = global_position

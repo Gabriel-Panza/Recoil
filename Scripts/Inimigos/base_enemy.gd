@@ -26,6 +26,21 @@ const SOFT_SEPARATION_FORCE: float = 0.48
 const SOFT_SEPARATION_IDLE_SPEED_MULTIPLIER: float = 0.35
 const BODY_RADIUS_FALLBACK: float = 18.0
 const AGILE_COLLISION_BYPASS_GROUP: String = "AgileEnemyCollisionBypass"
+const ELITE_NONE: String = ""
+const ELITE_ARMORED: String = "armored"
+const ELITE_UNSTABLE: String = "unstable"
+const ELITE_VAMPIRIC: String = "vampiric"
+const ELITE_ARMORED_DAMAGE_TAKEN_MULTIPLIER: float = 0.58
+const ELITE_UNSTABLE_EXPLOSION_RADIUS: float = 118.0
+const ELITE_UNSTABLE_EXPLOSION_DAMAGE: float = 42.0
+const ELITE_VAMPIRIC_HEAL_DAMAGE_RATIO: float = 0.65
+const ELITE_VAMPIRIC_MAX_HEAL_RATIO: float = 0.18
+const ELITE_OUTLINE_WIDTH: float = 2.0
+const ELITE_OUTLINE_COLORS = {
+	ELITE_ARMORED: Color(0.82, 0.86, 0.88, 1.0),
+	ELITE_UNSTABLE: Color(1.0, 0.64, 0.08, 1.0),
+	ELITE_VAMPIRIC: Color(0.66, 0.02, 0.045, 1.0)
+}
 const CORNER_ESCAPE_EDGE_MARGIN: float = 112.0
 const CORNER_ESCAPE_INFLUENCE_DISTANCE: float = 180.0
 const CORNER_ESCAPE_CORRIDOR_HALF_WIDTH: float = 72.0
@@ -43,6 +58,7 @@ var health_feedback_tween: Tween
 var health_feedback_base_modulate: Color = Color.WHITE
 var avoidance_side: int = 1
 var avoidance_memory_timer: float = 0.0
+var elite_variant: String = ELITE_NONE
 @onready var aparencia = get_node_or_null("AnimatedAppearence")
 
 func _ready() -> void:
@@ -444,7 +460,8 @@ func take_damage(amount: float) -> void:
 	if is_dead:
 		return
 
-	current_health -= int(round(amount))
+	var final_amount = amount * _get_damage_taken_multiplier()
+	current_health -= int(round(final_amount))
 	_update_health_bar()
 	_play_damage_feedback()
 	if current_health <= 0:
@@ -492,6 +509,8 @@ func die() -> void:
 	current_health = 0
 	_update_health_bar()
 	set_physics_process(false)
+	if elite_variant == ELITE_UNSTABLE:
+		_trigger_unstable_death_explosion()
 
 	if _should_grant_xp() and player and player.has_method("gain_xp"):
 		player.gain_xp(xp_drop)
@@ -501,6 +520,122 @@ func die() -> void:
 
 func _should_grant_xp() -> bool:
 	return xp_drop > 0 and not bool(get_meta("skip_xp", false))
+
+func apply_elite_variant(variant: String) -> void:
+	if is_dead:
+		return
+
+	elite_variant = variant
+	set_meta("elite_variant", elite_variant)
+	_apply_elite_visuals()
+
+func get_elite_variant() -> String:
+	return elite_variant
+
+func get_elite_display_name() -> String:
+	match elite_variant:
+		ELITE_ARMORED:
+			return "Blindado"
+		ELITE_UNSTABLE:
+			return "Instavel"
+		ELITE_VAMPIRIC:
+			return "Vampirico"
+	return ""
+
+func on_player_damage_dealt(damage_amount: float, _target: Node) -> void:
+	if elite_variant != ELITE_VAMPIRIC or is_dead:
+		return
+
+	var heal_amount = min(float(max_health) * ELITE_VAMPIRIC_MAX_HEAL_RATIO, max(damage_amount * ELITE_VAMPIRIC_HEAL_DAMAGE_RATIO, 4.0))
+	heal(heal_amount)
+
+func _get_damage_taken_multiplier() -> float:
+	if elite_variant == ELITE_ARMORED:
+		return ELITE_ARMORED_DAMAGE_TAKEN_MULTIPLIER
+	return 1.0
+
+func _apply_elite_visuals() -> void:
+	if elite_variant == ELITE_NONE:
+		return
+	if not aparencia or not (aparencia is CanvasItem):
+		return
+
+	var material = ShaderMaterial.new()
+	var shader = Shader.new()
+	shader.code = "shader_type canvas_item;\nuniform vec4 outline_color : source_color = vec4(1.0);\nuniform float outline_size = 2.0;\nvoid fragment() {\n\tvec4 base_color = texture(TEXTURE, UV);\n\tvec2 pixel = TEXTURE_PIXEL_SIZE * outline_size;\n\tfloat outline_alpha = 0.0;\n\toutline_alpha = max(outline_alpha, texture(TEXTURE, UV + vec2(pixel.x, 0.0)).a);\n\toutline_alpha = max(outline_alpha, texture(TEXTURE, UV + vec2(-pixel.x, 0.0)).a);\n\toutline_alpha = max(outline_alpha, texture(TEXTURE, UV + vec2(0.0, pixel.y)).a);\n\toutline_alpha = max(outline_alpha, texture(TEXTURE, UV + vec2(0.0, -pixel.y)).a);\n\toutline_alpha = max(outline_alpha, texture(TEXTURE, UV + pixel).a);\n\toutline_alpha = max(outline_alpha, texture(TEXTURE, UV - pixel).a);\n\toutline_alpha = max(outline_alpha, texture(TEXTURE, UV + vec2(pixel.x, -pixel.y)).a);\n\toutline_alpha = max(outline_alpha, texture(TEXTURE, UV + vec2(-pixel.x, pixel.y)).a);\n\tvec4 final_color = mix(outline_color, base_color, base_color.a);\n\tfinal_color.a = max(base_color.a, outline_alpha * outline_color.a);\n\tCOLOR = final_color;\n}\n"
+	material.shader = shader
+	material.set_shader_parameter("outline_color", ELITE_OUTLINE_COLORS.get(elite_variant, Color.WHITE))
+	material.set_shader_parameter("outline_size", ELITE_OUTLINE_WIDTH)
+	(aparencia as CanvasItem).material = material
+
+func _trigger_unstable_death_explosion() -> void:
+	var explosion_position = global_position
+	_spawn_elite_explosion_vfx(explosion_position)
+
+	for enemy in get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
+		if enemy == self or not is_instance_valid(enemy) or not enemy.has_method("take_damage"):
+			continue
+		if not (enemy is Node2D):
+			continue
+		if (enemy as Node2D).global_position.distance_to(explosion_position) <= ELITE_UNSTABLE_EXPLOSION_RADIUS:
+			enemy.take_damage(ELITE_UNSTABLE_EXPLOSION_DAMAGE)
+
+	if player and player.has_method("take_damage") and player.global_position.distance_to(explosion_position) <= ELITE_UNSTABLE_EXPLOSION_RADIUS:
+		player.take_damage(ELITE_UNSTABLE_EXPLOSION_DAMAGE, explosion_position, 0.85, self)
+
+func _spawn_elite_explosion_vfx(explosion_position: Vector2) -> void:
+	var parent = _get_vfx_parent()
+	if parent == null:
+		return
+
+	var ring = Line2D.new()
+	ring.width = 3.0
+	ring.default_color = Color(1.0, 0.64, 0.08, 0.9)
+	ring.points = _build_elite_circle_points(ELITE_UNSTABLE_EXPLOSION_RADIUS, true)
+	ring.z_index = 35
+	parent.add_child(ring)
+	ring.global_position = explosion_position
+
+	var particles = CPUParticles2D.new()
+	particles.amount = 48
+	particles.one_shot = true
+	particles.explosiveness = 1.0
+	particles.lifetime = 0.34
+	particles.direction = Vector2.UP
+	particles.spread = 180.0
+	particles.gravity = Vector2.ZERO
+	particles.initial_velocity_min = 55.0
+	particles.initial_velocity_max = 175.0
+	particles.color = Color(1.0, 0.62, 0.08, 0.92)
+	particles.z_index = 36
+	parent.add_child(particles)
+	particles.global_position = explosion_position
+	particles.emitting = true
+
+	var tween = ring.create_tween().bind_node(ring)
+	tween.tween_interval(0.05)
+	tween.tween_property(ring, "modulate:a", 0.0, 0.12)
+	tween.tween_callback(Callable(ring, "queue_free"))
+
+	var cleanup_timer = get_tree().create_timer(particles.lifetime + 0.2, false)
+	cleanup_timer.timeout.connect(Callable(particles, "queue_free"))
+
+func _get_vfx_parent() -> Node:
+	var tree = get_tree()
+	if tree == null:
+		return null
+	if tree.current_scene:
+		return tree.current_scene
+	return tree.root
+
+func _build_elite_circle_points(radius: float, closed: bool) -> PackedVector2Array:
+	var points = PackedVector2Array()
+	var segment_count = 48
+	var point_count = segment_count + (1 if closed else 0)
+	for i in range(point_count):
+		var angle = TAU * float(i % segment_count) / float(segment_count)
+		points.append(Vector2(cos(angle), sin(angle)) * radius)
+	return points
 
 func _setup_health_bar() -> void:
 	if health_bar:

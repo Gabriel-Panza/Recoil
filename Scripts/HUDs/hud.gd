@@ -71,12 +71,14 @@ func _setup_active_skill_hud_labels() -> void:
 	active_skill_e_label = get_node_or_null("ActiveSkillHudE")
 	if active_skill_e_label == null:
 		active_skill_e_label = _create_active_skill_hud_label("ActiveSkillHudE")
+	active_skill_e_label.mouse_filter = Control.MOUSE_FILTER_PASS
 	active_skill_e_label.position = SKILL_STATUS_POSITION + ACTIVE_SKILL_E_OFFSET
 	_apply_skill_status_label_alpha(active_skill_e_label)
 
 	active_skill_r_label = get_node_or_null("ActiveSkillHudR")
 	if active_skill_r_label == null:
 		active_skill_r_label = _create_active_skill_hud_label("ActiveSkillHudR")
+	active_skill_r_label.mouse_filter = Control.MOUSE_FILTER_PASS
 	active_skill_r_label.position = SKILL_STATUS_POSITION + ACTIVE_SKILL_R_OFFSET
 	_apply_skill_status_label_alpha(active_skill_r_label)
 
@@ -122,6 +124,7 @@ func _get_or_create_skill_status_texture_rect(node_name: String) -> TextureRect:
 func _setup_passive_status_label() -> void:
 	passive_status_label = get_node_or_null("PassiveStatusHud")
 	if passive_status_label != null:
+		passive_status_label.mouse_filter = Control.MOUSE_FILTER_PASS
 		_apply_skill_status_label_alpha(passive_status_label)
 		return
 
@@ -130,7 +133,7 @@ func _setup_passive_status_label() -> void:
 	passive_status_label.position = SKILL_STATUS_POSITION + Vector2(10.0, SKILL_STATUS_TOP_SIZE.y + 5.0)
 	passive_status_label.size = Vector2(SKILL_STATUS_LIST_WIDTH - 20.0, SKILL_STATUS_LIST_MIN_HEIGHT)
 	passive_status_label.z_index = 0
-	passive_status_label.mouse_filter = Control.MOUSE_FILTER_STOP
+	passive_status_label.mouse_filter = Control.MOUSE_FILTER_PASS
 	passive_status_label.add_theme_color_override("font_color", Color(1.0, 1.0, 0.3, 1.0))
 	passive_status_label.add_theme_constant_override("outline_size", 3)
 	passive_status_label.add_theme_font_size_override("font_size", 13)
@@ -144,7 +147,7 @@ func _create_active_skill_hud_label(label_name: String) -> Label:
 	label.name = label_name
 	label.size = Vector2(SKILL_STATUS_LIST_WIDTH - 56.0, 20.0)
 	label.z_index = 0
-	label.mouse_filter = Control.MOUSE_FILTER_STOP
+	label.mouse_filter = Control.MOUSE_FILTER_PASS
 	label.add_theme_color_override("font_color", Color(1.0, 1.0, 0.3, 1.0))
 	label.add_theme_constant_override("outline_size", 3)
 	label.add_theme_font_size_override("font_size", 14)
@@ -288,6 +291,8 @@ func _apply_effect(option) -> void:
 	if player.has_method("is_active_ability_id") and player.is_active_ability_id(option_id):
 		if not player.learn_active_ability(option_id):
 			_show_active_discard_popup(option_id)
+		else:
+			_record_applied_upgrade(option_data)
 		return
 
 	if _is_boss_passive_option(option_id):
@@ -320,7 +325,7 @@ func _apply_effect(option) -> void:
 			player.heal(health_gain)
 			_on_hp_updated(player.current_health, player.max_health)
 		"option_3":
-			player.attack_damage += player.attack_damage * 0.10 * stat_multiplier
+			player.attack_damage += player.attack_damage * 0.12 * stat_multiplier
 		"option_4":
 			player.add_attack_speed_bonus(0.05 * stat_multiplier)
 		"option_5":
@@ -377,10 +382,15 @@ func _apply_effect(option) -> void:
 		"greed_cursed_level":
 			_enable_golden_debt()
 
+	_record_applied_upgrade(option_data)
 	_finish_effect_application()
 
 func _get_option_stat_multiplier(option_data: Dictionary) -> float:
 	return max(float(option_data.get("stat_multiplier", 1.0)), 0.0)
+
+func _record_applied_upgrade(option_data: Dictionary) -> void:
+	if player and player.has_method("record_upgrade"):
+		player.record_upgrade(option_data)
 
 func _get_remaining_stat_multiplier(base_penalty: float, stat_multiplier: float) -> float:
 	return max(1.0 - base_penalty * stat_multiplier, 0.01)
@@ -391,6 +401,14 @@ func _is_rare_option(option: String) -> bool:
 func _is_boss_passive_option(option: String) -> bool:
 	return option in Global.SIN_PASSIVE_IDS
 
+func _get_option_by_id(option_id: String) -> Dictionary:
+	for pool in [Global.PASSIVE_UPGRADE_OPTIONS, Global.CURSED_PASSIVE_OPTIONS, Global.RARE_PASSIVE_OPTIONS, Global.BOSS_REWARD_OPTIONS]:
+		for option in pool:
+			if str(option.get("id", "")) == option_id:
+				return option.duplicate(true)
+
+	return { "id": option_id, "text": option_id, "description": "Unknown upgrade effect.", "rarity": "passive_common" }
+
 func _equip_boss_passive_option(option: String) -> void:
 	var already_equipped = player.has_boss_passive(option) if player.has_method("has_boss_passive") else false
 
@@ -399,6 +417,7 @@ func _equip_boss_passive_option(option: String) -> void:
 
 	if not already_equipped:
 		_apply_boss_passive_effect(option)
+		_record_applied_upgrade(_get_option_by_id(option))
 	_finish_effect_application()
 
 func _apply_boss_passive_effect(option: String) -> void:
@@ -459,6 +478,7 @@ func _equip_rare_option(option: String) -> void:
 
 	if not already_equipped:
 		_apply_rare_effect(option)
+		_record_applied_upgrade(_get_option_by_id(option))
 	_finish_effect_application()
 
 func _apply_rare_effect(option: String) -> void:
@@ -539,6 +559,7 @@ func _on_active_discard_selected(discarded_slot: String, new_option: String) -> 
 		return
 
 	player.replace_active_ability(discarded_slot, new_option)
+	_record_applied_upgrade(_get_option_by_id(new_option))
 	if player.pause_control:
 		player.pause_control.update_status_labels()
 
@@ -552,6 +573,7 @@ func _on_rare_discard_selected(discarded_option: String, old_option: String, new
 	else:
 		player.current_rare_option = new_option
 	_apply_rare_effect(new_option)
+	_record_applied_upgrade(_get_option_by_id(new_option))
 	_finish_effect_application()
 
 func _on_boss_passive_discard_selected(discarded_option: String, old_option: String, new_option: String) -> void:
@@ -562,6 +584,7 @@ func _on_boss_passive_discard_selected(discarded_option: String, old_option: Str
 	if player.has_method("replace_boss_passive_id"):
 		player.replace_boss_passive_id(discarded_option, new_option)
 	_apply_boss_passive_effect(new_option)
+	_record_applied_upgrade(_get_option_by_id(new_option))
 	_finish_effect_application()
 
 func _show_active_discard_popup(option: String) -> void:

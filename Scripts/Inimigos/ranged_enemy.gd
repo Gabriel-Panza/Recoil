@@ -80,6 +80,7 @@ func _fire_projectiles() -> void:
 	var aim_direction = global_position.direction_to(player.global_position)
 	projectile.direction = aim_direction
 	projectile.damage = damage * 1.25
+	projectile.set_meta("damage_source", self)
 	var tree = get_tree()
 	var parent = tree.current_scene if tree != null and tree.current_scene else null
 	if parent == null:

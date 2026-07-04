@@ -41,16 +41,15 @@ const SLOTH_BOSS_PLAYER_VELOCITY_MULTIPLIER: float = 0.75
 const SLOTH_BOSS_ZONE_DPS: float = 2.0
 const SLOTH_BOSS_ENEMY_SLOW_EFFECT_RATIO: float = 0.1
 const SLOTH_BOSS_ENEMY_SLOW_REFERENCE_DASH_MULTIPLIER: float = 0.45
-const GLUTTONY_FOOD_SPAWN_INTERVAL: float = 1.75
-const GLUTTONY_FOOD_SPEED_PHASE_1: float = 142.0
-const GLUTTONY_FOOD_SPEED_PHASE_2: float = 175.0
-const GLUTTONY_FOOD_HEAL_MULTIPLIER: float = 1.25
+const GLUTTONY_FOOD_SPAWN_INTERVAL: float = 2.0
+const GLUTTONY_FOOD_SPEED_PHASE_1: float = 135.0
+const GLUTTONY_FOOD_SPEED_PHASE_2: float = 155.0
 const GLUTTONY_FOOD_DASH_DURATION: float = 0.28
-const GLUTTONY_FOOD_DASH_DISTANCE_PHASE_1: float = 190.0
-const GLUTTONY_FOOD_DASH_DISTANCE_PHASE_2: float = 230.0
-const GLUTTONY_FOOD_DASH_ARENA_MARGIN: float = 32.0
-const GLUTTONY_STRESS_DURATION_PHASE_1: float = 7.5
-const GLUTTONY_STRESS_DURATION_PHASE_2: float = 10.0
+const GLUTTONY_FOOD_DASH_DISTANCE_PHASE_1: float = 175.0
+const GLUTTONY_FOOD_DASH_DISTANCE_PHASE_2: float = 215.0
+const GLUTTONY_FOOD_DASH_ARENA_MARGIN: float = 30.0
+const GLUTTONY_STRESS_DURATION_PHASE_1: float = 5.0
+const GLUTTONY_STRESS_DURATION_PHASE_2: float = 8.0
 const ENVY_CLONE_MAX_HEALTH: float = 180.0
 const ENVY_CLONE_VISUAL_MODULATE: Color = Color(0.55, 0.95, 1.0, 0.56)
 const ENVY_PINCER_TELEGRAPH_DURATION: float = 0.75
@@ -91,12 +90,12 @@ const DAMAGE_FEEDBACK_COLOR: Color = Color(1.0, 0.08, 0.08, 1.0)
 const HEAL_FEEDBACK_COLOR: Color = Color(0.18, 1.0, 0.32, 1.0)
 
 const BOSS_CONFIG = {
-	1: { "max_health": 450, "speed": 0.0, "damage": 40, "state": BossState.SLOTH, "animation": "pecado1" },
-	2: { "max_health": 1500, "speed": 100.0, "damage": 60, "state": BossState.GLUTTONY, "animation": "pecado2", "visual_scale": Vector2(2.15, 2.15) },
+	1: { "max_health": 500, "speed": 0.0, "damage": 40, "state": BossState.SLOTH, "animation": "pecado1" },
+	2: { "max_health": 1850, "speed": 90.0, "damage": 50, "state": BossState.GLUTTONY, "animation": "pecado2", "visual_scale": Vector2(2.15, 2.15) },
 	3: { "max_health": 1200, "speed": 90.0, "damage": 50, "state": BossState.ENVY, "animation": "pecado3" },
-	4: { "max_health": 1600, "speed": 90.0, "damage": 65, "state": BossState.WRATH, "animation": "pecado4" },
-	5: { "max_health": 2200, "speed": 80.0, "damage": 50, "state": BossState.LUST, "animation": "pecado5" },
-	6: { "max_health": 2850, "speed": 80.0, "damage": 60, "state": BossState.GREED, "animation": "pecado6" },
+	4: { "max_health": 1500, "speed": 90.0, "damage": 75, "state": BossState.WRATH, "animation": "pecado4" },
+	5: { "max_health": 2250, "speed": 80.0, "damage": 50, "state": BossState.LUST, "animation": "pecado5" },
+	6: { "max_health": 2750, "speed": 80.0, "damage": 60, "state": BossState.GREED, "animation": "pecado6" },
 	7: { "max_health": 3500, "speed": 80.0, "damage": 80, "state": BossState.PRIDE, "animation": "pecado7" },
 }
 
@@ -429,9 +428,9 @@ func _refresh_damage_value() -> void:
 	if is_enraged:
 		multiplier *= ENRAGE_STAT_MULTIPLIER
 	if current_state == BossState.GLUTTONY:
-		multiplier *= 1.0 + float(gluttony_stress_timers.size()) * (0.13 if phase == 1 else 0.2)
+		multiplier *= 1.0 + float(gluttony_stress_timers.size()) * (0.10 if phase == 1 else 0.15)
 	if current_state == BossState.GREED:
-		multiplier *= 1.0 + float(greed_money_stacks) * 0.04
+		multiplier *= 1.0 + float(greed_money_stacks) * 0.05
 	if envy_boss_buff_remaining > 0.0:
 		multiplier *= 1.25
 	damage = int(round(float(base_damage) * multiplier))
@@ -621,7 +620,7 @@ func _update_gluttony_foods(_delta: float) -> void:
 		if food.global_position.distance_to(global_position) <= 40.0:
 			food.set_meta("gluttony_delivered", true)
 			gluttony_foods.erase(food)
-			var heal_amount = max_health * (0.18 if phase == 1 else 0.11) * GLUTTONY_FOOD_HEAL_MULTIPLIER
+			var heal_amount = max_health * (0.15 if phase == 1 else 0.12)
 			heal(heal_amount)
 			_spawn_heal_particles(food.global_position)
 			_start_gluttony_food_dash()
@@ -1767,7 +1766,7 @@ func take_self_damage(amount: float) -> void:
 
 func _get_damage_taken_multiplier() -> float:
 	if current_state == BossState.GLUTTONY:
-		return 1.0 + float(gluttony_stress_timers.size()) * (0.11 if phase == 1 else 0.17)
+		return 1.0 + float(gluttony_stress_timers.size()) * (0.1 if phase == 1 else 0.15)
 	return 1.0
 
 func heal(amount: float) -> void:
@@ -1866,6 +1865,10 @@ func _register_boss_summon(enemy: Node) -> void:
 	if enemy.get("xp_drop") != null:
 		enemy.set("xp_drop", 0)
 	boss_summons.append(enemy)
+	var tree = get_tree()
+	var scene = tree.current_scene if tree != null else null
+	if scene != null and scene.has_method("apply_contract_to_boss_summon"):
+		scene.call("apply_contract_to_boss_summon", enemy)
 
 func _setup_boss_edge_indicator() -> void:
 	if boss_indicator_layer != null:
@@ -1969,6 +1972,7 @@ func _spawn_enemy_projectile(spawn_position: Vector2, projectile_direction: Vect
 	var projectile = PROJECTILE_SCENE.instantiate()
 	projectile.direction = projectile_direction.normalized()
 	projectile.damage = projectile_damage
+	projectile.set_meta("damage_source", self)
 	projectile.set_meta("vfx_color", _get_active_attack_color(color))
 	if not _add_child_at_global(_get_vfx_parent(), projectile, spawn_position):
 		return null

@@ -33,6 +33,7 @@ func _fire_projectiles() -> void:
 
 		projectile.direction = Vector2(cos(final_angle), sin(final_angle))
 		projectile.damage = damage * 0.8
+		projectile.set_meta("damage_source", self)
 
 		var tree = get_tree()
 		var parent = tree.current_scene if tree != null and tree.current_scene else null
