@@ -10,7 +10,6 @@ const OPTION_BUTTON_COUNT: int = 3
 const OPTION_LABEL_FONT_SIZE: int = 32
 const REROLL_BUTTON_SIZE: Vector2 = Vector2(72.0, 42.0)
 const REROLL_BUTTON_RIGHT_MARGIN: float = 8.0
-const REROLL_BUTTON_TEXT: String = "Reroll"
 const SLOT_ROLL_BASE_TICKS: int = 14
 const SLOT_ROLL_STOP_TICK_STEP: int = 6
 const SLOT_ROLL_INTERVAL: float = 0.075
@@ -71,6 +70,7 @@ func _ready() -> void:
 	_setup_skip_button()
 	_connect_buttons()
 	_apply_popup_style()
+	I18n.language_changed.connect(_on_language_changed)
 	visible = false
 
 func _setup_title_label() -> void:
@@ -97,15 +97,34 @@ func _setup_skip_button() -> void:
 		skip_button.offset_top = 214
 		skip_button.offset_right = 388
 		skip_button.offset_bottom = 252
-		skip_button.text = "Skip"
 		skip_button.add_theme_font_size_override("font_size", 16)
 		add_child(skip_button)
 
 	PopupStyle.apply_button(skip_button)
-	skip_button.tooltip_text = "Skip this level up"
+	skip_button.text = I18n.t("levelup.skip")
+	skip_button.tooltip_text = I18n.t("levelup.skip_tooltip")
 	var skip_callable = Callable(self, "_on_skip_button_pressed")
 	if not skip_button.pressed.is_connected(skip_callable):
 		skip_button.pressed.connect(skip_callable)
+
+func _on_language_changed(_language: String) -> void:
+	_refresh_title_label()
+	if skip_button:
+		skip_button.text = I18n.t("levelup.skip")
+		skip_button.tooltip_text = I18n.t("levelup.skip_tooltip")
+	if visible and not is_rolling_options:
+		_render_options(current_options, skip_button != null and skip_button.visible)
+
+func _refresh_title_label() -> void:
+	if title_label == null:
+		return
+	match current_mode:
+		"discard_active":
+			title_label.text = I18n.t("levelup.discard_active_title")
+		"discard_rare":
+			title_label.text = I18n.t("levelup.discard_rare_title")
+		"discard_boss_passive":
+			title_label.text = I18n.t("levelup.discard_boss_title")
 
 func _connect_buttons() -> void:
 	var container = get_node_or_null("VBoxContainer")
@@ -189,7 +208,7 @@ func show_active_discard_popup(new_option: String, active_slots: Dictionary) -> 
 	pending_old_rare_option = ""
 	pending_rare_options = []
 	pending_new_rare_option = ""
-	title_label.text = "Escolha 1 habilidade para descartar"
+	title_label.text = I18n.t("levelup.discard_active_title")
 	title_label.visible = true
 
 	var discard_options = []
@@ -198,12 +217,11 @@ func show_active_discard_popup(new_option: String, active_slots: Dictionary) -> 
 		if option_id != "":
 			var option_data = _get_option_by_id(option_id).duplicate()
 			option_data["slot"] = slot
-			option_data["text"] = "%s - %s" % [slot, _get_option_button_text(option_data)]
 			discard_options.append(option_data)
 
 	var new_option_data = _get_option_by_id(new_option).duplicate()
 	new_option_data["slot"] = "new"
-	new_option_data["text"] = "Nova - %s" % _get_option_button_text(new_option_data)
+	new_option_data["display_prefix_key"] = "levelup.new_prefix"
 	discard_options.append(new_option_data)
 	_render_options(discard_options, false)
 
@@ -215,7 +233,7 @@ func show_rare_discard_popup(old_options, new_option: String) -> void:
 	pending_rare_options = pending_rare_options.filter(func(option_id): return str(option_id) != "")
 	pending_old_rare_option = str(pending_rare_options[0]) if pending_rare_options.size() > 0 else ""
 	pending_new_rare_option = new_option
-	title_label.text = "Escolha 1 rara para substituir"
+	title_label.text = I18n.t("levelup.discard_rare_title")
 	title_label.visible = true
 
 	var discard_options = []
@@ -223,12 +241,12 @@ func show_rare_discard_popup(old_options, new_option: String) -> void:
 		var old_option_data = _get_option_by_id(str(old_option)).duplicate()
 		old_option_data["discard_target"] = "equipped"
 		old_option_data["discard_option"] = str(old_option)
-		old_option_data["text"] = "Descartar - %s" % _get_option_button_text(old_option_data)
+		old_option_data["display_prefix_key"] = "levelup.discard_prefix"
 		discard_options.append(old_option_data)
 
 	var new_option_data = _get_option_by_id(new_option).duplicate()
 	new_option_data["discard_target"] = "new"
-	new_option_data["text"] = "Manter atuais - %s" % _get_option_button_text(new_option_data)
+	new_option_data["display_prefix_key"] = "levelup.keep_current_prefix"
 	discard_options.append(new_option_data)
 
 	_render_options(discard_options, false)
@@ -241,7 +259,7 @@ func show_boss_passive_discard_popup(old_options, new_option: String) -> void:
 	pending_rare_options = pending_rare_options.filter(func(option_id): return str(option_id) != "")
 	pending_old_rare_option = str(pending_rare_options[0]) if pending_rare_options.size() > 0 else ""
 	pending_new_rare_option = new_option
-	title_label.text = "Escolha 1 passiva de boss para substituir"
+	title_label.text = I18n.t("levelup.discard_boss_title")
 	title_label.visible = true
 
 	var discard_options = []
@@ -249,12 +267,12 @@ func show_boss_passive_discard_popup(old_options, new_option: String) -> void:
 		var old_option_data = _get_option_by_id(str(old_option)).duplicate()
 		old_option_data["discard_target"] = "equipped"
 		old_option_data["discard_option"] = str(old_option)
-		old_option_data["text"] = "Descartar - %s" % _get_option_button_text(old_option_data)
+		old_option_data["display_prefix_key"] = "levelup.discard_prefix"
 		discard_options.append(old_option_data)
 
 	var new_option_data = _get_option_by_id(new_option).duplicate()
 	new_option_data["discard_target"] = "new"
-	new_option_data["text"] = "Manter atuais - %s" % _get_option_button_text(new_option_data)
+	new_option_data["display_prefix_key"] = "levelup.keep_current_prefix"
 	discard_options.append(new_option_data)
 
 	_render_options(discard_options, false)
@@ -478,6 +496,8 @@ func _render_options(options: Array, show_skip: bool) -> void:
 	if skip_button:
 		skip_button.visible = show_skip
 		skip_button.disabled = is_rolling_options
+		skip_button.text = I18n.t("levelup.skip")
+		skip_button.tooltip_text = I18n.t("levelup.skip_tooltip")
 	var container = get_node_or_null("VBoxContainer")
 	if container == null:
 		return
@@ -562,7 +582,7 @@ func _apply_option_to_button(button: Button, option: Dictionary, is_blocked: boo
 		label.add_theme_color_override("font_outline_color", Color(rarity_color.r * 0.35, rarity_color.g * 0.25, rarity_color.b * 0.2, 1.0))
 	button.tooltip_text = tooltip
 	if is_blocked:
-		var blocked_tooltip = "Bloqueado neste level up porque voce recusou esta opcao."
+		var blocked_tooltip = I18n.t("levelup.blocked_tooltip")
 		button.tooltip_text = blocked_tooltip if tooltip == "" else "%s\n%s" % [tooltip, blocked_tooltip]
 	if label:
 		label.tooltip_text = button.tooltip_text
@@ -591,7 +611,8 @@ func _update_reroll_button(button: Button, option_index: int, is_blocked: bool, 
 	var can_show = current_mode == "level_up" and show_skip and not is_rolling_options and not is_blocked and rerolls_left > 0
 	reroll_button.visible = can_show
 	reroll_button.disabled = not can_show
-	reroll_button.tooltip_text = "Reroll this upgrade. Rerolls left: %d" % rerolls_left
+	reroll_button.text = I18n.t("levelup.reroll")
+	reroll_button.tooltip_text = I18n.t("levelup.reroll_tooltip", [rerolls_left])
 
 func _get_or_create_reroll_button(button: Button, option_index: int) -> Button:
 	var reroll_button_name = "RerollButton%d" % option_index
@@ -601,7 +622,7 @@ func _get_or_create_reroll_button(button: Button, option_index: int) -> Button:
 
 	reroll_button = Button.new()
 	reroll_button.name = reroll_button_name
-	reroll_button.text = REROLL_BUTTON_TEXT
+	reroll_button.text = I18n.t("levelup.reroll")
 	reroll_button.focus_mode = Control.FOCUS_NONE
 	reroll_button.mouse_filter = Control.MOUSE_FILTER_STOP
 	reroll_button.custom_minimum_size = REROLL_BUTTON_SIZE
@@ -726,13 +747,22 @@ func _get_design_viewport_size() -> Vector2:
 	)
 
 func _get_option_button_text(option: Dictionary) -> String:
-	var text = str(option.get("text", option.get("name", option.get("id", ""))))
+	var option_id = str(option.get("id", ""))
+	var text = I18n.option_text(option_id, str(option.get("text", option.get("name", option_id))))
+	var display_prefix_key = str(option.get("display_prefix_key", ""))
+	if display_prefix_key != "":
+		text = I18n.t(display_prefix_key, [text])
+	else:
+		var slot = str(option.get("slot", ""))
+		if slot != "" and slot != "new":
+			text = "%s - %s" % [slot, text]
 	if _is_special_level_up_option(option):
 		return _get_special_level_up_text(text, _get_option_stat_multiplier(option))
 	return text
 
 func _get_option_tooltip(option: Dictionary) -> String:
-	var tooltip = str(option.get("description", ""))
+	var option_id = str(option.get("id", ""))
+	var tooltip = I18n.option_description(option_id, str(option.get("description", "")))
 	if _is_special_level_up_option(option):
 		var special_tooltip = _get_special_level_up_tooltip(option)
 		return special_tooltip if tooltip == "" else "%s\n%s" % [tooltip, special_tooltip]
@@ -740,12 +770,13 @@ func _get_option_tooltip(option: Dictionary) -> String:
 
 func _get_special_level_up_tooltip(option: Dictionary) -> String:
 	var tier = _get_special_level_up_tier(option)
-	var base_text = str(option.get("text", option.get("name", option.get("id", ""))))
+	var option_id = str(option.get("id", ""))
+	var base_text = I18n.option_text(option_id, str(option.get("text", option.get("name", option_id))))
 	var final_values = _get_special_level_up_text(base_text, _get_option_stat_multiplier(option))
-	var final_values_line = "\nFinal values: " + final_values if final_values != base_text else ""
+	var final_values_line = "\n" + I18n.t("levelup.final_values", [final_values]) if final_values != base_text else ""
 	if tier == SPECIAL_LEVEL_UP_LEGENDARY_TIER:
-		return "Lucky Legendary: numeric values are increased by 100%." + final_values_line
-	return "Lucky Epic: numeric values are increased by 50%." + final_values_line
+		return I18n.t("levelup.lucky_legendary_tooltip") + final_values_line
+	return I18n.t("levelup.lucky_epic_tooltip") + final_values_line
 
 func _get_special_level_up_text(text: String, multiplier: float) -> String:
 	var multiplier_text = _apply_special_level_up_multiplier_text(text, multiplier)
@@ -795,6 +826,10 @@ func _apply_special_level_up_multiplier_text(text: String, multiplier: float) ->
 func _format_special_percent_value(value: float) -> String:
 	if abs(value - round(value)) < 0.01:
 		return str(int(round(value)))
+	if abs(value * 10.0 - round(value * 10.0)) < 0.01:
+		return "%.1f" % value
+	if abs(value * 100.0 - round(value * 100.0)) < 0.01:
+		return "%.2f" % value
 	return "%.1f" % value
 
 func _is_special_level_up_option(option: Dictionary) -> bool:
@@ -858,7 +893,7 @@ func _get_option_by_id(option_id: String) -> Dictionary:
 			if option["id"] == option_id:
 				return option.duplicate()
 
-	return { "id": option_id, "text": option_id, "description": "Unknown upgrade effect.", "rarity": "passive_common" }
+	return { "id": option_id, "text": option_id, "description": I18n.t("levelup.unknown_upgrade"), "rarity": "passive_common" }
 
 func _on_reroll_button_pressed(option_index: int) -> void:
 	if is_rolling_options or current_mode != "level_up":

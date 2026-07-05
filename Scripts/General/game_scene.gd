@@ -177,6 +177,7 @@ func _ready() -> void:
 	current_arena = arena_nodes[0]
 	_setup_fade_overlay()
 	_setup_debug_panel()
+	I18n.language_changed.connect(_on_language_changed)
 	set_waves_based_on_pecado()
 	_update_camera_limits()
 	await _show_starting_arm_selection()
@@ -193,6 +194,10 @@ func finish_run() -> bool:
 
 	run_finished = true
 	return true
+
+func _on_language_changed(_language: String) -> void:
+	_refresh_debug_panel_texts()
+	_refresh_debug_panel()
 
 func _show_starting_arm_selection() -> void:
 	if $Player == null or not $Player.has_method("apply_starting_arm"):
@@ -239,14 +244,14 @@ func _show_starting_arm_selection() -> void:
 	margin.add_child(layout)
 
 	var title = Label.new()
-	title.text = "O demonio escolhe como segurar seu braco"
+	title.text = I18n.t("start.title")
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 26)
 	title.add_theme_color_override("font_color", Color(1.0, 0.72, 0.42, 1.0))
 	layout.add_child(title)
 
 	var subtitle = Label.new()
-	subtitle.text = "Sua arma e seu movimento tambem. Escolha o pacto que definirá sua run."
+	subtitle.text = I18n.t("start.subtitle")
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	subtitle.add_theme_font_size_override("font_size", 15)
 	subtitle.add_theme_color_override("font_color", Color(0.95, 0.86, 0.76, 1.0))
@@ -258,18 +263,23 @@ func _show_starting_arm_selection() -> void:
 	layout.add_child(choices)
 
 	for option in Global.STARTING_ARM_OPTIONS:
+		var arm_id = str(option["id"])
 		var button = Button.new()
 		button.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.custom_minimum_size = Vector2(0, 190)
-		button.text = "%s\n\n%s\n%s" % [option["name"], option["summary"], option["details"]]
-		button.tooltip_text = str(option["details"])
+		button.text = "%s\n\n%s\n%s" % [
+			I18n.arm_option_name(arm_id, str(option["name"])),
+			I18n.arm_summary(arm_id, str(option["summary"])),
+			I18n.arm_details(arm_id, str(option["details"]))
+		]
+		button.tooltip_text = I18n.arm_details(arm_id, str(option["details"]))
 		button.add_theme_font_size_override("font_size", 17)
 		button.add_theme_color_override("font_color", Color(1.0, 0.95, 0.82, 1.0))
 		button.add_theme_stylebox_override("normal", _make_starting_arm_style(Color(0.16, 0.07, 0.075, 0.98), Color(0.52, 0.18, 0.12, 0.95), 2))
 		button.add_theme_stylebox_override("hover", _make_starting_arm_style(Color(0.26, 0.10, 0.08, 0.98), Color(1.0, 0.54, 0.20, 1.0), 3))
 		button.add_theme_stylebox_override("pressed", _make_starting_arm_style(Color(0.34, 0.13, 0.08, 0.98), Color(1.0, 0.76, 0.28, 1.0), 3))
-		button.pressed.connect(Callable(self, "_on_starting_arm_button_pressed").bind(str(option["id"])))
+		button.pressed.connect(Callable(self, "_on_starting_arm_button_pressed").bind(arm_id))
 		choices.add_child(button)
 
 	await starting_arm_selected
@@ -304,29 +314,29 @@ func _show_movement_tutorial() -> void:
 	movement_tutorial_seen = true
 	await _show_tutorial_popup(
 		TutorialAnimation.MODE_MOVEMENT,
-		"Movimentação Infernal",
+		I18n.t("tutorial.movement_title"),
 		[
 			"------------------------------------------------------------",
-			"Clique para atirar. O tiro vai na direcao do mouse e empurra o player para o lado oposto.",
-			"Use esse recuo para fugir, frear e reposicionar entre um disparo e outro.",
-			"Dash: aperte Espaco/Shift para avancar na direcao do mouse quando precisar cortar perigo.",
+			I18n.t("tutorial.movement_1"),
+			I18n.t("tutorial.movement_2"),
+			I18n.t("tutorial.movement_3"),
 			"------------------------------------------------------------"
 		],
-		"Ok"
+		I18n.t("tutorial.ok")
 	)
 
 func _show_elite_tutorial() -> void:
 	await _show_tutorial_popup(
 		TutorialAnimation.MODE_ELITES,
-		"Elite Enemies",
+		I18n.t("tutorial.elite_title"),
 		[
 			"------------------------------------------------------------",
-			"Blindado: outline cinza claro. Toma menos dano.",
-			"Instavel: outline laranja amarelado. Explode ao morrer; saia da area.",
-			"Vampirico: outline vermelho sangue. Cura quando causa dano no player.",
+			I18n.t("tutorial.elite_armored"),
+			I18n.t("tutorial.elite_unstable"),
+			I18n.t("tutorial.elite_vampiric"),
 			"------------------------------------------------------------"
 		],
-		"Ok"
+		I18n.t("tutorial.ok")
 	)
 
 func _show_tutorial_popup(animation_mode: String, title_text: String, info_lines: Array, button_text: String) -> void:
@@ -435,8 +445,8 @@ func _create_tutorial_animation_area(animation_mode: String) -> Control:
 	animation_stack.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	animation_stack.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	animation_stack.add_theme_constant_override("separation", 7)
-	_add_tutorial_animation_window(animation_stack, "Tiro / Recoil", TutorialAnimation.MODE_RECOIL)
-	_add_tutorial_animation_window(animation_stack, "Dash", TutorialAnimation.MODE_DASH)
+	_add_tutorial_animation_window(animation_stack, I18n.t("tutorial.recoil_window"), TutorialAnimation.MODE_RECOIL)
+	_add_tutorial_animation_window(animation_stack, I18n.t("tutorial.dash_window"), TutorialAnimation.MODE_DASH)
 	return animation_stack
 
 func _add_tutorial_animation_window(parent: VBoxContainer, label_text: String, animation_mode: String) -> void:
@@ -1271,7 +1281,7 @@ func set_waves_based_on_pecado() -> void:
 func start_next_wave() -> void:
 	if current_wave_index >= waves.size():
 		if current_arena == arena_nodes[0]:
-			print("4 waves concluidas na arena principal! Indo para arena do pecado {0}.".format([Global.pecado]))
+			print("4 waves completed in the main arena! Moving to sin arena {0}.".format([Global.pecado]))
 			await _offer_contract_before_boss()
 			current_arena = arena_nodes[Global.pecado] if Global.pecado <= arena_nodes.size() - 1 else arena_nodes[1]
 			_update_camera_limits()
@@ -1283,7 +1293,7 @@ func start_next_wave() -> void:
 	wave_finish_pending = false
 	var wave_data = waves[current_wave_index]
 	var arena_type = "principal" if current_arena == arena_nodes[0] else "boss"
-	print("Wave {0} do pecado {1} ({2}) iniciada!".format([current_wave_index + 1, Global.pecado, arena_type]))
+	print("Wave {0} of sin {1} ({2}) started!".format([current_wave_index + 1, Global.pecado, arena_type]))
 	spawn_wave(wave_data)
 	current_wave_index += 1
 
@@ -1419,7 +1429,7 @@ func _apply_contract_modifiers_to_enemy(enemy: Node, target_key: String) -> void
 		_multiply_enemy_speed(enemy, speed_multiplier)
 
 	enemy.set_meta("contract_id", contract_id)
-	enemy.set_meta("contract_name", str(active_contract.get("name", "Contract")))
+	enemy.set_meta("contract_name", str(active_contract.get("name", I18n.t("contract.fallback_name"))))
 
 func _multiply_enemy_health(enemy: Node, multiplier: float) -> void:
 	if enemy.get("max_health") == null:
@@ -1484,7 +1494,8 @@ func _generate_contract_offer(pecado_id: int) -> Dictionary:
 
 	var contract = {
 		"id": "contract_%d_%d" % [pecado_id, Time.get_ticks_msec()],
-		"name": "Contrato do pecado %d" % pecado_id,
+		"name": I18n.t("contract.name", [pecado_id]),
+		"pecado_id": pecado_id,
 		"modifiers": modifiers,
 		"reward_type": reward_type,
 	}
@@ -1505,20 +1516,20 @@ func _roll_contract_multiplier(buff_type: String, is_boss: bool) -> float:
 func _build_contract_buff_summary(modifiers: Dictionary) -> String:
 	var parts = PackedStringArray()
 	for key in modifiers.keys():
-		var label = str(key).replace("boss_", "Boss ").replace("minion_", "Minions ")
-		label = label.replace("_", " ").capitalize()
+		var label_key = "contract.buff.%s" % str(key)
+		var label = I18n.t(label_key) if I18n.has_key(label_key) else str(key).replace("_", " ").capitalize()
 		parts.append("%s %s" % [label, _format_contract_multiplier(float(modifiers[key]))])
 	return ", ".join(parts)
 
 func _get_contract_reward_summary(reward_type: String) -> String:
 	match reward_type:
 		CONTRACT_REWARD_EXTRA_LEVEL:
-			return "Extra level-up with common/cursed passives"
+			return I18n.t("contract.reward.extra_level")
 		CONTRACT_REWARD_REROLLS:
-			return "+%d rerolls" % CONTRACT_REWARD_REROLL_AMOUNT
+			return I18n.t("contract.reward.rerolls", [CONTRACT_REWARD_REROLL_AMOUNT])
 		CONTRACT_REWARD_STAT:
-			return "Random permanent stat increase"
-	return "Unknown reward"
+			return I18n.t("contract.reward.stat")
+	return I18n.t("contract.reward.unknown")
 
 func _format_contract_multiplier(multiplier: float) -> String:
 	return "+%d%%" % int(round((multiplier - 1.0) * 100.0))
@@ -1536,8 +1547,8 @@ func _grant_contract_reward(contract: Dictionary) -> void:
 				if $Player.has_method("record_upgrade"):
 					$Player.record_upgrade({
 						"id": "contract_rerolls",
-						"text": "Contract: +%d Rerolls" % CONTRACT_REWARD_REROLL_AMOUNT,
-						"description": "Contract reward.",
+						"text": I18n.t("contract.record_rerolls", [CONTRACT_REWARD_REROLL_AMOUNT]),
+						"description": I18n.t("contract.record_description"),
 						"rarity": "contract_reward"
 					})
 		CONTRACT_REWARD_STAT:
@@ -1598,17 +1609,17 @@ func _create_contract_offer_layer(contract: Dictionary) -> void:
 	margin.add_child(layout)
 
 	var title = Label.new()
-	title.text = str(contract.get("name", "Contrato"))
+	title.text = str(contract.get("name", I18n.t("contract.fallback_name")))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 26)
 	title.add_theme_color_override("font_color", Color(1.0, 0.72, 0.36, 1.0))
 	layout.add_child(title)
 
 	var body = Label.new()
-	body.text = "Aceitar fortalece o boss deste pecado e seus minions.\n\nBuff: %s\nRecompensa: %s" % [
+	body.text = I18n.t("contract.body", [
 		str(contract.get("buff_summary", "")),
 		str(contract.get("reward_summary", ""))
-	]
+	])
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	body.add_theme_font_size_override("font_size", 18)
@@ -1620,11 +1631,11 @@ func _create_contract_offer_layer(contract: Dictionary) -> void:
 	buttons.add_theme_constant_override("separation", 18)
 	layout.add_child(buttons)
 
-	var accept_button = _make_contract_button("Aceitar")
+	var accept_button = _make_contract_button(I18n.t("common.accept"))
 	accept_button.pressed.connect(Callable(self, "_on_contract_button_pressed").bind(true))
 	buttons.add_child(accept_button)
 
-	var decline_button = _make_contract_button("Recusar")
+	var decline_button = _make_contract_button(I18n.t("common.decline"))
 	decline_button.pressed.connect(Callable(self, "_on_contract_button_pressed").bind(false))
 	buttons.add_child(decline_button)
 
@@ -2130,6 +2141,13 @@ func _setup_debug_panel() -> void:
 	debug_layer.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(debug_layer)
 
+	var input_catcher = DebugInputCatcher.new()
+	input_catcher.name = "DebugInputCatcher"
+	input_catcher.process_mode = Node.PROCESS_MODE_ALWAYS
+	input_catcher.toggle_debug_requested.connect(_toggle_debug_panel)
+	input_catcher.skip_encounter_requested.connect(_debug_skip_current_encounter)
+	debug_layer.add_child(input_catcher)
+
 	debug_panel = PanelContainer.new()
 	debug_panel.name = "DebugBalancePanel"
 	debug_panel.process_mode = Node.PROCESS_MODE_ALWAYS
@@ -2151,7 +2169,8 @@ func _setup_debug_panel() -> void:
 	margin.add_child(layout)
 
 	var title = Label.new()
-	title.text = "DEBUG / BALANCE"
+	title.name = "DebugTitle"
+	title.text = I18n.t("debug.title")
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 18)
 	PopupStyle.apply_title(title)
@@ -2163,18 +2182,19 @@ func _setup_debug_panel() -> void:
 	PopupStyle.apply_text(debug_status_label)
 	layout.add_child(debug_status_label)
 
-	layout.add_child(_make_debug_button("Skip encounter (;)", "_debug_skip_current_encounter"))
-	layout.add_child(_make_debug_button("Go to boss", "_debug_go_to_boss"))
-	layout.add_child(_make_debug_button("Force level up", "_debug_force_level_up"))
-	layout.add_child(_make_debug_button("+5 rerolls", "_debug_add_rerolls"))
-	layout.add_child(_make_debug_button("Toggle invincible", "_debug_toggle_invincible"))
-	layout.add_child(_make_debug_button("Offer contract", "_debug_offer_contract_now"))
+	layout.add_child(_make_debug_button("debug.skip", "_debug_skip_current_encounter"))
+	layout.add_child(_make_debug_button("debug.go_boss", "_debug_go_to_boss"))
+	layout.add_child(_make_debug_button("debug.force_level", "_debug_force_level_up"))
+	layout.add_child(_make_debug_button("debug.rerolls", "_debug_add_rerolls"))
+	layout.add_child(_make_debug_button("debug.invincible", "_debug_toggle_invincible"))
+	layout.add_child(_make_debug_button("debug.contract", "_debug_offer_contract_now"))
 	_refresh_debug_panel()
 
-func _make_debug_button(text: String, method_name: String) -> Button:
+func _make_debug_button(text_key: String, method_name: String) -> Button:
 	var button = Button.new()
 	button.process_mode = Node.PROCESS_MODE_ALWAYS
-	button.text = text
+	button.set_meta("i18n_key", text_key)
+	button.text = I18n.t(text_key)
 	button.custom_minimum_size = Vector2(0.0, 32.0)
 	PopupStyle.apply_button(button)
 	button.pressed.connect(Callable(self, method_name))
@@ -2194,7 +2214,7 @@ func _refresh_debug_panel() -> void:
 	var player = get_tree().get_first_node_in_group(Global.GROUP_PLAYER)
 	var rerolls = player.get_reroll_tokens() if player != null and player.has_method("get_reroll_tokens") else 0
 	var invincible = player.get("debug_invincible_enabled") if player != null and player.get("debug_invincible_enabled") != null else false
-	debug_status_label.text = "Pecado: %d\nWave: %d/%d\nBoss phase: %s\nEnemies spawning: %d\nRerolls: %d\nInvincible: %s" % [
+	debug_status_label.text = I18n.t("debug.status", [
 		Global.pecado,
 		current_wave_index,
 		waves.size(),
@@ -2202,7 +2222,19 @@ func _refresh_debug_panel() -> void:
 		enemies_left_to_spawn,
 		rerolls,
 		str(invincible)
-	]
+	])
+
+func _refresh_debug_panel_texts() -> void:
+	if debug_panel == null:
+		return
+
+	var title = debug_panel.find_child("DebugTitle", true, false)
+	if title is Label:
+		(title as Label).text = I18n.t("debug.title")
+
+	for child in debug_panel.find_children("*", "Button", true, false):
+		if child.has_meta("i18n_key"):
+			(child as Button).text = I18n.t(str(child.get_meta("i18n_key")))
 
 func _debug_go_to_boss() -> void:
 	if boss_phase:

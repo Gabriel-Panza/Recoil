@@ -535,11 +535,11 @@ func get_elite_variant() -> String:
 func get_elite_display_name() -> String:
 	match elite_variant:
 		ELITE_ARMORED:
-			return "Blindado"
+			return I18n.t("elite.armored")
 		ELITE_UNSTABLE:
-			return "Instavel"
+			return I18n.t("elite.unstable")
 		ELITE_VAMPIRIC:
-			return "Vampirico"
+			return I18n.t("elite.vampiric")
 	return ""
 
 func on_player_damage_dealt(damage_amount: float, _target: Node) -> void:

@@ -135,10 +135,10 @@ stretch_mode = 0
 process_mode = 3
 visible = false
 layout_mode = 0
-offset_left = 284.0
-offset_top = 134.0
-offset_right = 340.0
-offset_bottom = 163.0
+offset_left = 296.0
+offset_top = 66.0
+offset_right = 352.0
+offset_bottom = 101.0
 scale = Vector2(10, 14.852)
 theme_override_styles/panel = SubResource("StyleBoxFlat_7yn15")
 
@@ -147,16 +147,16 @@ layout_mode = 0
 offset_left = -1.6403804
 offset_top = -1.1044184
 offset_right = 58.596497
-offset_bottom = 30.895582
+offset_bottom = 36.89558
 texture = ExtResource("3_nlrbi")
 expand_mode = 1
 
 [node name="VBoxContainer" type="VBoxContainer" parent="OptionsMenu" unique_id=1989776312]
 layout_mode = 0
 offset_left = 14.465
-offset_top = 10.407
+offset_top = 12.523564
 offset_right = 96.465
-offset_bottom = 81.407
+offset_bottom = 83.52357
 scale = Vector2(0.373394, 0.23979)
 theme_override_constants/separation = 7
 alignment = 1

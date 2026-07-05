@@ -25,8 +25,8 @@ const AREA_AURA_VFX_DARKENING: float = 0.15
 
 const STARTING_ARM_DATA = {
 	"fast": {
-		"name": "Braco rapido",
-		"description": "Tiros fracos, cadencia alta e recuo curto para controlar melhor o personagem.",
+		"name": "Fast Arm",
+		"description": "Weak shots, high fire rate, and short recoil for tighter control.",
 		"attack_damage": 27.5,
 		"base_fire_rate": 0.5,
 		"min_fire_rate": 0.3,
@@ -36,8 +36,8 @@ const STARTING_ARM_DATA = {
 		"unstable_projectiles": false
 	},
 	"heavy": {
-		"name": "Braco pesado",
-		"description": "Tiros lentos com dano alto e recuo forte para reposicionamentos grandes.",
+		"name": "Heavy Arm",
+		"description": "Slow shots with high damage and strong recoil for big repositioning plays.",
 		"attack_damage": 70.0,
 		"base_fire_rate": 2.1,
 		"min_fire_rate": 1.75,
@@ -47,8 +47,8 @@ const STARTING_ARM_DATA = {
 		"unstable_projectiles": false
 	},
 	"unstable": {
-		"name": "Braco instavel",
-		"description": "Projeteis atravessam um alvo e ricocheteiam uma vez, mas voltam perigosos.",
+		"name": "Unstable Arm",
+		"description": "Projectiles pierce one target and ricochet once, but come back dangerous.",
 		"attack_damage": 35.0,
 		"base_fire_rate": 1.3,
 		"min_fire_rate": 0.8,
@@ -62,21 +62,21 @@ const STARTING_ARM_DATA = {
 const STARTING_ARM_OPTIONS = [
 	{
 		"id": "fast",
-		"name": "BRACO RAPIDO",
-		"summary": "Tiros fracos",
-		"details": "Muito controle e recuo curto."
+		"name": "FAST ARM",
+		"summary": "Weak shots",
+		"details": "High control and short recoil."
 	},
 	{
 		"id": "heavy",
-		"name": "BRACO PESADO",
-		"summary": "Tiros fortes",
-		"details": "Pouco controle, recuo forte."
+		"name": "HEAVY ARM",
+		"summary": "Heavy shots",
+		"details": "Low control, strong recoil."
 	},
 	{
 		"id": "unstable",
-		"name": "BRACO INSTAVEL",
-		"summary": "Pierce e ricochete",
-		"details": "Tiro pode voltar contra voce."
+		"name": "UNSTABLE ARM",
+		"summary": "Pierce and ricochet",
+		"details": "Shots can come back at you."
 	}
 ]
 
@@ -96,7 +96,7 @@ const CURSED_PASSIVE_OPTIONS = [
 	{ "id": "deadly_slow", "text": "Recoil Force (-20%), Attack (+40%)", "description": "Greatly increases damage, but weakens your recoil movement by cutting pushback force.", "rarity": "passive_cursed" },
 	{ "id": "fast_but_small", "text": "Bullet Size (-30%), Atk-Speed (+30%)", "description": "Adds +30% attack speed before the chosen arm's tuning, but reduces bullet size by 30%. Bullet size cannot drop below 50%.", "rarity": "passive_cursed" },
 	{ "id": "blood_tax", "text": "Attack (+40%), Heal (-45%)", "description": "Greatly increases damage, but all healing you receive is reduced by 45%.", "rarity": "passive_cursed" },
-	{ "id": "cursed_luck", "text": "Luck (x2), Damage Taken (+30%)", "description": "Luck multiplies your chance to roll lucky level ups, but all damage you take is increased by 30%.", "rarity": "passive_cursed" },
+	{ "id": "cursed_luck", "text": "Luck (x1.5), Damage Taken (+30%)", "description": "Luck multiplies your chance to roll lucky level ups, but all damage you take is increased by 30%.", "rarity": "passive_cursed" },
 	{ "id": "thin_blood", "text": "Health (-40%), Heal (+100%)", "description": "Greatly lowers your maximum health, but increase all healing you receive.", "rarity": "passive_cursed" }
 ]
 
@@ -307,10 +307,7 @@ func get_ranked_runs() -> Array:
 
 ## Formats the defeated sin count for ranking UI.
 func format_pecados_derrotados(amount: int) -> String:
-	var safe_amount = clampi(amount, 0, 7)
-	if safe_amount == 1:
-		return "1 pecado derrotado"
-	return "%d pecados derrotados" % safe_amount
+	return I18n.defeated_sins(amount)
 
 ## Formats elapsed run seconds as MM:SS for ranking UI.
 func format_run_time(seconds: float) -> String:

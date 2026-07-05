@@ -85,44 +85,44 @@ const MAX_HEAL_AFTER_WAVE_BONUS: float = 0.15
 const ARM_MUTATION_DATA = {
 	"fast": {
 		1: {
-			"name": "Mira Nervosa",
-			"description": "Tiros marcam inimigos por alguns segundos. Projeteis proximos curvam levemente para alvos marcados."
+			"name": "Nervous Aim",
+			"description": "Shots mark enemies for a few seconds. Nearby projectiles curve slightly toward marked targets."
 		},
 		2: {
-			"name": "Perfuracao por Ritmo",
-			"description": "A cada 6 tiros em sequencia, o proximo disparo atravessa um alvo adicional."
+			"name": "Rhythm Pierce",
+			"description": "Every 6 shots in sequence, the next shot pierces one additional target."
 		},
 		3: {
-			"name": "Metralha Sinaptica",
-			"description": "Alternar bastante a mira cria um disparo extra que repete o angulo anterior com dano reduzido."
+			"name": "Synaptic Volley",
+			"description": "Frequent aim changes create an extra shot that repeats the previous angle with reduced damage."
 		}
 	},
 	"heavy": {
 		1: {
-			"name": "Estilhaco de Impacto",
-			"description": "O primeiro impacto de cada tiro pesado solta fragmentos em cone para tras."
+			"name": "Impact Shard",
+			"description": "The first impact of each heavy shot releases cone fragments backward."
 		},
 		2: {
-			"name": "Tranco de Execucao",
-			"description": "Abates com tiros pesados geram uma onda curta que empurra e fere inimigos proximos."
+			"name": "Execution Kick",
+			"description": "Heavy-shot kills create a short wave that pushes and damages nearby enemies."
 		},
 		3: {
-			"name": "Canhao de Penitencia",
-			"description": "Atirar logo que o cooldown termina cria um disparo grande que atravessa e arrasta inimigos."
+			"name": "Penitence Cannon",
+			"description": "Shooting right as the cooldown ends creates a large shot that pierces and drags enemies."
 		}
 	},
 	"unstable": {
 		1: {
-			"name": "Memoria Balistica",
-			"description": "Ricochetes deixam um eco atrasado que repete parte da trajetoria com dano baixo."
+			"name": "Ballistic Memory",
+			"description": "Ricochets leave a delayed echo that repeats part of the trajectory with low damage."
 		},
 		2: {
-			"name": "Ressonancia Instavel",
-			"description": "Atingir um alvo depois de ricochetear deixa uma ressonancia. Outro tiro no alvo detona uma explosao curta."
+			"name": "Unstable Resonance",
+			"description": "Hitting a target after a ricochet leaves a resonance. Another shot on that target detonates a short explosion."
 		},
 		3: {
-			"name": "Paradoxo Vivo",
-			"description": "Todo terceiro projetil cria um eco espelhado no primeiro impacto ou ricochete. O eco e lento e perigoso para todos."
+			"name": "Living Paradox",
+			"description": "Every third projectile creates a mirrored echo on first impact or ricochet. The echo is slow and dangerous to everyone."
 		}
 	}
 }
@@ -346,9 +346,9 @@ func apply_starting_arm(arm_id: String) -> void:
 ## Returns the display name of the arm selected at the start of the run.
 func get_starting_arm_name() -> String:
 	if current_arm_id == "" or not Global.STARTING_ARM_DATA.has(current_arm_id):
-		return "Nenhum braco"
+		return I18n.t("arm.none")
 
-	return str(Global.STARTING_ARM_DATA[current_arm_id]["name"])
+	return I18n.arm_name(current_arm_id, str(Global.STARTING_ARM_DATA[current_arm_id]["name"]))
 
 func add_attack_speed_bonus(amount: float) -> void:
 	if amount > 0.0 and not can_upgrade_attack_speed():
@@ -375,8 +375,8 @@ func get_attack_speed_upgrade_scale_percent() -> float:
 
 func get_current_arm_name() -> String:
 	if Global.STARTING_ARM_DATA.has(current_arm_id):
-		return str(Global.STARTING_ARM_DATA[current_arm_id].get("name", current_arm_id))
-	return "Base"
+		return I18n.arm_name(current_arm_id, str(Global.STARTING_ARM_DATA[current_arm_id].get("name", current_arm_id)))
+	return I18n.t("common.base")
 
 func apply_arm_mutation(target_tier: int) -> bool:
 	if current_arm_id == "" or not ARM_MUTATION_DATA.has(current_arm_id):
@@ -406,8 +406,8 @@ func get_arm_mutation_summaries() -> Array:
 			continue
 		summaries.append({
 			"id": "arm_mutation_%s_%d" % [current_arm_id, tier],
-			"name": str(mutation_data.get("name", "Mutation")),
-			"description": str(mutation_data.get("description", ""))
+			"name": I18n.mutation_name(current_arm_id, tier, str(mutation_data.get("name", "Mutation"))),
+			"description": I18n.mutation_description(current_arm_id, tier, str(mutation_data.get("description", "")))
 		})
 	return summaries
 
@@ -418,8 +418,8 @@ func _record_arm_mutation_unlock(tier: int) -> void:
 
 	record_upgrade({
 		"id": "arm_mutation_%s_%d" % [current_arm_id, tier],
-		"text": "Arm Mutation %d: %s" % [tier, str(mutation_data.get("name", "Mutation"))],
-		"description": str(mutation_data.get("description", "")),
+		"text": "Arm Mutation %d: %s" % [tier, I18n.mutation_name(current_arm_id, tier, str(mutation_data.get("name", "Mutation")))],
+		"description": I18n.mutation_description(current_arm_id, tier, str(mutation_data.get("description", ""))),
 		"rarity": "arm_mutation"
 	})
 
@@ -631,8 +631,8 @@ func get_available_contract_stat_ids() -> Array:
 func apply_contract_stat_reward(stat_id: String) -> Dictionary:
 	var reward_data = {
 		"id": "contract_stat_%s" % stat_id,
-		"text": "Contract Stat",
-		"description": "Permanent stat reward from a contract.",
+		"text": I18n.option_text("contract_stat_%s" % stat_id, "Contract Stat"),
+		"description": I18n.t("contract.stat_description"),
 		"rarity": "contract_reward"
 	}
 
@@ -642,16 +642,16 @@ func apply_contract_stat_reward(stat_id: String) -> Dictionary:
 			var health_gain = current_health * health_bonus
 			max_health = int(round(float(max_health) * (1.0 + health_bonus)))
 			heal(health_gain)
-			reward_data["text"] = "Contract: Health (+8%)"
+			reward_data["text"] = I18n.option_text("contract_stat_health")
 		"attack":
 			attack_damage += attack_damage * 0.10
-			reward_data["text"] = "Contract: Attack (+10%)"
+			reward_data["text"] = I18n.option_text("contract_stat_attack")
 		"attack_speed":
 			add_attack_speed_bonus(0.08)
-			reward_data["text"] = "Contract: Atk-Speed (+8%)"
+			reward_data["text"] = I18n.option_text("contract_stat_attack_speed")
 		"recoil":
 			add_recoil_force_bonus(0.08)
-			reward_data["text"] = "Contract: Recoil Force (+8%)"
+			reward_data["text"] = I18n.option_text("contract_stat_recoil")
 		_:
 			return {}
 
@@ -1844,11 +1844,11 @@ func get_active_ability_cooldown(option_id: String) -> float:
 
 func get_active_ability_name(option_id: String) -> String:
 	var data = Global.ACTIVE_ABILITY_DATA.get(option_id, {})
-	return str(data.get("name", option_id))
+	return I18n.option_name(option_id, str(data.get("name", option_id)))
 
 func get_active_ability_description(option_id: String) -> String:
 	var data = Global.ACTIVE_ABILITY_DATA.get(option_id, {})
-	return str(data.get("description", option_id))
+	return I18n.option_description(option_id, str(data.get("description", option_id)))
 
 func get_equipped_passive_summaries() -> Array:
 	var summaries: Array = []
@@ -1856,8 +1856,8 @@ func get_equipped_passive_summaries() -> Array:
 		var arm_data: Dictionary = Global.STARTING_ARM_DATA[current_arm_id]
 		summaries.append({
 			"id": current_arm_id,
-			"name": str(arm_data["name"]),
-			"description": str(arm_data["description"])
+			"name": I18n.arm_name(current_arm_id, str(arm_data["name"])),
+			"description": I18n.arm_description(current_arm_id, str(arm_data["description"]))
 		})
 	for summary in get_arm_mutation_summaries():
 		summaries.append(summary)
@@ -1890,11 +1890,11 @@ func _get_passive_summary(passive_id: String) -> Dictionary:
 
 func get_passive_effect_name(passive_id: String) -> String:
 	var data = Global.PASSIVE_STATUS_DATA.get(passive_id, {})
-	return str(data.get("name", passive_id))
+	return I18n.option_name(passive_id, str(data.get("name", passive_id)))
 
 func get_passive_effect_description(passive_id: String) -> String:
 	var data = Global.PASSIVE_STATUS_DATA.get(passive_id, {})
-	return str(data.get("description", passive_id))
+	return I18n.option_description(passive_id, str(data.get("description", passive_id)))
 
 func _is_passive_enabled(passive_id: String) -> bool:
 	if Global.SIN_PASSIVE_FLAGS.has(passive_id):
@@ -2099,8 +2099,11 @@ func record_contract_decision(contract_data: Dictionary, accepted: bool) -> void
 		return
 
 	run_contract_history.append({
-		"name": str(contract_data.get("name", "Contract")),
+		"name": str(contract_data.get("name", I18n.t("contract.fallback_name"))),
+		"pecado_id": int(contract_data.get("pecado_id", 0)),
 		"accepted": accepted,
+		"modifiers": contract_data.get("modifiers", {}).duplicate(true),
+		"reward_type": str(contract_data.get("reward_type", "")),
 		"buff_summary": str(contract_data.get("buff_summary", "")),
 		"reward_summary": str(contract_data.get("reward_summary", ""))
 	})
@@ -2115,72 +2118,121 @@ func capture_run_end(reason: String) -> void:
 
 func get_death_recap_text() -> String:
 	var lines = PackedStringArray()
-	lines.append("RUN RECAP")
-	lines.append("Result: %s" % (run_end_reason if run_end_reason != "" else "Defeat"))
-	lines.append("Time: %s" % Global.format_run_time(run_end_elapsed_seconds))
-	lines.append("Pecados derrotados: %s" % Global.format_pecados_derrotados(clampi(Global.pecado - 1, 0, 7)))
-	lines.append("Kills: %d (%d elites)" % [run_kills_total, run_elite_kills_total])
-	lines.append("Damage taken: %d" % run_damage_taken_total)
-	lines.append("Final blow: %s (%d)" % [last_damage_source_name, last_damage_source_amount])
+	lines.append(I18n.t("recap.title"))
+	lines.append(I18n.t("recap.result", [_format_run_result(run_end_reason)]))
+	lines.append(I18n.t("recap.time", [Global.format_run_time(run_end_elapsed_seconds)]))
+	lines.append(I18n.t("recap.sins", [Global.format_pecados_derrotados(clampi(Global.pecado - 1, 0, 7))]))
+	lines.append(I18n.t("recap.kills", [run_kills_total, run_elite_kills_total]))
+	lines.append(I18n.t("recap.damage_taken", [run_damage_taken_total]))
+	var final_blow_name = I18n.t("common.none") if last_damage_source_name == "None" else last_damage_source_name
+	lines.append(I18n.t("recap.final_blow", [final_blow_name, last_damage_source_amount]))
 	lines.append("")
-	lines.append("FINAL STATS")
-	lines.append("Health: %d/%d" % [current_health, max_health])
-	lines.append("Attack: %.1f" % attack_damage)
-	lines.append("Atk-Speed: %.1f%%" % get_attack_speed_percent())
-	lines.append("Recoil Force: %.1f" % (recoil_force / 100.0))
-	lines.append("Rerolls left: %d" % reroll_tokens)
+	lines.append(I18n.t("recap.final_stats"))
+	lines.append(I18n.t("recap.health", [current_health, max_health]))
+	lines.append(I18n.t("recap.attack", [attack_damage]))
+	lines.append(I18n.t("recap.atk_speed", [get_attack_speed_percent()]))
+	lines.append(I18n.t("recap.recoil", [recoil_force / 100.0]))
+	lines.append(I18n.t("recap.rerolls_left", [reroll_tokens]))
 	lines.append("")
-	lines.append("BUILD")
-	lines.append("Lucky upgrades: %d" % run_lucky_upgrade_count)
-	lines.append("Cursed passives: %d" % run_cursed_upgrade_count)
+	lines.append(I18n.t("recap.build"))
+	lines.append(I18n.t("recap.lucky_upgrades", [run_lucky_upgrade_count]))
+	lines.append(I18n.t("recap.cursed_passives", [run_cursed_upgrade_count]))
 	if run_upgrade_history.is_empty():
-		lines.append("- No upgrades recorded")
+		lines.append(I18n.t("recap.no_upgrades"))
 	else:
 		for upgrade in run_upgrade_history:
 			var lucky_suffix = ""
 			if bool(upgrade.get("lucky", false)):
 				lucky_suffix = " [%s x%.1f]" % [str(upgrade.get("lucky_tier", "lucky")).capitalize(), float(upgrade.get("stat_multiplier", 1.0))]
-			lines.append("- %s (%s)%s" % [str(upgrade.get("name", "Upgrade")), _format_recap_rarity(str(upgrade.get("rarity", ""))), lucky_suffix])
+			lines.append("- %s (%s)%s" % [_get_recap_upgrade_name(upgrade), _format_recap_rarity(str(upgrade.get("rarity", ""))), lucky_suffix])
 	lines.append("")
-	lines.append("CONTRACTS")
+	lines.append(I18n.t("recap.contracts"))
 	if run_contract_history.is_empty():
-		lines.append("- No contracts offered")
+		lines.append(I18n.t("recap.no_contracts"))
 	else:
 		for contract in run_contract_history:
-			var status = "Accepted" if bool(contract.get("accepted", false)) else "Declined"
-			lines.append("- %s: %s" % [status, str(contract.get("name", "Contract"))])
-			var buff_summary = str(contract.get("buff_summary", ""))
-			var reward_summary = str(contract.get("reward_summary", ""))
+			var status = I18n.t("recap.accepted") if bool(contract.get("accepted", false)) else I18n.t("recap.declined")
+			lines.append(I18n.t("recap.contract_status", [status, _get_recap_contract_name(contract)]))
+			var buff_summary = _get_recap_contract_buff_summary(contract)
+			var reward_summary = _get_recap_contract_reward_summary(contract)
 			if buff_summary != "":
-				lines.append("  Boss buff: %s" % buff_summary)
+				lines.append(I18n.t("recap.boss_buff", [buff_summary]))
 			if reward_summary != "":
-				lines.append("  Reward: %s" % reward_summary)
+				lines.append(I18n.t("recap.reward", [reward_summary]))
 	lines.append("")
-	lines.append("DAMAGE SOURCES")
+	lines.append(I18n.t("recap.damage_sources"))
 	if run_damage_taken_by_source.is_empty():
-		lines.append("- None")
+		lines.append("- %s" % I18n.t("common.none"))
 	else:
 		for source_name in run_damage_taken_by_source.keys():
 			lines.append("- %s: %d" % [str(source_name), int(run_damage_taken_by_source[source_name])])
 	return "\n".join(lines)
 
+func _format_run_result(reason: String) -> String:
+	match reason:
+		"Victory", "recap.victory":
+			return I18n.t("recap.victory")
+		"Defeat", "recap.defeat", "":
+			return I18n.t("recap.defeat")
+	return reason
+
+func _get_recap_upgrade_name(upgrade: Dictionary) -> String:
+	var upgrade_id = str(upgrade.get("id", ""))
+	if upgrade_id == "contract_rerolls":
+		return I18n.t("contract.record_rerolls", [5])
+	if upgrade_id.begins_with("arm_mutation_"):
+		var parts = upgrade_id.split("_")
+		if parts.size() >= 4:
+			var tier = int(parts[3])
+			var mutation_name = I18n.mutation_name(str(parts[2]), tier, str(upgrade.get("name", "Upgrade")))
+			return I18n.t("recap.arm_mutation_upgrade", [tier, mutation_name])
+	return I18n.option_text(upgrade_id, str(upgrade.get("name", "Upgrade")))
+
+func _get_recap_contract_name(contract: Dictionary) -> String:
+	var pecado_id = int(contract.get("pecado_id", 0))
+	if pecado_id > 0:
+		return I18n.t("contract.name", [pecado_id])
+	return str(contract.get("name", I18n.t("contract.fallback_name")))
+
+func _get_recap_contract_buff_summary(contract: Dictionary) -> String:
+	var modifiers = contract.get("modifiers", {})
+	if not (modifiers is Dictionary) or modifiers.is_empty():
+		return str(contract.get("buff_summary", ""))
+
+	var parts = PackedStringArray()
+	for key in modifiers.keys():
+		var label_key = "contract.buff.%s" % str(key)
+		var label = I18n.t(label_key) if I18n.has_key(label_key) else str(key).replace("_", " ").capitalize()
+		parts.append("%s +%d%%" % [label, int(round((float(modifiers[key]) - 1.0) * 100.0))])
+	return ", ".join(parts)
+
+func _get_recap_contract_reward_summary(contract: Dictionary) -> String:
+	match str(contract.get("reward_type", "")):
+		"extra_level":
+			return I18n.t("contract.reward.extra_level")
+		"rerolls":
+			return I18n.t("contract.reward.rerolls", [5])
+		"stat":
+			return I18n.t("contract.reward.stat")
+	return str(contract.get("reward_summary", ""))
+
 func _format_recap_rarity(rarity: String) -> String:
 	match rarity:
 		"passive_common":
-			return "common"
+			return I18n.t("rarity.passive_common")
 		"passive_rare":
-			return "rare"
+			return I18n.t("rarity.passive_rare")
 		"passive_cursed":
-			return "cursed"
+			return I18n.t("rarity.passive_cursed")
 		"passive_sin":
-			return "boss passive"
+			return I18n.t("rarity.passive_sin")
 		"active_sin":
-			return "boss active"
+			return I18n.t("rarity.active_sin")
 		"contract_reward":
-			return "contract"
+			return I18n.t("rarity.contract_reward")
 		"arm_mutation":
-			return "arm mutation"
-	return rarity if rarity != "" else "unknown"
+			return I18n.t("rarity.arm_mutation")
+	return rarity if rarity != "" else I18n.t("common.unknown")
 
 func _record_damage_taken(amount: int, contact_source: Node) -> void:
 	if amount <= 0:
@@ -2194,10 +2246,10 @@ func _record_damage_taken(amount: int, contact_source: Node) -> void:
 
 func _get_damage_source_name(contact_source: Node) -> String:
 	if not is_instance_valid(contact_source):
-		return "Direct damage"
+		return I18n.t("common.direct_damage")
 
 	if contact_source.is_in_group(Global.GROUP_BOSS):
-		return "Boss"
+		return I18n.t("common.boss")
 
 	var source_name = str(contact_source.name)
 	if contact_source.has_method("get_elite_display_name"):

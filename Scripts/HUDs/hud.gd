@@ -41,6 +41,7 @@ func _ready() -> void:
 	_setup_skill_status_background()
 	_setup_active_skill_hud_labels()
 	_setup_passive_status_label()
+	I18n.language_changed.connect(_on_language_changed)
 	
 	level_up_popup = preload("res://Cenas/HUDs/levelUpPopup.tscn").instantiate()
 	add_child(level_up_popup)
@@ -57,12 +58,27 @@ func _ready() -> void:
 		player.connect("xp_updated", Callable(self, "_on_xp_updated"))
 		player.connect("level_updated", Callable(self, "_on_level_updated"))
 		player.connect("stats_updated", Callable(self, "_update_status_hud_labels"))
+		_refresh_localized_text()
 		_update_status_hud_labels()
 	else:
-		print("Jogador ou câmera não encontrados!")
+		print("Player or camera not found!")
 
 func _process(_delta: float) -> void:
 	_update_status_hud_labels()
+
+func _on_language_changed(_language: String) -> void:
+	_refresh_localized_text()
+	_update_status_hud_labels()
+
+func _refresh_localized_text() -> void:
+	if active_skill_title_label != null:
+		active_skill_title_label.text = I18n.t("hud.active_skills")
+		active_skill_title_label.tooltip_text = I18n.t("hud.active_skills_tooltip")
+	if passive_status_label != null and passive_status_label.text == "":
+		passive_status_label.text = "- %s" % I18n.t("common.none")
+	var level_label = get_node_or_null("Label")
+	if level_label is Label and player != null:
+		(level_label as Label).text = I18n.t("level.label", [int(player.get("level")) if player.get("level") != null else 1])
 
 func _setup_active_skill_hud_labels() -> void:
 	active_skill_title_label = get_node_or_null("ActiveSkillHudTitle")
@@ -161,8 +177,8 @@ func _setup_passive_status_label() -> void:
 	passive_status_label.add_theme_constant_override("outline_size", 3)
 	passive_status_label.add_theme_font_size_override("font_size", 12)
 	passive_status_label.add_theme_constant_override("line_spacing", 0)
-	passive_status_label.text = "- None"
-	passive_status_label.tooltip_text = "No passive skills equipped"
+	passive_status_label.text = "- %s" % I18n.t("common.none")
+	passive_status_label.tooltip_text = I18n.t("hud.no_passives")
 	_apply_skill_status_label_alpha(passive_status_label)
 	add_child(passive_status_label)
 
@@ -175,7 +191,7 @@ func _create_active_skill_hud_label(label_name: String) -> Label:
 	label.add_theme_color_override("font_color", Color(1.0, 1.0, 0.3, 1.0))
 	label.add_theme_constant_override("outline_size", 3)
 	label.add_theme_font_size_override("font_size", 14)
-	label.text = "None"
+	label.text = I18n.t("common.none")
 	_apply_skill_status_label_alpha(label)
 	add_child(label)
 	return label
@@ -198,7 +214,8 @@ func _style_active_skill_hud_title_label(label: Label) -> void:
 	label.add_theme_font_override("font", HUD_PIXEL_FONT)
 	label.add_theme_constant_override("outline_size", 0)
 	label.add_theme_font_size_override("font_size", 15)
-	label.text = "ACTIVES:"
+	label.text = I18n.t("hud.active_skills")
+	label.tooltip_text = I18n.t("hud.active_skills_tooltip")
 
 func _apply_skill_status_label_alpha(label: Label) -> void:
 	if label == null:
@@ -234,40 +251,40 @@ func _update_passive_status_label() -> void:
 		mutation_summaries = player.get_arm_mutation_summaries()
 
 	var passive_lines := PackedStringArray([
-		"ARM MUTATIONS:",
+		I18n.t("hud.arm_mutations"),
 		_get_special_passive_slot_text(mutation_summaries, 0),
 		_get_special_passive_slot_text(mutation_summaries, 1),
 		_get_special_passive_slot_text(mutation_summaries, 2),
-		"BOSS PASSIVES:",
+		I18n.t("hud.boss_passives"),
 		_get_special_passive_slot_text(boss_summaries, 0),
 		_get_special_passive_slot_text(boss_summaries, 1),
-		"RARE PASSIVES:",
+		I18n.t("hud.rare_passives"),
 		_get_special_passive_slot_text(rare_summaries, 0),
 		_get_special_passive_slot_text(rare_summaries, 1)
 	])
 	var tooltip_lines := PackedStringArray()
-	_append_passive_tooltip_lines(tooltip_lines, "Arm Mutations", mutation_summaries)
-	_append_passive_tooltip_lines(tooltip_lines, "Boss Passives", boss_summaries)
-	_append_passive_tooltip_lines(tooltip_lines, "Rare Passives", rare_summaries)
+	_append_passive_tooltip_lines(tooltip_lines, I18n.t("hud.arm_mutations_tooltip"), mutation_summaries)
+	_append_passive_tooltip_lines(tooltip_lines, I18n.t("hud.boss_passives_tooltip"), boss_summaries)
+	_append_passive_tooltip_lines(tooltip_lines, I18n.t("hud.rare_passives_tooltip"), rare_summaries)
 
 	passive_status_label.text = "\n".join(passive_lines)
-	passive_status_label.tooltip_text = "\n".join(tooltip_lines) if not tooltip_lines.is_empty() else "No special passives equipped"
+	passive_status_label.tooltip_text = "\n".join(tooltip_lines) if not tooltip_lines.is_empty() else I18n.t("hud.no_special_passives")
 	_update_skill_status_background(passive_lines.size())
 
 func _get_special_passive_slot_text(summaries: Array, slot_index: int) -> String:
 	if slot_index >= summaries.size():
-		return "- None"
+		return "- %s" % I18n.t("common.none")
 
 	var summary = summaries[slot_index]
-	return "- %s" % str(summary.get("name", "Passive"))
+	return "- %s" % str(summary.get("name", I18n.t("hud.passive_fallback")))
 
 func _append_passive_tooltip_lines(tooltip_lines: PackedStringArray, section_name: String, summaries: Array) -> void:
 	if summaries.is_empty():
-		tooltip_lines.append("%s: None" % section_name)
+		tooltip_lines.append("%s: %s" % [section_name, I18n.t("common.none")])
 		return
 
 	for summary in summaries:
-		var passive_name = str(summary.get("name", "Passive"))
+		var passive_name = str(summary.get("name", I18n.t("hud.passive_fallback")))
 		tooltip_lines.append("%s: %s" % [
 			passive_name,
 			str(summary.get("description", ""))
@@ -289,8 +306,8 @@ func _update_active_skill_hud_label(label: Label, slot: String) -> void:
 	var slots = player.get_active_ability_slots() if player.has_method("get_active_ability_slots") else {}
 	var ability_id = str(slots.get(slot, ""))
 	if ability_id == "":
-		label.text = "None"
-		label.tooltip_text = "No active skill equipped"
+		label.text = I18n.t("common.none")
+		label.tooltip_text = I18n.t("hud.no_active")
 		return
 
 	var ability_name = player.get_active_ability_name(ability_id) if player.has_method("get_active_ability_name") else ability_id
@@ -311,7 +328,7 @@ func _on_xp_updated(current_xp, xp_to_next_level) -> void:
 	$ProgressBar.max_value = xp_to_next_level
 
 func _on_level_updated(level, current_xp, xp_to_next_level) -> void:
-	$Label.text = "Level: %d" % level
+	$Label.text = I18n.t("level.label", [level])
 	$ProgressBar.value = current_xp
 	$ProgressBar.max_value = xp_to_next_level
 	level_up_popup.show_popup(player.level_up_context, player.level_up_boss_pecado)
@@ -386,7 +403,7 @@ func _apply_effect(option) -> void:
 				player.add_healing_received_multiplier_bonus(float(percent_effects.get("heal", -0.45 * stat_multiplier)))
 		"cursed_luck":
 			if player.has_method("add_special_level_up_chance_bonus"):
-				player.add_special_level_up_chance_bonus(max(2.0 * stat_multiplier - 1.0, 0.0))
+				player.add_special_level_up_chance_bonus(max(1.5 * stat_multiplier - 1.0, 0.0))
 			if player.has_method("add_damage_taken_multiplier_bonus"):
 				player.add_damage_taken_multiplier_bonus(float(percent_effects.get("damage_taken", 0.3 * stat_multiplier)))
 			else:
@@ -486,7 +503,7 @@ func _get_option_by_id(option_id: String) -> Dictionary:
 			if str(option.get("id", "")) == option_id:
 				return option.duplicate(true)
 
-	return { "id": option_id, "text": option_id, "description": "Unknown upgrade effect.", "rarity": "passive_common" }
+	return { "id": option_id, "text": option_id, "description": I18n.t("common.unknown"), "rarity": "passive_common" }
 
 func _equip_boss_passive_option(option: String) -> void:
 	var already_equipped = player.has_boss_passive(option) if player.has_method("has_boss_passive") else false
