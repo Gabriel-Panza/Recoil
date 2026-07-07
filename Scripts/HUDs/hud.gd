@@ -488,9 +488,6 @@ func _record_applied_upgrade(option_data: Dictionary) -> void:
 	if player and player.has_method("record_upgrade"):
 		player.record_upgrade(option_data)
 
-func _get_remaining_stat_multiplier(base_penalty: float, stat_multiplier: float) -> float:
-	return max(1.0 - base_penalty * stat_multiplier, 0.01)
-
 func _is_rare_option(option: String) -> bool:
 	return option in Global.RARE_OPTION_IDS
 

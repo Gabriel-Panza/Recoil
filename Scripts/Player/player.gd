@@ -93,8 +93,8 @@ const ARM_MUTATION_DATA = {
 			"description": "Every 6 shots in sequence, the next shot pierces one additional target."
 		},
 		3: {
-			"name": "Synaptic Volley",
-			"description": "Frequent aim changes create an extra shot that repeats the previous angle with reduced damage."
+			"name": "Split Trigger",
+			"description": "Shots have a 40% chance to split into two angled projectiles at 75% damage each."
 		}
 	},
 	"heavy": {
@@ -121,8 +121,8 @@ const ARM_MUTATION_DATA = {
 			"description": "Hitting a target after a ricochet leaves a resonance. Another shot on that target detonates a short explosion."
 		},
 		3: {
-			"name": "Living Paradox",
-			"description": "Every third projectile creates a mirrored echo on first impact or ricochet. The echo is slow and dangerous to everyone."
+			"name": "Errant Seeker",
+			"description": "After ricocheting off a wall, shots bend slightly toward nearby enemies without perfect tracking."
 		}
 	}
 }
@@ -133,12 +133,12 @@ const FAST_HOMING_TURN_RATE: float = 5.4
 const FAST_RHYTHM_SHOT_WINDOW_MSEC: int = 1000
 const FAST_RHYTHM_SHOTS_REQUIRED: int = 6
 const FAST_RHYTHM_PIERCE_BONUS: int = 1
-const FAST_SYNAPTIC_MIN_ANGLE_DELTA: float = 0.52
-const FAST_SYNAPTIC_STACKS_REQUIRED: int = 3
-const FAST_SYNAPTIC_DAMAGE_MULTIPLIER: float = 0.55
+const FAST_SPLIT_TRIGGER_CHANCE: float = 0.40
+const FAST_SPLIT_TRIGGER_ANGLE: float = 15.0
+const FAST_SPLIT_TRIGGER_DAMAGE_MULTIPLIER: float = 0.75
 const HEAVY_IMPACT_SHARD_COUNT: int = 3
-const HEAVY_IMPACT_SHARD_DAMAGE_MULTIPLIER: float = 0.28
-const HEAVY_IMPACT_SHARD_ANGLE_SPREAD: float = 42.0
+const HEAVY_IMPACT_SHARD_DAMAGE_MULTIPLIER: float = 0.3
+const HEAVY_IMPACT_SHARD_ANGLE_SPREAD: float = 45.0
 const HEAVY_EXECUTION_RADIUS: float = 128.0
 const HEAVY_EXECUTION_DAMAGE_MULTIPLIER: float = 0.22
 const HEAVY_EXECUTION_KNOCKBACK_FORCE: float = 340.0
@@ -155,9 +155,9 @@ const UNSTABLE_MEMORY_ECHO_SPEED_MULTIPLIER: float = 0.72
 const UNSTABLE_RESONANCE_DURATION_MSEC: int = 2500
 const UNSTABLE_RESONANCE_RADIUS: float = 105.0
 const UNSTABLE_RESONANCE_DAMAGE_MULTIPLIER: float = 0.55
-const UNSTABLE_PARADOX_INTERVAL: int = 3
-const UNSTABLE_PARADOX_DAMAGE_MULTIPLIER: float = 0.45
-const UNSTABLE_PARADOX_SPEED_MULTIPLIER: float = 0.62
+const UNSTABLE_RICOCHET_HOMING_RANGE: float = 520.0
+const UNSTABLE_RICOCHET_HOMING_TURN_RATE: float = 2.2
+const UNSTABLE_RICOCHET_HOMING_MAX_TURN: float = 0.1
 
 # --- TIRO ---
 @export var pistol_bullet_scene: PackedScene
@@ -171,11 +171,7 @@ var unstable_arm_projectiles_enabled: bool = false
 var arm_mutation_tier: int = 0
 var fast_rhythm_combo: int = 0
 var fast_last_shot_msec: int = -1
-var fast_previous_shot_angle: float = 0.0
-var fast_has_previous_shot_angle: bool = false
-var fast_synaptic_charge: int = 0
 var heavy_perfect_window_remaining: float = 0.0
-var unstable_paradox_projectile_counter: int = 0
 
 var active_abilities = {
 	"E": "",
@@ -435,11 +431,7 @@ func _get_arm_mutation_data(arm_id: String, tier: int) -> Dictionary:
 func _reset_arm_mutation_runtime_state() -> void:
 	fast_rhythm_combo = 0
 	fast_last_shot_msec = -1
-	fast_previous_shot_angle = 0.0
-	fast_has_previous_shot_angle = false
-	fast_synaptic_charge = 0
 	heavy_perfect_window_remaining = 0.0
-	unstable_paradox_projectile_counter = 0
 
 func _get_arm_mutation_color(arm_id: String) -> Color:
 	match arm_id:
@@ -966,8 +958,10 @@ func shoot(direction: Vector2) -> void:
 	var mutation_shot = _prepare_arm_mutation_shot(base_angle, shot_damage)
 	shot_damage = float(mutation_shot.get("damage", shot_damage))
 	var projectile_flags: Dictionary = mutation_shot.get("projectile_flags", {})
+	var skip_base_projectiles = bool(mutation_shot.get("skip_base_projectiles", false))
+	var base_shot_count = shot_count if not skip_base_projectiles else 0
 	
-	for i in range(shot_count):
+	for i in range(base_shot_count):
 		# Calcula o deslocamento do ângulo dado que podemos ter multiplos tiros
 		var angle_offset = deg_to_rad((i - (shot_count - 1) / 2.0) * spread_angle)
 		var final_angle = base_angle + angle_offset
@@ -998,7 +992,8 @@ func _prepare_arm_mutation_shot(base_angle: float, shot_damage: float) -> Dictio
 	var result = {
 		"damage": shot_damage,
 		"projectile_flags": {},
-		"extra_projectiles": []
+		"extra_projectiles": [],
+		"skip_base_projectiles": false
 	}
 
 	match current_arm_id:
@@ -1027,30 +1022,24 @@ func _prepare_fast_mutation_shot(result: Dictionary, base_angle: float) -> void:
 		_spawn_burst_particles(global_position, Color(0.92, 1.0, 0.28, 0.72), 10, 0.16, 70.0)
 
 	if arm_mutation_tier < 3:
-		fast_previous_shot_angle = base_angle
-		fast_has_previous_shot_angle = true
 		return
 
-	if fast_has_previous_shot_angle:
-		var angle_delta = abs(wrapf(base_angle - fast_previous_shot_angle, -PI, PI))
-		if angle_delta >= FAST_SYNAPTIC_MIN_ANGLE_DELTA:
-			fast_synaptic_charge = min(fast_synaptic_charge + 1, FAST_SYNAPTIC_STACKS_REQUIRED)
-		else:
-			fast_synaptic_charge = max(fast_synaptic_charge - 1, 0)
+	if randf() > FAST_SPLIT_TRIGGER_CHANCE:
+		return
 
-		if fast_synaptic_charge >= FAST_SYNAPTIC_STACKS_REQUIRED:
-			result["extra_projectiles"].append({
-				"angle": fast_previous_shot_angle,
-				"damage_multiplier": FAST_SYNAPTIC_DAMAGE_MULTIPLIER,
-				"color": Color(0.25, 0.95, 1.0, 0.92),
-				"projectile_flags": {
-					"synaptic_echo": true,
-					"projectile_speed_multiplier": 1.12
-				}
-			})
-
-	fast_previous_shot_angle = base_angle
-	fast_has_previous_shot_angle = true
+	result["skip_base_projectiles"] = true
+	var split_angle = deg_to_rad(FAST_SPLIT_TRIGGER_ANGLE)
+	for angle_offset in [-split_angle, split_angle]:
+		var split_flags = projectile_flags.duplicate()
+		split_flags["split_trigger"] = true
+		split_flags["projectile_speed_multiplier"] = float(split_flags.get("projectile_speed_multiplier", 1.0)) * 1.06
+		result["extra_projectiles"].append({
+			"angle": base_angle + angle_offset,
+			"damage_multiplier": FAST_SPLIT_TRIGGER_DAMAGE_MULTIPLIER,
+			"color": Color(0.25, 0.95, 1.0, 0.92),
+			"projectile_flags": split_flags
+		})
+	_spawn_burst_particles(global_position, Color(0.25, 0.95, 1.0, 0.72), 8, 0.14, 64.0)
 
 func _prepare_heavy_mutation_shot(result: Dictionary) -> void:
 	if arm_mutation_tier < 3 or heavy_perfect_window_remaining <= 0.0:
@@ -1268,8 +1257,8 @@ func _configure_unstable_projectile(bullet: Node) -> void:
 		bullet.set_meta("unstable_memory_echo", true)
 	if arm_mutation_tier >= 2:
 		bullet.set_meta("unstable_resonance_enabled", true)
-	if arm_mutation_tier >= 3 and _consume_unstable_paradox_projectile():
-		bullet.set_meta("unstable_paradox_enabled", true)
+	if arm_mutation_tier >= 3:
+		bullet.set_meta("unstable_ricochet_homing_enabled", true)
 
 func _apply_projectile_flags(bullet: Node, projectile_flags: Dictionary) -> void:
 	if projectile_flags.is_empty():
@@ -1292,14 +1281,6 @@ func _apply_projectile_flags(bullet: Node, projectile_flags: Dictionary) -> void
 			continue
 		bullet.set_meta(key_name, projectile_flags[key])
 
-func _consume_unstable_paradox_projectile() -> bool:
-	unstable_paradox_projectile_counter += 1
-	if unstable_paradox_projectile_counter < UNSTABLE_PARADOX_INTERVAL:
-		return false
-
-	unstable_paradox_projectile_counter = 0
-	return true
-
 func get_fast_mutation_homing_direction(projectile_position: Vector2, current_direction: Vector2, delta: float) -> Vector2:
 	if current_arm_id != "fast" or arm_mutation_tier < 1 or current_direction == Vector2.ZERO:
 		return current_direction
@@ -1313,6 +1294,21 @@ func get_fast_mutation_homing_direction(projectile_position: Vector2, current_di
 		return current_direction
 
 	var turn_amount = clampf(FAST_HOMING_TURN_RATE * delta, 0.0, 0.24)
+	return current_direction.lerp(target_direction, turn_amount).normalized()
+
+func get_unstable_ricochet_homing_direction(projectile_position: Vector2, current_direction: Vector2, delta: float) -> Vector2:
+	if current_arm_id != "unstable" or arm_mutation_tier < 3 or current_direction == Vector2.ZERO:
+		return current_direction
+
+	var target = _get_best_unstable_ricochet_target(projectile_position, current_direction)
+	if target == null:
+		return current_direction
+
+	var target_direction = projectile_position.direction_to(target.global_position)
+	if target_direction == Vector2.ZERO:
+		return current_direction
+
+	var turn_amount = clampf(UNSTABLE_RICOCHET_HOMING_TURN_RATE * delta, 0.0, UNSTABLE_RICOCHET_HOMING_MAX_TURN)
 	return current_direction.lerp(target_direction, turn_amount).normalized()
 
 func _get_best_fast_marked_target(projectile_position: Vector2, current_direction: Vector2) -> Node2D:
@@ -1353,6 +1349,38 @@ func _get_best_fast_marked_target(projectile_position: Vector2, current_directio
 
 	return best_target
 
+func _get_best_unstable_ricochet_target(projectile_position: Vector2, current_direction: Vector2) -> Node2D:
+	var best_target: Node2D = null
+	var best_score = INF
+	var max_distance_sq = UNSTABLE_RICOCHET_HOMING_RANGE * UNSTABLE_RICOCHET_HOMING_RANGE
+	var normalized_direction = current_direction.normalized()
+
+	for enemy in get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
+		if not is_instance_valid(enemy) or not (enemy is Node2D):
+			continue
+		if enemy.get("is_dead") != null and bool(enemy.get("is_dead")):
+			continue
+
+		var enemy_node = enemy as Node2D
+		var to_enemy = projectile_position.direction_to(enemy_node.global_position)
+		if to_enemy == Vector2.ZERO:
+			continue
+
+		var distance_sq = projectile_position.distance_squared_to(enemy_node.global_position)
+		if distance_sq > max_distance_sq:
+			continue
+
+		var alignment = normalized_direction.dot(to_enemy)
+		if alignment < -0.1:
+			continue
+
+		var score = distance_sq / max(alignment + 1.05, 0.1)
+		if score < best_score:
+			best_score = score
+			best_target = enemy_node
+
+	return best_target
+
 func on_player_projectile_hit_enemy(enemy: Node, projectile: Node, dealt_damage: float) -> void:
 	if not is_instance_valid(enemy) or not is_instance_valid(projectile):
 		return
@@ -1373,9 +1401,6 @@ func on_player_projectile_hit_enemy(enemy: Node, projectile: Node, dealt_damage:
 	if bool(projectile.get_meta("unstable_resonance_enabled", false)):
 		_handle_unstable_resonance_hit(enemy, projectile, dealt_damage)
 
-	if bool(projectile.get_meta("unstable_paradox_enabled", false)):
-		spawn_unstable_paradox_echo(projectile, hit_position, _get_projectile_direction(projectile), dealt_damage)
-
 func on_player_projectile_ricochet(projectile: Node, ricochet_position: Vector2, incoming_direction: Vector2, outgoing_direction: Vector2) -> void:
 	if not is_instance_valid(projectile):
 		return
@@ -1383,9 +1408,6 @@ func on_player_projectile_ricochet(projectile: Node, ricochet_position: Vector2,
 	projectile.set_meta("unstable_has_ricocheted", true)
 	if bool(projectile.get_meta("unstable_memory_echo", false)):
 		spawn_unstable_memory_echo(ricochet_position, incoming_direction, projectile.get("damage"))
-
-	if bool(projectile.get_meta("unstable_paradox_enabled", false)):
-		spawn_unstable_paradox_echo(projectile, ricochet_position, outgoing_direction, projectile.get("damage"))
 
 func _apply_fast_nervous_mark(enemy: Node) -> void:
 	enemy.set_meta(FAST_MARK_META, Time.get_ticks_msec() + FAST_MARK_DURATION_MSEC)
@@ -1507,40 +1529,6 @@ func spawn_unstable_memory_echo(source_position: Vector2, echo_direction: Vector
 			"scale_multiplier": 0.78
 		}
 	)
-
-func spawn_unstable_paradox_echo(projectile: Node, source_position: Vector2, source_direction: Vector2, source_damage) -> void:
-	if current_arm_id != "unstable" or arm_mutation_tier < 3 or source_direction == Vector2.ZERO:
-		return
-	if is_instance_valid(projectile) and bool(projectile.get_meta("unstable_paradox_triggered", false)):
-		return
-	if is_instance_valid(projectile):
-		projectile.set_meta("unstable_paradox_triggered", true)
-
-	var tree = get_tree()
-	if tree == null:
-		return
-	await tree.create_timer(0.07, false).timeout
-	if not is_inside_tree():
-		return
-
-	var echo_direction = (-source_direction.normalized()).normalized()
-	var damage_value = float(source_damage) if source_damage != null else attack_damage
-	var echo = _spawn_projectile(
-		source_position + echo_direction * 14.0,
-		echo_direction.angle(),
-		max(damage_value * UNSTABLE_PARADOX_DAMAGE_MULTIPLIER, 8.0),
-		true,
-		Color(1.0, 0.18, 0.84, 0.95),
-		{
-			"skip_arm_mutations": true,
-			"projectile_speed_multiplier": UNSTABLE_PARADOX_SPEED_MULTIPLIER,
-			"scale_multiplier": 0.9,
-			"damage_source": self,
-			"paradox_echo": true
-		}
-	)
-	if echo != null:
-		_spawn_burst_particles(source_position, Color(1.0, 0.18, 0.84, 0.82), 12, 0.18, 90.0)
 
 func _can_mutation_affect_enemy(enemy: Node) -> bool:
 	if not is_instance_valid(enemy) or not enemy.has_method("take_damage") or not (enemy is Node2D):

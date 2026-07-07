@@ -1235,9 +1235,6 @@ func _get_local_polygon_bounds(polygon: PackedVector2Array) -> Rect2:
 		rect = rect.expand(point)
 	return rect
 
-func _is_tile_inside_arena_grid(tile_coords: Vector2i) -> bool:
-	return tile_coords.x >= 0 and tile_coords.y >= 0 and tile_coords.x < ARENA_GRID_SIZE.x and tile_coords.y < ARENA_GRID_SIZE.y
-
 func _update_camera_limits() -> void:
 	var camera = get_viewport().get_camera_2d()
 	if camera == null:
@@ -2062,35 +2059,14 @@ func _on_pecado_changed(new_pecado: int) -> void:
 		if player and player.has_method("win"):
 			player.win()
 			
-func _unhandled_input(event: InputEvent) -> void: # Modo Debug
-	if OS.is_debug_build() and event is InputEventKey and event.pressed and not event.echo:
-		if event.keycode == KEY_F10:
-			_toggle_debug_panel()
-			return
-		if event.keycode == KEY_SEMICOLON:
-			_debug_skip_current_encounter()
-			return
-			
-			# Cancela o spawn de inimigos normais
-			enemies_left_to_spawn = 0
-			
-			# Apaga todos os inimigos normais
-			for enemy in get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
-				enemy.queue_free()
-				
-			# Verifica e apaga o Boss
-			var matou_boss = false
-			for boss in get_tree().get_nodes_in_group(Global.GROUP_BOSS):
-				boss.queue_free()
-				matou_boss = true
-				
-			# Se matou o boss ou o jogo já estava na fase do boss:
-			if matou_boss or boss_phase:
-				Global.pecado += 1       # Sobe o nível do pecado para a próxima fase
-				_on_boss_died()          # Força a transição da câmera e da arena
-			else:
-				# Se era uma wave normal
-				call_deferred("_try_finish_wave")
+func _unhandled_input(event: InputEvent) -> void:
+	if not OS.is_debug_build() or not (event is InputEventKey) or not event.pressed or event.echo:
+		return
+
+	if event.keycode == KEY_F10:
+		_toggle_debug_panel()
+	elif event.keycode == KEY_SEMICOLON:
+		_debug_skip_current_encounter()
 
 func _debug_skip_current_encounter() -> void:
 	enemies_left_to_spawn = 0

@@ -4,7 +4,7 @@ const PLAYER_PATH: NodePath = "/root/GameScene/Player"
 const GAME_SCENE_PATH: NodePath = "/root/GameScene"
 const HEAL_AFTER_WAVE_COMMON_ROLL_CHANCE: float = 0.3
 const DASH_COOLDOWN_COMMON_ROLL_CHANCE: float = 0.5
-const CONTRACT_EXTRA_CURSED_ROLL_CHANCE: float = 0.1
+const CONTRACT_EXTRA_CURSED_ROLL_CHANCE: float = 0.075
 const DEFAULT_VIEWPORT_SIZE: Vector2 = Vector2(1152.0, 648.0)
 const OPTION_BUTTON_COUNT: int = 3
 const OPTION_LABEL_FONT_SIZE: int = 32
@@ -26,7 +26,6 @@ const SPECIAL_LEVEL_UP_CONFETTI_NAME: String = "SpecialLevelUpConfetti"
 const CONFETTI_LIFETIME: float = 2.5
 const CONFETTI_VIEWPORT_WIDTH_MULTIPLIER: float = 1.15
 const CONFETTI_START_Y: float = -36.0
-const CONFETTI_BOTTOM_OVERSHOOT: float = 96.0
 const CONFETTI_AMOUNT: int = 280
 const CONFETTI_EXPLOSIVENESS: float = 0.0
 const CONFETTI_GRAVITY: float = 280.0
@@ -277,9 +276,6 @@ func show_boss_passive_discard_popup(old_options, new_option: String) -> void:
 
 	_render_options(discard_options, false)
 
-func _build_options(context: String, boss_pecado: int) -> Array:
-	return _build_level_up_roll_data(context, boss_pecado).get("final_options", [])
-
 ## Builds final rewards and the visual pools used by the level-up slot animation.
 func _build_level_up_roll_data(context: String, boss_pecado: int) -> Dictionary:
 	if context == "pre_boss":
@@ -339,12 +335,6 @@ func _build_contract_extra_roll_data() -> Dictionary:
 			pools.append(cursed_pool)
 
 	return _make_level_up_roll_data(final_options, pools)
-
-func _build_normal_options() -> Array:
-	return _select_normal_options(_get_available_passive_options())
-
-func _build_pre_boss_options() -> Array:
-	return _select_pre_boss_options(_get_available_rare_options(), _get_available_passive_options())
 
 func _select_normal_options(passive_pool: Array) -> Array:
 	var options = passive_pool.duplicate(true)
@@ -406,9 +396,6 @@ func _get_available_passive_options() -> Array:
 		available_options.append(option.duplicate())
 
 	return available_options
-
-func _build_boss_options(boss_pecado: int) -> Array:
-	return _select_boss_options(_get_boss_reward_options(boss_pecado), _get_cursed_passive_options())
 
 func _get_boss_reward_options(boss_pecado: int) -> Array:
 	var options = []
@@ -835,12 +822,6 @@ func _format_special_percent_value(value: float) -> String:
 func _is_special_level_up_option(option: Dictionary) -> bool:
 	return bool(option.get("special_level_up", false))
 
-func _has_special_level_up_option(options: Array) -> bool:
-	for option in options:
-		if option is Dictionary and _is_special_level_up_option(option):
-			return true
-	return false
-
 func _has_legendary_special_level_up_option(options: Array) -> bool:
 	for option in options:
 		if option is Dictionary and _is_legendary_special_level_up_option(option):
@@ -876,15 +857,6 @@ func _get_option_text_color(option: Dictionary, is_blocked: bool) -> Color:
 	var color = _get_color_for_rarity(str(option.get("rarity", "")))
 	if is_blocked:
 		return Color(color.r * 0.28, color.g * 0.28, color.b * 0.28, 0.78)
-	return color
-
-func _get_option_button_color(option: Dictionary, is_blocked: bool) -> Color:
-	var color = _get_color_for_rarity(str(option.get("rarity", "")))
-	if is_blocked:
-		return Color(color.r * 0.28, color.g * 0.28, color.b * 0.28, 0.78)
-	if _is_special_level_up_option(option):
-		return color.lerp(_get_special_level_up_color(option), 0.68)
-
 	return color
 
 func _get_option_by_id(option_id: String) -> Dictionary:
@@ -1136,13 +1108,3 @@ func _clear_special_level_up_confetti() -> void:
 	if is_instance_valid(special_level_up_confetti):
 		special_level_up_confetti.queue_free()
 	special_level_up_confetti = null
-
-func _get_confetti_fall_distance() -> float:
-	var average_velocity = (CONFETTI_MIN_VELOCITY + CONFETTI_MAX_VELOCITY) * 0.5
-	return average_velocity * CONFETTI_LIFETIME + 0.5 * CONFETTI_GRAVITY * CONFETTI_LIFETIME * CONFETTI_LIFETIME
-
-func _is_confetti_visual_coverage_valid() -> bool:
-	var viewport_size = _get_design_viewport_size()
-	var full_width = viewport_size.x * CONFETTI_VIEWPORT_WIDTH_MULTIPLIER >= viewport_size.x
-	var full_height = CONFETTI_START_Y + _get_confetti_fall_distance() >= viewport_size.y + CONFETTI_BOTTOM_OVERSHOOT
-	return full_width and full_height

@@ -12,8 +12,12 @@ const ACTIVE_SKILL_E_LABEL_PATH: NodePath = "/root/GameScene/Player/Camera2D/Can
 const ACTIVE_SKILL_R_LABEL_PATH: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer/ActiveSkillR"
 const GAME_OVER_PATH: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/PauseControl/GameOver"
 const GAME_WIN_PATH: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/PauseControl/GameWin"
+const GAME_OVER_TEXTURE_EN: Texture2D = preload("res://Sprites/Menu/UI_morte_en.png")
+const GAME_OVER_TEXTURE_PT: Texture2D = preload("res://Sprites/Menu/UI_morte_pt.png")
+const GAME_WIN_TEXTURE_EN: Texture2D = preload("res://Sprites/Menu/UI_vitoria_en.png")
+const GAME_WIN_TEXTURE_PT: Texture2D = preload("res://Sprites/Menu/UI_vitoria_pt.png")
 const OPTIONS_MENU_DEFAULT_SEPARATION: int = 7
-const OPTIONS_LANGUAGE_BUTTON_CENTER: Vector2 = Vector2(46.5, 32.6)
+const OPTIONS_LANGUAGE_BUTTON_CENTER: Vector2 = Vector2(46.5, 33)
 const OPTIONS_LANGUAGE_BUTTON_SIZE: Vector2 = Vector2(48.0, 28.0)
 const OPTIONS_LANGUAGE_BUTTON_FONT_SIZE: int = 16
 
@@ -31,7 +35,9 @@ var healing_received_label: Label
 var active_skill_e_label: Label
 var active_skill_r_label: Label
 var game_over: Panel
+var game_over_background: TextureRect
 var game_win: Panel
+var game_win_background: TextureRect
 var death_recap_background: Panel
 var death_recap_scroll: ScrollContainer
 var death_recap_label: Label
@@ -55,7 +61,9 @@ func _ready() -> void:
 	active_skill_e_label = get_node_or_null(ACTIVE_SKILL_E_LABEL_PATH)
 	active_skill_r_label = get_node_or_null(ACTIVE_SKILL_R_LABEL_PATH)
 	game_over = get_node_or_null(GAME_OVER_PATH)
+	game_over_background = get_node_or_null("GameOver/Fundo") as TextureRect
 	game_win = get_node_or_null(GAME_WIN_PATH)
+	game_win_background = get_node_or_null("GameWin/Fundo") as TextureRect
 	_setup_language_button()
 	I18n.language_changed.connect(_on_language_changed)
 	_refresh_localized_text()
@@ -313,6 +321,9 @@ func _on_language_changed(_language: String) -> void:
 		_update_death_recap()
 
 func _refresh_localized_text() -> void:
+	_update_game_over_texture()
+	_update_game_win_texture()
+
 	if language_button != null:
 		language_button.text = I18n.t("settings.language_button")
 		language_button.tooltip_text = I18n.t("settings.language_tooltip")
@@ -326,6 +337,20 @@ func _refresh_localized_text() -> void:
 	var game_win_menu_label = get_node_or_null("GameWin/MarginContainer2/TextureButton/Label")
 	if game_win_menu_label is Label:
 		(game_win_menu_label as Label).text = I18n.t("common.menu")
+
+func _update_game_over_texture() -> void:
+	if game_over_background == null:
+		game_over_background = get_node_or_null("GameOver/Fundo") as TextureRect
+	if game_over_background == null:
+		return
+	game_over_background.texture = GAME_OVER_TEXTURE_PT if I18n.get_language() == I18n.LANG_PT_BR else GAME_OVER_TEXTURE_EN
+
+func _update_game_win_texture() -> void:
+	if game_win_background == null:
+		game_win_background = get_node_or_null("GameWin/Fundo") as TextureRect
+	if game_win_background == null:
+		return
+	game_win_background.texture = GAME_WIN_TEXTURE_PT if I18n.get_language() == I18n.LANG_PT_BR else GAME_WIN_TEXTURE_EN
 
 func _on_h_slider_value_changed(value: float) -> void:
 	Global.music_volume_db = value

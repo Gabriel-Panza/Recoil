@@ -1,19 +1,25 @@
 [gd_scene format=3 uid="uid://xywhrxgsjyey"]
 
-[ext_resource type="Texture2D" uid="uid://bimnjcjw2128v" path="res://Sprites/Menu/menu_recoil.jpg" id="2_disip"]
+[ext_resource type="Texture2D" uid="uid://cu1gxpdtqt5x8" path="res://Sprites/Menu/menu_fundo.png" id="2_disip"]
 [ext_resource type="Script" uid="uid://bre3maa3yjpb6" path="res://Scripts/HUDs/main_menu.gd" id="2_lhkw5"]
-[ext_resource type="Texture2D" uid="uid://dqwkp7u2muh1x" path="res://Sprites/Menu/Play_button_normal.png" id="2_xe10a"]
 [ext_resource type="Script" uid="uid://cbu5wg2uwwswg" path="res://Scripts/HUDs/h_slider.gd" id="3_7yn15"]
-[ext_resource type="Texture2D" uid="uid://boi4gvans1och" path="res://Sprites/Menu/Play_button_hover_and_pressed.png" id="3_b8upb"]
+[ext_resource type="Texture2D" uid="uid://wjox3vvr887x" path="res://Sprites/Menu/menu_roleta.png" id="3_lqsxv"]
+[ext_resource type="Texture2D" uid="uid://hbwk2wtn3f2l" path="res://Sprites/Menu/Text_overlay.png" id="3_nid4a"]
 [ext_resource type="Texture2D" uid="uid://0y0wpxjhectw" path="res://Sprites/Menu/panel_options_hud.png" id="3_nlrbi"]
-[ext_resource type="Texture2D" uid="uid://m3ijv4m8qf10" path="res://Sprites/Menu/Options_button_normal.png" id="4_bvot3"]
-[ext_resource type="Texture2D" uid="uid://dmoi5gdmqpa2b" path="res://Sprites/Menu/Exit_button_normal.png" id="4_jie5y"]
-[ext_resource type="Texture2D" uid="uid://btl8uyigkckg5" path="res://Sprites/Menu/Options_button_hover_and_pressed.png" id="5_8b04f"]
-[ext_resource type="Texture2D" uid="uid://ctyp6wqg3qn2n" path="res://Sprites/Menu/Exit_button_hover_and_pressed.png" id="5_a4pvi"]
-[ext_resource type="Texture2D" uid="uid://eqwe8oa45uh5" path="res://Sprites/Menu/Ranking_button_normal.png" id="6_57byf"]
-[ext_resource type="Texture2D" uid="uid://drkgt1w8eo5lp" path="res://Sprites/Menu/Ranking_button_hover_and_pressed.png" id="7_disip"]
+[ext_resource type="Texture2D" uid="uid://qaump5bcpqvf" path="res://Sprites/Menu/Play_icon_normal.png" id="5_nid4a"]
+[ext_resource type="Texture2D" uid="uid://cq0jwarxdi8rf" path="res://Sprites/Menu/Play_icon_hover.png" id="6_nfh28"]
+[ext_resource type="Texture2D" uid="uid://inocwkied87o" path="res://Sprites/Menu/Options_icon_normal.png" id="7_n8vyj"]
+[ext_resource type="Texture2D" uid="uid://ckgqyg1uo73k3" path="res://Sprites/Menu/Options_icon_hover.png" id="8_h10yq"]
+[ext_resource type="Texture2D" uid="uid://brkjpla1qr3vt" path="res://Sprites/Menu/Ranking_icon_normal.png" id="9_1q1cg"]
+[ext_resource type="Texture2D" uid="uid://bpgf3rixj36j4" path="res://Sprites/Menu/Ranking_icon_hover.png" id="10_43anu"]
+[ext_resource type="Texture2D" uid="uid://dyoxun51pqdib" path="res://Sprites/Menu/CutscenesGalery_icon_normal.png" id="11_1q1cg"]
+[ext_resource type="Texture2D" uid="uid://rdaehbqrjsws" path="res://Sprites/Menu/CutscenesGalery_icon_hover.png" id="12_43anu"]
 [ext_resource type="Texture2D" uid="uid://cdxdy4khmm05w" path="res://Sprites/Menu/Back_button_normal.png" id="12_57byf"]
+[ext_resource type="Texture2D" uid="uid://bc6r2kwmv5jg" path="res://Sprites/Menu/Exit_icon_normal.png" id="13_1q1cg"]
 [ext_resource type="Texture2D" uid="uid://dimbpn40bj757" path="res://Sprites/Menu/Back_button_hover_and_pressed.png" id="13_disip"]
+[ext_resource type="Texture2D" uid="uid://u2qvemk5yp03" path="res://Sprites/Menu/Exit_icon_hover.png" id="14_43anu"]
+[ext_resource type="Texture2D" uid="uid://dbqyeqwua7jwq" path="res://Sprites/Menu/Creditos_icon_normal.png" id="15_1q1cg"]
+[ext_resource type="Texture2D" uid="uid://ce0x0j5xo4jp" path="res://Sprites/Menu/Creditos_icon_hover.png" id="16_43anu"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_7yn15"]
 bg_color = Color(0.2, 0.239216, 0.270588, 1)
@@ -33,8 +39,8 @@ layout_mode = 1
 anchors_preset = -1
 anchor_right = 0.998
 anchor_bottom = 0.994
-offset_right = 6.30396
-offset_bottom = 9.888
+offset_right = 6.303955
+offset_bottom = 5.8880005
 expand_mode = 1
 
 [node name="Menu" type="Control" parent="." unique_id=1971434833]
@@ -51,83 +57,124 @@ offset_bottom = 158.0
 scale = Vector2(0.62, 0.62)
 
 [node name="Titulo" type="Sprite2D" parent="Menu/Titulo" unique_id=1359029706]
-position = Vector2(158.06447, 370.9677)
-scale = Vector2(3.3539069, 1.6803236)
+position = Vector2(161.29034, 370.96768)
+scale = Vector2(3.2370074, 3.2258062)
 texture = ExtResource("2_disip")
 
-[node name="MarginContainer" type="MarginContainer" parent="Menu" unique_id=144147291]
-custom_minimum_size = Vector2(146, 40)
-layout_mode = 0
-offset_left = 478.0
-offset_top = 235.0
-offset_right = 670.0
-offset_bottom = 294.0
+[node name="Botões" type="Control" parent="Menu" unique_id=1954776202]
+anchors_preset = 0
+offset_right = 1152.0
+offset_bottom = 648.0
 
-[node name="PlayButton" type="TextureButton" parent="Menu/MarginContainer" unique_id=223760500]
-custom_minimum_size = Vector2(146, 40)
+[node name="TextOverlay" type="Sprite2D" parent="Menu/Botões" unique_id=393776843]
+position = Vector2(605.5, 325.99692)
+scale = Vector2(1.8975697, 1.9877491)
+texture = ExtResource("3_nid4a")
+
+[node name="Roleta" type="Sprite2D" parent="Menu/Botões" unique_id=475653709]
+position = Vector2(75, 323)
+scale = Vector2(1.994792, 1.9938462)
+texture = ExtResource("3_lqsxv")
+
+[node name="MarginContainer" type="MarginContainer" parent="Menu/Botões" unique_id=144147291]
+layout_mode = 0
+offset_left = 180.0
+offset_top = 296.5
+offset_right = 244.0
+offset_bottom = 353.5
+
+[node name="PlayButton" type="TextureButton" parent="Menu/Botões/MarginContainer" unique_id=223760500]
 layout_mode = 2
-texture_normal = ExtResource("2_xe10a")
-texture_pressed = ExtResource("3_b8upb")
-texture_hover = ExtResource("3_b8upb")
-texture_disabled = ExtResource("2_xe10a")
-texture_focused = ExtResource("2_xe10a")
+texture_normal = ExtResource("5_nid4a")
+texture_pressed = ExtResource("6_nfh28")
+texture_hover = ExtResource("6_nfh28")
+texture_disabled = ExtResource("5_nid4a")
+texture_focused = ExtResource("5_nid4a")
 ignore_texture_size = true
 stretch_mode = 0
 
-[node name="MarginContainer2" type="MarginContainer" parent="Menu" unique_id=1627233419]
-custom_minimum_size = Vector2(146, 40)
+[node name="MarginContainer2" type="MarginContainer" parent="Menu/Botões" unique_id=1627233419]
 layout_mode = 0
-offset_left = 478.0
-offset_top = 318.0
-offset_right = 670.0
-offset_bottom = 377.0
+offset_left = 69.0
+offset_top = 111.5
+offset_right = 141.0
+offset_bottom = 175.0
 
-[node name="OptionsButton" type="TextureButton" parent="Menu/MarginContainer2" unique_id=1692633453]
-custom_minimum_size = Vector2(146, 40)
+[node name="OptionsButton" type="TextureButton" parent="Menu/Botões/MarginContainer2" unique_id=1692633453]
 layout_mode = 2
-texture_normal = ExtResource("4_bvot3")
-texture_pressed = ExtResource("5_8b04f")
-texture_hover = ExtResource("5_8b04f")
-texture_disabled = ExtResource("4_bvot3")
-texture_focused = ExtResource("4_bvot3")
+texture_normal = ExtResource("7_n8vyj")
+texture_pressed = ExtResource("8_h10yq")
+texture_hover = ExtResource("8_h10yq")
+texture_disabled = ExtResource("7_n8vyj")
+texture_focused = ExtResource("7_n8vyj")
 ignore_texture_size = true
 stretch_mode = 0
 
-[node name="MarginContainer3" type="MarginContainer" parent="Menu" unique_id=1566693352]
-custom_minimum_size = Vector2(146, 40)
+[node name="MarginContainer3" type="MarginContainer" parent="Menu/Botões" unique_id=1566693352]
 layout_mode = 0
-offset_left = 478.0
-offset_top = 407.0
-offset_right = 670.0
-offset_bottom = 466.0
+offset_left = 71.0
+offset_top = 475.0
+offset_right = 135.0
+offset_bottom = 537.0
 
-[node name="RankingButton" type="TextureButton" parent="Menu/MarginContainer3" unique_id=925690450]
-custom_minimum_size = Vector2(146, 40)
+[node name="RankingButton" type="TextureButton" parent="Menu/Botões/MarginContainer3" unique_id=925690450]
 layout_mode = 2
-texture_normal = ExtResource("6_57byf")
-texture_pressed = ExtResource("7_disip")
-texture_hover = ExtResource("7_disip")
-texture_disabled = ExtResource("6_57byf")
-texture_focused = ExtResource("6_57byf")
+texture_normal = ExtResource("9_1q1cg")
+texture_pressed = ExtResource("10_43anu")
+texture_hover = ExtResource("10_43anu")
+texture_disabled = ExtResource("9_1q1cg")
+texture_focused = ExtResource("9_1q1cg")
 ignore_texture_size = true
 stretch_mode = 0
 
-[node name="MarginContainer4" type="MarginContainer" parent="Menu" unique_id=2072548704]
-custom_minimum_size = Vector2(146, 40)
+[node name="MarginContainer4" type="MarginContainer" parent="Menu/Botões" unique_id=2072548704]
 layout_mode = 0
-offset_left = 478.0
-offset_top = 491.0
-offset_right = 670.0
-offset_bottom = 550.0
+offset_left = -131.0
+offset_top = 470.0
+offset_right = -79.0
+offset_bottom = 530.0
 
-[node name="ExitButton" type="TextureButton" parent="Menu/MarginContainer4" unique_id=1527520183]
-custom_minimum_size = Vector2(146, 40)
+[node name="CutscenesGaleryButton" type="TextureButton" parent="Menu/Botões/MarginContainer4" unique_id=1527520183]
 layout_mode = 2
-texture_normal = ExtResource("4_jie5y")
-texture_pressed = ExtResource("5_a4pvi")
-texture_hover = ExtResource("5_a4pvi")
-texture_disabled = ExtResource("4_jie5y")
-texture_focused = ExtResource("4_jie5y")
+texture_normal = ExtResource("11_1q1cg")
+texture_pressed = ExtResource("12_43anu")
+texture_hover = ExtResource("12_43anu")
+texture_disabled = ExtResource("11_1q1cg")
+texture_focused = ExtResource("11_1q1cg")
+ignore_texture_size = true
+stretch_mode = 0
+
+[node name="MarginContainer5" type="MarginContainer" parent="Menu/Botões" unique_id=177789819]
+layout_mode = 0
+offset_left = -134.0
+offset_top = 115.0
+offset_right = -79.0
+offset_bottom = 172.0
+
+[node name="ExitButton" type="TextureButton" parent="Menu/Botões/MarginContainer5" unique_id=777084945]
+layout_mode = 2
+texture_normal = ExtResource("13_1q1cg")
+texture_pressed = ExtResource("14_43anu")
+texture_hover = ExtResource("14_43anu")
+texture_disabled = ExtResource("13_1q1cg")
+texture_focused = ExtResource("13_1q1cg")
+ignore_texture_size = true
+stretch_mode = 0
+
+[node name="MarginContainer6" type="MarginContainer" parent="Menu/Botões" unique_id=581658337]
+layout_mode = 0
+offset_left = -239.0
+offset_top = 294.0
+offset_right = -186.0
+offset_bottom = 352.0
+
+[node name="CreditsButton" type="TextureButton" parent="Menu/Botões/MarginContainer6" unique_id=1972933834]
+layout_mode = 2
+texture_normal = ExtResource("15_1q1cg")
+texture_pressed = ExtResource("16_43anu")
+texture_hover = ExtResource("16_43anu")
+texture_disabled = ExtResource("15_1q1cg")
+texture_focused = ExtResource("15_1q1cg")
 ignore_texture_size = true
 stretch_mode = 0
 
@@ -240,10 +287,10 @@ text = "Back"
 volume_db = 6.0
 autoplay = true
 
-[connection signal="pressed" from="Menu/MarginContainer/PlayButton" to="." method="_on_start_game_pressed"]
-[connection signal="pressed" from="Menu/MarginContainer2/OptionsButton" to="." method="_on_options_button_pressed"]
-[connection signal="pressed" from="Menu/MarginContainer3/RankingButton" to="." method="_on_ranking_button_pressed"]
-[connection signal="pressed" from="Menu/MarginContainer4/ExitButton" to="." method="_on_exit_button_pressed"]
+[connection signal="pressed" from="Menu/Botões/MarginContainer/PlayButton" to="." method="_on_start_game_pressed"]
+[connection signal="pressed" from="Menu/Botões/MarginContainer2/OptionsButton" to="." method="_on_options_button_pressed"]
+[connection signal="pressed" from="Menu/Botões/MarginContainer3/RankingButton" to="." method="_on_ranking_button_pressed"]
+[connection signal="pressed" from="Menu/Botões/MarginContainer5/ExitButton" to="." method="_on_exit_button_pressed"]
 [connection signal="value_changed" from="OptionsMenu/VBoxContainer/HSlider" to="OptionsMenu/VBoxContainer/HSlider" method="_on_value_changed"]
 [connection signal="value_changed" from="OptionsMenu/VBoxContainer/HSlider2" to="OptionsMenu/VBoxContainer/HSlider" method="_on_h_slider_2_value_changed"]
 [connection signal="pressed" from="OptionsMenu/VBoxContainer/BackButton" to="." method="_on_back_button_pressed"]

@@ -133,15 +133,22 @@ func _try_ricochet_from_body(body: Node) -> bool:
 	return true
 
 func _apply_projectile_mutations(delta: float) -> void:
-	if not self.is_in_group(Global.GROUP_PROJECTILE) or not bool(get_meta("fast_homing_enabled", false)):
+	if not self.is_in_group(Global.GROUP_PROJECTILE):
 		return
-	if not is_instance_valid(player) or not player.has_method("get_fast_mutation_homing_direction"):
+	if not is_instance_valid(player):
 		return
 
-	var adjusted_direction = player.call("get_fast_mutation_homing_direction", global_position, direction, delta)
-	if adjusted_direction is Vector2 and adjusted_direction != Vector2.ZERO:
-		direction = adjusted_direction.normalized()
-		rotation = direction.angle()
+	if bool(get_meta("fast_homing_enabled", false)) and player.has_method("get_fast_mutation_homing_direction"):
+		var fast_direction = player.call("get_fast_mutation_homing_direction", global_position, direction, delta)
+		if fast_direction is Vector2 and fast_direction != Vector2.ZERO:
+			direction = fast_direction.normalized()
+			rotation = direction.angle()
+
+	if bool(get_meta("unstable_ricochet_homing_enabled", false)) and bool(get_meta("unstable_has_ricocheted", false)) and player.has_method("get_unstable_ricochet_homing_direction"):
+		var unstable_direction = player.call("get_unstable_ricochet_homing_direction", global_position, direction, delta)
+		if unstable_direction is Vector2 and unstable_direction != Vector2.ZERO:
+			direction = unstable_direction.normalized()
+			rotation = direction.angle()
 
 func _notify_player_projectile_enemy_hit(target: Node, enemy_damage: float) -> void:
 	if not is_instance_valid(player) or not player.has_method("on_player_projectile_hit_enemy"):

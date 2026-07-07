@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bimnjcjw2128v"
-path="res://.godot/imported/menu_recoil.jpg-19a1341692939c09fd4e5c37493216ed.ctex"
+uid="uid://ckgqyg1uo73k3"
+path="res://.godot/imported/Options_icon_hover.png-826bf1a4ad9a1387c79ca4795e3c508e.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Sprites/Menu/menu_recoil.jpg"
-dest_files=["res://.godot/imported/menu_recoil.jpg-19a1341692939c09fd4e5c37493216ed.ctex"]
+source_file="res://Sprites/Menu/Options_icon_hover.png"
+dest_files=["res://.godot/imported/Options_icon_hover.png-826bf1a4ad9a1387c79ca4795e3c508e.ctex"]
 
 [params]
 

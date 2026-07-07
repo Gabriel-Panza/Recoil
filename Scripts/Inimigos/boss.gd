@@ -1591,9 +1591,6 @@ func _start_pride_aimed_fireballs(amount: int, spread_degrees: float) -> void:
 		if projectile != null:
 			projectile.scale *= 0.92
 
-func _spawn_radial_projectiles(projectile_count: int, projectile_damage: float, color: Color, projectile_speed: float, angle_offset: float = 0.0) -> void:
-	_spawn_radial_projectiles_from(global_position, projectile_count, projectile_damage, color, projectile_speed, angle_offset)
-
 func _spawn_radial_projectiles_from(origin: Vector2, projectile_count: int, projectile_damage: float, color: Color, projectile_speed: float, angle_offset: float = 0.0) -> void:
 	for i in range(projectile_count):
 		var angle = TAU * float(i) / float(projectile_count) + angle_offset

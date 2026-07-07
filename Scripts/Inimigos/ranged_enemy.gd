@@ -92,22 +92,3 @@ func _fire_projectiles() -> void:
 func _update_sprite_direction() -> void:
 	if aparencia and player:
 		aparencia.flip_h = player.global_position.x < global_position.x
-
-func _is_visible_on_screen() -> bool:
-	var camera = get_viewport().get_camera_2d()
-	if not camera:
-		return true
-
-	var cam_pos = camera.global_position
-	var viewport_size = get_viewport_rect().size
-	var cam_zoom = camera.zoom
-	var real_view_size = viewport_size / cam_zoom
-
-	var top_left = cam_pos - (real_view_size / 2)
-	var bottom_right = cam_pos + (real_view_size / 2)
-	var padding: float = 15.0
-
-	var inside_x = global_position.x > (top_left.x + padding) and global_position.x < (bottom_right.x - padding)
-	var inside_y = global_position.y > (top_left.y + padding) and global_position.y < (bottom_right.y - padding)
-
-	return inside_x and inside_y

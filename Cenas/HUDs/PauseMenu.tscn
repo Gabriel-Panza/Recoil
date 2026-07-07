@@ -11,7 +11,8 @@
 [ext_resource type="Texture2D" uid="uid://0y0wpxjhectw" path="res://Sprites/Menu/panel_options_hud.png" id="9_81ba2"]
 [ext_resource type="Texture2D" uid="uid://cdxdy4khmm05w" path="res://Sprites/Menu/Back_button_normal.png" id="10_0l46b"]
 [ext_resource type="Texture2D" uid="uid://dimbpn40bj757" path="res://Sprites/Menu/Back_button_hover_and_pressed.png" id="11_cblwv"]
-[ext_resource type="Texture2D" uid="uid://bpe77mquesgup" path="res://Sprites/Menu/gameOver.png" id="12_cblwv"]
+[ext_resource type="Texture2D" uid="uid://cqqwqa5s7vaff" path="res://Sprites/Menu/UI_morte_en.png" id="12_cblwv"]
+[ext_resource type="Texture2D" uid="uid://cdeic6st40jc6" path="res://Sprites/Menu/UI_vitoria_en.png" id="13_ah2t0"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_428n7"]
 bg_color = Color(0.2, 0.239216, 0.270588, 1)
@@ -260,11 +261,11 @@ layout_mode = 1
 anchors_preset = -1
 anchor_right = 0.998
 anchor_bottom = 0.994
-offset_left = -25.2
-offset_top = -51.0
-offset_right = -18.895996
-offset_bottom = -41.112
+offset_left = -2.9999638
+offset_right = -190.19598
+offset_bottom = -104.112
 scale = Vector2(1.2, 1.2)
+texture = ExtResource("13_ah2t0")
 
 [node name="MarginContainer2" type="MarginContainer" parent="GameWin" unique_id=1704343652]
 z_index = 2
