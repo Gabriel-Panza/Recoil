@@ -23,6 +23,7 @@ const WRATH_BOSS_SHEET = preload("res://Sprites/Bosses/Wrath_Spritesheet.png")
 const LUST_BOSS_SHEET = preload("res://Sprites/Bosses/Lust_Spritesheet.png")
 const GREED_BOSS_SHEET = preload("res://Sprites/Bosses/Greed_Spritesheet.png")
 const PRIDE_BOSS_SHEET = preload("res://Sprites/Bosses/Pride_Spritesheet.png")
+const FOOTSTEP_SFX_STREAM: AudioStream = preload("res://Music&SFX/SFX/FootStepsGravel_SFX.mp3")
 
 const WRATH_BOMB_RADIUS: float = 20.0
 const WRATH_BOMB_EXPLOSION_RADIUS: float = 110.0
@@ -54,7 +55,7 @@ const SLOTH_BOSS_PLAYER_VELOCITY_MULTIPLIER: float = 0.75
 const SLOTH_BOSS_ZONE_DPS: float = 2.0
 const SLOTH_BOSS_ENEMY_SLOW_EFFECT_RATIO: float = 0.1
 const SLOTH_BOSS_ENEMY_SLOW_REFERENCE_DASH_MULTIPLIER: float = 0.45
-const GLUTTONY_FOOD_SPAWN_INTERVAL: float = 2.5
+const GLUTTONY_FOOD_SPAWN_INTERVAL: float = 3.25
 const GLUTTONY_FOOD_SPEED_PHASE_1: float = 137.5
 const GLUTTONY_FOOD_SPEED_PHASE_2: float = 157.5
 const GLUTTONY_FOOD_DASH_DURATION: float = 0.3
@@ -62,7 +63,7 @@ const GLUTTONY_FOOD_DASH_DISTANCE_PHASE_1: float = 177.5
 const GLUTTONY_FOOD_DASH_DISTANCE_PHASE_2: float = 217.5
 const GLUTTONY_FOOD_DASH_ARENA_MARGIN: float = 30.0
 const GLUTTONY_STRESS_DURATION_PHASE_1: float = 5.0
-const GLUTTONY_STRESS_DURATION_PHASE_2: float = 8.0
+const GLUTTONY_STRESS_DURATION_PHASE_2: float = 7.5
 const ENVY_CLONE_MAX_HEALTH: float = 180.0
 const ENVY_CLONE_VISUAL_MODULATE: Color = Color(0.55, 0.95, 1.0, 0.56)
 const ENVY_PINCER_TELEGRAPH_DURATION: float = 0.75
@@ -110,7 +111,7 @@ const HEAL_FEEDBACK_COLOR: Color = Color(0.18, 1.0, 0.32, 1.0)
 
 const BOSS_CONFIG = {
 	1: { "max_health": 500, "speed": 0.0, "damage": 40, "state": BossState.SLOTH, "animation": "pecado1", "sprite_sheet": SLOTH_BOSS_SHEET, "frame_size": Vector2i(44, 58), "frame_count": 8, "visual_scale": Vector2(1.35, 1.35) },
-	2: { "max_health": 1750, "speed": 90.0, "damage": 50, "state": BossState.GLUTTONY, "animation": "pecado2", "sprite_sheet": GLUTTONY_BOSS_SHEET, "frame_size": Vector2i(150, 140), "frame_count": 4, "visual_scale": Vector2(0.82, 0.82) },
+	2: { "max_health": 1050, "speed": 90.0, "damage": 50, "state": BossState.GLUTTONY, "animation": "pecado2", "sprite_sheet": GLUTTONY_BOSS_SHEET, "frame_size": Vector2i(150, 140), "frame_count": 4, "visual_scale": Vector2(0.82, 0.82) },
 	3: { "max_health": 1200, "speed": 90.0, "damage": 50, "state": BossState.ENVY, "animation": "pecado3", "sprite_sheet": ENVY_BOSS_SHEET, "frame_size": Vector2i(69, 98), "frame_count": 4, "visual_scale": Vector2(0.9, 0.9) },
 	4: { "max_health": 1500, "speed": 90.0, "damage": 75, "state": BossState.WRATH, "animation": "pecado4", "sprite_sheet": WRATH_BOSS_SHEET, "frame_size": Vector2i(78, 74), "frame_count": 8, "visual_scale": Vector2(1.08, 1.08) },
 	5: { "max_health": 2000, "speed": 90.0, "damage": 60, "state": BossState.LUST, "animation": "pecado5", "sprite_sheet": LUST_BOSS_SHEET, "frame_size": Vector2i(60, 80), "frame_count": 6, "visual_scale": Vector2(1.08, 1.08) },
@@ -167,6 +168,7 @@ var pride_edge_overlay_cooldown: float = 0.0
 var pride_movement_mode: String = PRIDE_MOVEMENT_DEFAULT
 var boss_indicator_layer: CanvasLayer
 var boss_indicator_node: Node2D
+var footstep_sfx_player: AudioStreamPlayer2D
 
 func _ready() -> void:
 	z_index = Global.CHARACTER_RENDER_Z_INDEX
@@ -178,6 +180,7 @@ func _ready() -> void:
 	aparencia = $AparenciaAnimada
 	health_feedback_base_modulate = aparencia.modulate
 	_configure_boss_for_current_sin()
+	_setup_footstep_sfx()
 	_setup_boss_edge_indicator()
 	current_health = max_health
 	base_speed = speed
@@ -262,6 +265,7 @@ func _physics_process(delta: float) -> void:
 			handle_gluttony(delta)
 		BossState.SLOTH:
 			handle_sloth(delta)
+	_update_footstep_sfx()
 
 func _update_phase() -> void:
 	if phase == 2:
@@ -1908,6 +1912,7 @@ func die() -> void:
 	current_health = 0
 	_update_health_bar()
 	set_physics_process(false)
+	_stop_footstep_sfx()
 	_set_boss_edge_indicator_visible(false)
 	_cleanup_boss_objects()
 
@@ -2181,6 +2186,40 @@ func _get_boss_color() -> Color:
 		BossState.PRIDE:
 			return PRIDE_LIGHT_COLOR
 	return Color.WHITE
+
+func _setup_footstep_sfx() -> void:
+	if not _should_use_footstep_sfx():
+		return
+
+	footstep_sfx_player = get_node_or_null("FootstepSFX") as AudioStreamPlayer2D
+	if footstep_sfx_player == null:
+		footstep_sfx_player = AudioStreamPlayer2D.new()
+		footstep_sfx_player.name = "FootstepSFX"
+		add_child(footstep_sfx_player)
+
+	footstep_sfx_player.stream = Global.make_looping_audio_stream(FOOTSTEP_SFX_STREAM)
+	footstep_sfx_player.max_distance = 420.0
+	footstep_sfx_player.attenuation = 1.35
+	Global.register_audio_player(footstep_sfx_player, Global.GROUP_SFX, -15.0)
+
+func _should_use_footstep_sfx() -> bool:
+	return current_state != BossState.SLOTH and current_state != BossState.GLUTTONY
+
+func _update_footstep_sfx() -> void:
+	if footstep_sfx_player == null:
+		return
+
+	if is_dead or velocity.length() < 18.0:
+		_stop_footstep_sfx()
+		return
+
+	if not footstep_sfx_player.playing:
+		footstep_sfx_player.pitch_scale = randf_range(0.92, 1.04)
+		footstep_sfx_player.play()
+
+func _stop_footstep_sfx() -> void:
+	if footstep_sfx_player != null and footstep_sfx_player.playing:
+		footstep_sfx_player.stop()
 
 func _add_circle_collision(parent: Node, radius: float) -> CollisionPolygon2D:
 	var collision = CollisionPolygon2D.new()

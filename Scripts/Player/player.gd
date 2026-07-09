@@ -7,6 +7,7 @@ extends CharacterBody2D
 @export var fire_rate: float = 1.1
 const STARTING_FIRE_RATE: float = 1.1
 const DEFAULT_MIN_FIRE_RATE: float = 0.25
+const SHOT_SFX_STREAM: AudioStream = preload("res://Music&SFX/SFX/Shot_SFX.mp3")
 var min_fire_rate: float = DEFAULT_MIN_FIRE_RATE
 var base_fire_rate: float = 1.1
 var attack_speed_bonus: float = 0.0
@@ -43,6 +44,7 @@ const EXPLOSIVE_KNOCKBACK_IMMUNITY_DURATION: float = 0.35
 const EXPLOSIVE_SHOCKWAVE_COLOR: Color = Color(0.62, 0.39, 0.16, 0.72)
 const EXPLOSIVE_SHOCKWAVE_PARTICLE_COLOR: Color = Color(0.76, 0.48, 0.18, 1.0)
 const PASSIVE_RING_Z_INDEX: int = 10
+const PLAYER_STATUS_RING_Z_INDEX: int = 35
 const PASSIVE_RING_COLOR: Color = Color(0.78, 0.54, 0.18, 0.58)
 const PASSIVE_RING_SOFT_COLOR: Color = Color(0.78, 0.54, 0.18, 0.42)
 const PASSIVE_RING_DOT_COLOR: Color = Color(0.95, 0.7, 0.24, 0.95)
@@ -281,6 +283,7 @@ const GAME_WIN_PATH: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD
 var pause_control: Control
 var game_over: Panel
 var game_win: Panel
+var shot_sfx_player: AudioStreamPlayer2D
 
 var type_animation = "walk_down"
 
@@ -301,6 +304,7 @@ func _ready() -> void:
 	pause_control = get_node_or_null(PAUSE_CONTROL_PATH)
 	game_over = get_node_or_null(GAME_OVER_PATH)
 	game_win = get_node_or_null(GAME_WIN_PATH)
+	_setup_shot_sfx()
 
 	shoot_timer = Timer.new()
 	shoot_timer.one_shot = true
@@ -633,6 +637,9 @@ func get_available_contract_stat_ids() -> Array:
 	return stat_ids
 
 func apply_contract_stat_reward(stat_id: String) -> Dictionary:
+	if not get_available_contract_stat_ids().has(stat_id):
+		return {}
+
 	var reward_data = {
 		"id": "contract_stat_%s" % stat_id,
 		"text": I18n.option_text("contract_stat_%s" % stat_id, "Contract Stat"),
@@ -963,6 +970,7 @@ func shoot(direction: Vector2) -> void:
 	can_shoot = false
 	shoot_timer.start(fire_rate)
 	_update_shot_cooldown_bar()
+	_play_shot_sfx()
 	
 	var mouse_pos = get_global_mouse_position()
 	var base_direction = (mouse_pos - global_position).normalized()
@@ -1001,6 +1009,25 @@ func shoot(direction: Vector2) -> void:
 	_apply_recoil_impulse(direction)
 	if recoil_explosion_enabled:
 		_trigger_recoil_explosion()
+
+func _setup_shot_sfx() -> void:
+	shot_sfx_player = get_node_or_null("ShotSFX") as AudioStreamPlayer2D
+	if shot_sfx_player == null:
+		shot_sfx_player = AudioStreamPlayer2D.new()
+		shot_sfx_player.name = "ShotSFX"
+		add_child(shot_sfx_player)
+
+	shot_sfx_player.stream = SHOT_SFX_STREAM
+	shot_sfx_player.max_distance = 520.0
+	shot_sfx_player.attenuation = 1.0
+	Global.register_audio_player(shot_sfx_player, Global.GROUP_SFX, -3.0)
+
+func _play_shot_sfx() -> void:
+	if shot_sfx_player == null:
+		return
+
+	shot_sfx_player.pitch_scale = randf_range(0.96, 1.04)
+	shot_sfx_player.play()
 
 func _prepare_arm_mutation_shot(base_angle: float, shot_damage: float) -> Dictionary:
 	var result = {
@@ -2131,6 +2158,7 @@ func record_contract_decision(contract_data: Dictionary, accepted: bool) -> void
 		"accepted": accepted,
 		"modifiers": contract_data.get("modifiers", {}).duplicate(true),
 		"reward_type": str(contract_data.get("reward_type", "")),
+		"reward_stat_id": str(contract_data.get("reward_stat_id", "")),
 		"buff_summary": str(contract_data.get("buff_summary", "")),
 		"reward_summary": str(contract_data.get("reward_summary", ""))
 	})
@@ -2240,8 +2268,18 @@ func _get_recap_contract_reward_summary(contract: Dictionary) -> String:
 		"rerolls":
 			return I18n.t("contract.reward.rerolls", [5])
 		"stat":
-			return I18n.t("contract.reward.stat")
+			var stat_id = str(contract.get("reward_stat_id", ""))
+			if stat_id != "":
+				return I18n.t("contract.reward.stat_specific", [_get_contract_stat_reward_label(stat_id)])
+			var stored_summary = str(contract.get("reward_summary", ""))
+			return stored_summary if stored_summary != "" else I18n.t("contract.reward.stat")
 	return str(contract.get("reward_summary", ""))
+
+func _get_contract_stat_reward_label(stat_id: String) -> String:
+	var label_key = "contract.stat.%s" % stat_id
+	if I18n.has_key(label_key):
+		return I18n.t(label_key)
+	return stat_id.replace("_", " ").capitalize()
 
 func _format_recap_rarity(rarity: String) -> String:
 	match rarity:
@@ -2715,12 +2753,20 @@ func _update_passive_status_vfx(delta: float) -> void:
 	_set_passive_ring_vfx_enabled("offensive_dash", offensive_dash_enabled, 31.0, PASSIVE_RING_COLOR, 1.5)
 
 	if max_dash_charges > 1:
+		_remove_passive_status_vfx("dash_cooldown")
 		var dash_charge_vfx = _ensure_double_dash_vfx()
 		if is_instance_valid(dash_charge_vfx):
 			_update_double_dash_vfx(dash_charge_vfx)
 			dash_charge_vfx.rotation += delta * 1.7
 	else:
 		_remove_passive_status_vfx("double_dash")
+		if _should_show_dash_cooldown_vfx():
+			var dash_cooldown_vfx = _ensure_dash_cooldown_vfx()
+			if is_instance_valid(dash_cooldown_vfx):
+				_update_dash_cooldown_vfx(dash_cooldown_vfx)
+				dash_cooldown_vfx.rotation += delta * 1.7
+		else:
+			_remove_passive_status_vfx("dash_cooldown")
 
 	_set_passive_ring_vfx_enabled("vengeance", lust_for_vengeance_enabled and current_health >= max_health, 34.0, Color(1.0, 0.24, 0.46, 0.34), 1.6)
 
@@ -2758,10 +2804,10 @@ func _ensure_double_dash_vfx() -> Node2D:
 
 	var vfx = Node2D.new()
 	vfx.name = "DoubleDashPassiveVFX"
-	vfx.z_index = PASSIVE_RING_Z_INDEX
+	vfx.z_index = PLAYER_STATUS_RING_Z_INDEX
 	vfx.z_as_relative = false
 	add_child(vfx)
-	move_child(vfx, 0)
+	move_child(vfx, get_child_count() - 1)
 	_add_circular_ring_to_node(vfx, DASH_CHARGE_RING_RADIUS, PASSIVE_RING_SOFT_COLOR, DASH_CHARGE_RING_WIDTH)
 
 	var progress_ring = Line2D.new()
@@ -2783,6 +2829,29 @@ func _ensure_double_dash_vfx() -> Node2D:
 	_update_double_dash_vfx(vfx)
 	return vfx
 
+func _ensure_dash_cooldown_vfx() -> Node2D:
+	var existing_vfx = passive_status_vfx.get("dash_cooldown", null)
+	if is_instance_valid(existing_vfx):
+		return existing_vfx
+
+	var vfx = Node2D.new()
+	vfx.name = "DashCooldownPassiveVFX"
+	vfx.z_index = PLAYER_STATUS_RING_Z_INDEX
+	vfx.z_as_relative = false
+	add_child(vfx)
+	move_child(vfx, get_child_count() - 1)
+	_add_circular_ring_to_node(vfx, DASH_CHARGE_RING_RADIUS, PASSIVE_RING_SOFT_COLOR, DASH_CHARGE_RING_WIDTH)
+
+	var progress_ring = Line2D.new()
+	progress_ring.name = "DashCooldownProgressRing"
+	progress_ring.width = DASH_CHARGE_PROGRESS_RING_WIDTH
+	progress_ring.default_color = PASSIVE_RING_DOT_COLOR
+	progress_ring.points = _build_dash_cooldown_progress_points(_get_base_dash_recharge_progress())
+	vfx.add_child(progress_ring)
+
+	passive_status_vfx["dash_cooldown"] = vfx
+	return vfx
+
 func _update_double_dash_vfx(vfx: Node2D) -> void:
 	var visible_charges = clamp(double_dash_charges, 0, max_dash_charges)
 	var progress_ring = vfx.get_node_or_null("DashCooldownProgressRing") as Line2D
@@ -2794,6 +2863,11 @@ func _update_double_dash_vfx(vfx: Node2D) -> void:
 		if dot is CanvasItem:
 			dot.visible = i < visible_charges
 
+func _update_dash_cooldown_vfx(vfx: Node2D) -> void:
+	var progress_ring = vfx.get_node_or_null("DashCooldownProgressRing") as Line2D
+	if progress_ring:
+		progress_ring.points = _build_dash_cooldown_progress_points(_get_base_dash_recharge_progress())
+
 func _get_dash_recharge_progress() -> float:
 	if double_dash_charges >= max_dash_charges:
 		return 1.0
@@ -2802,6 +2876,16 @@ func _get_dash_recharge_progress() -> float:
 
 	var cooldown = max(dash_cooldown, 0.001)
 	return clampf(1.0 - dash_cd_timer.time_left / cooldown, 0.0, 1.0)
+
+func _get_base_dash_recharge_progress() -> float:
+	if dash_cd_timer == null or dash_cd_timer.is_stopped():
+		return 1.0 if can_dash else 0.0
+
+	var cooldown = max(dash_cooldown, 0.001)
+	return clampf(1.0 - dash_cd_timer.time_left / cooldown, 0.0, 1.0)
+
+func _should_show_dash_cooldown_vfx() -> bool:
+	return dash_cd_timer != null and not dash_cd_timer.is_stopped() and not can_dash
 
 func _remove_passive_status_vfx(vfx_id: String) -> void:
 	var vfx = passive_status_vfx.get(vfx_id, null)

@@ -170,13 +170,13 @@ signal contract_offer_selected(accepted)
 
 const BOSS_CLEAR_HEAL_RATIO: float = 0.20
 const BOSS_SPAWN_DELAY_AFTER_ARENA_ARRIVAL: float = 0.5
+const GAME_MUSIC_STREAM: AudioStream = preload("res://Music&SFX/Music/Recoil Base theme Song.mp3")
+
+var game_music_player: AudioStreamPlayer
 
 func _ready() -> void:
-	AudioManager.tocar_musica_jogo()
-	for musica in get_tree().get_nodes_in_group(Global.GROUP_MUSIC):
-		musica.set_volume_db(Global.music_volume_db)
-	for som in get_tree().get_nodes_in_group(Global.GROUP_SFX):
-		som.set_volume_db(Global.sfx_volume_db)
+	_setup_game_music()
+	Global.apply_audio_volumes()
 
 	randomize()
 	Global.pecado = 1
@@ -192,6 +192,18 @@ func _ready() -> void:
 	await _show_movement_tutorial()
 	Global.start_run_timer()
 	start_next_wave()
+
+func _setup_game_music() -> void:
+	game_music_player = get_node_or_null("GameMusic") as AudioStreamPlayer
+	if game_music_player == null:
+		game_music_player = AudioStreamPlayer.new()
+		game_music_player.name = "GameMusic"
+		add_child(game_music_player)
+
+	game_music_player.stream = Global.make_looping_audio_stream(GAME_MUSIC_STREAM)
+	Global.register_audio_player(game_music_player, Global.GROUP_MUSIC, -4.0)
+	if not game_music_player.playing:
+		game_music_player.play()
 
 func finish_run() -> bool:
 	if run_finished:
@@ -1561,8 +1573,12 @@ func _generate_contract_offer(pecado_id: int) -> Dictionary:
 		"modifiers": modifiers,
 		"reward_type": reward_type,
 	}
+	if reward_type == CONTRACT_REWARD_STAT:
+		var reward_stat_id = _roll_contract_reward_stat_id()
+		if reward_stat_id != "":
+			contract["reward_stat_id"] = reward_stat_id
 	contract["buff_summary"] = _build_contract_buff_summary(modifiers)
-	contract["reward_summary"] = _get_contract_reward_summary(reward_type)
+	contract["reward_summary"] = _get_contract_reward_summary(reward_type, str(contract.get("reward_stat_id", "")))
 	return contract
 
 func _roll_contract_multiplier(buff_type: String, is_boss: bool) -> float:
@@ -1583,15 +1599,34 @@ func _build_contract_buff_summary(modifiers: Dictionary) -> String:
 		parts.append("%s %s" % [label, _format_contract_multiplier(float(modifiers[key]))])
 	return ", ".join(parts)
 
-func _get_contract_reward_summary(reward_type: String) -> String:
+func _get_contract_reward_summary(reward_type: String, stat_id: String = "") -> String:
 	match reward_type:
 		CONTRACT_REWARD_EXTRA_LEVEL:
 			return I18n.t("contract.reward.extra_level")
 		CONTRACT_REWARD_REROLLS:
 			return I18n.t("contract.reward.rerolls", [CONTRACT_REWARD_REROLL_AMOUNT])
 		CONTRACT_REWARD_STAT:
+			if stat_id != "":
+				return I18n.t("contract.reward.stat_specific", [_get_contract_stat_reward_label(stat_id)])
 			return I18n.t("contract.reward.stat")
 	return I18n.t("contract.reward.unknown")
+
+func _roll_contract_reward_stat_id() -> String:
+	if $Player == null or not $Player.has_method("get_available_contract_stat_ids"):
+		return ""
+
+	var stat_ids: Array = $Player.get_available_contract_stat_ids()
+	if stat_ids.is_empty():
+		return ""
+
+	stat_ids.shuffle()
+	return str(stat_ids[0])
+
+func _get_contract_stat_reward_label(stat_id: String) -> String:
+	var label_key = "contract.stat.%s" % stat_id
+	if I18n.has_key(label_key):
+		return I18n.t(label_key)
+	return stat_id.replace("_", " ").capitalize()
 
 func _format_contract_multiplier(multiplier: float) -> String:
 	return "+%d%%" % int(round((multiplier - 1.0) * 100.0))
@@ -1614,18 +1649,23 @@ func _grant_contract_reward(contract: Dictionary) -> void:
 						"rarity": "contract_reward"
 					})
 		CONTRACT_REWARD_STAT:
-			_grant_contract_stat_reward()
+			_grant_contract_stat_reward(contract)
 
-func _grant_contract_stat_reward() -> void:
+func _grant_contract_stat_reward(contract: Dictionary) -> void:
 	if $Player == null or not $Player.has_method("get_available_contract_stat_ids") or not $Player.has_method("apply_contract_stat_reward"):
 		return
 
-	var stat_ids: Array = $Player.get_available_contract_stat_ids()
-	if stat_ids.is_empty():
+	var available_stat_ids: Array = $Player.get_available_contract_stat_ids()
+	if available_stat_ids.is_empty():
 		return
 
-	stat_ids.shuffle()
-	$Player.apply_contract_stat_reward(str(stat_ids[0]))
+	var stat_id = str(contract.get("reward_stat_id", ""))
+	if stat_id == "" or not available_stat_ids.has(stat_id):
+		stat_id = _roll_contract_reward_stat_id()
+	if stat_id == "":
+		return
+
+	$Player.apply_contract_stat_reward(stat_id)
 
 func _show_contract_offer(contract: Dictionary) -> bool:
 	contract_choice_made = false

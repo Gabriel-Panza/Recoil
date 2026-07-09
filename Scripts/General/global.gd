@@ -24,6 +24,11 @@ const ENEMY_ATTACK_ACTIVE_COLOR_DARKENING: float = 0.3
 const AREA_AURA_VFX_DARKENING: float = 0.15
 const INTRO_CUTSCENE_RETURN_GAME: String = "game"
 const INTRO_CUTSCENE_RETURN_GALLERY: String = "gallery"
+const AUDIO_SLIDER_MIN_VALUE: float = 0.0
+const AUDIO_SLIDER_MAX_VALUE: float = 100.0
+const AUDIO_MUTE_DB: float = -80.0
+const AUDIO_MAX_DB: float = 0.0
+const AUDIO_BASE_VOLUME_META: String = "base_audio_volume_db"
 
 var intro_cutscene_return_target: String = INTRO_CUTSCENE_RETURN_GAME
 var open_cutscenes_gallery_on_menu_ready: bool = false
@@ -33,7 +38,7 @@ const STARTING_ARM_DATA = {
 		"name": "Fast Arm",
 		"description": "Weak shots, high fire rate, and short recoil for tighter control.",
 		"attack_damage": 30.0,
-		"base_fire_rate": 0.52,
+		"base_fire_rate": 0.5,
 		"min_fire_rate": 0.3,
 		"base_recoil_force": 380.0,
 		"friction": 900.0,
@@ -258,9 +263,119 @@ var current_run_saved: bool = false
 
 var sfx_volume_db: float = 0.0
 var music_volume_db: float = 0.0
+var sfx_volume_slider_value: float = AUDIO_SLIDER_MAX_VALUE
+var music_volume_slider_value: float = AUDIO_SLIDER_MAX_VALUE
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	_reset_ranking_if_executable_changed()
+
+func _process(_delta: float) -> void:
+	if get_tree() != null and get_tree().paused:
+		_resume_music_players_during_pause()
+
+func configure_music_slider(slider: Range) -> void:
+	_configure_volume_slider(slider, music_volume_slider_value)
+
+func configure_sfx_slider(slider: Range) -> void:
+	_configure_volume_slider(slider, sfx_volume_slider_value)
+
+func set_music_volume_from_slider(value: float) -> void:
+	music_volume_slider_value = _clamp_audio_slider_value(value)
+	music_volume_db = audio_slider_value_to_db(music_volume_slider_value)
+	_apply_group_volume(GROUP_MUSIC, music_volume_db)
+
+func set_sfx_volume_from_slider(value: float) -> void:
+	sfx_volume_slider_value = _clamp_audio_slider_value(value)
+	sfx_volume_db = audio_slider_value_to_db(sfx_volume_slider_value)
+	_apply_group_volume(GROUP_SFX, sfx_volume_db)
+
+func audio_slider_value_to_db(value: float) -> float:
+	var normalized = _clamp_audio_slider_value(value) / AUDIO_SLIDER_MAX_VALUE
+	if normalized <= 0.0:
+		return AUDIO_MUTE_DB
+
+	return clampf(linear_to_db(normalized), AUDIO_MUTE_DB, AUDIO_MAX_DB)
+
+func register_audio_player(player: Node, group_name: String, base_volume_db: float = 0.0) -> void:
+	if not is_instance_valid(player):
+		return
+
+	if group_name == GROUP_MUSIC:
+		_configure_music_player_for_pause(player)
+	if not player.is_in_group(group_name):
+		player.add_to_group(group_name)
+	player.set_meta(AUDIO_BASE_VOLUME_META, base_volume_db)
+	_apply_audio_player_volume(player, music_volume_db if group_name == GROUP_MUSIC else sfx_volume_db)
+
+func keep_music_playing_during_pause() -> void:
+	_resume_music_players_during_pause()
+
+func apply_audio_volumes() -> void:
+	_apply_group_volume(GROUP_MUSIC, music_volume_db)
+	_apply_group_volume(GROUP_SFX, sfx_volume_db)
+
+func make_looping_audio_stream(stream: AudioStream) -> AudioStream:
+	if stream == null:
+		return null
+
+	var looping_stream = stream.duplicate() as AudioStream
+	if looping_stream is AudioStreamMP3:
+		(looping_stream as AudioStreamMP3).loop = true
+	return looping_stream
+
+func _configure_volume_slider(slider: Range, value: float) -> void:
+	if slider == null:
+		return
+
+	slider.set_block_signals(true)
+	slider.min_value = AUDIO_SLIDER_MIN_VALUE
+	slider.max_value = AUDIO_SLIDER_MAX_VALUE
+	slider.step = 1.0
+	slider.value = _clamp_audio_slider_value(value)
+	slider.set_block_signals(false)
+
+func _clamp_audio_slider_value(value: float) -> float:
+	return clampf(value, AUDIO_SLIDER_MIN_VALUE, AUDIO_SLIDER_MAX_VALUE)
+
+func _apply_group_volume(group_name: String, volume_db: float) -> void:
+	var tree = get_tree()
+	if tree == null:
+		return
+
+	for audio_player in tree.get_nodes_in_group(group_name):
+		_apply_audio_player_volume(audio_player, volume_db)
+
+func _apply_audio_player_volume(audio_player: Node, volume_db: float) -> void:
+	if not is_instance_valid(audio_player):
+		return
+	if not (audio_player is AudioStreamPlayer or audio_player is AudioStreamPlayer2D or audio_player is AudioStreamPlayer3D):
+		return
+
+	if audio_player.is_in_group(GROUP_MUSIC):
+		_configure_music_player_for_pause(audio_player)
+	var base_volume = float(audio_player.get_meta(AUDIO_BASE_VOLUME_META, 0.0))
+	audio_player.set("volume_db", clampf(volume_db + base_volume, AUDIO_MUTE_DB, AUDIO_MAX_DB))
+
+func _resume_music_players_during_pause() -> void:
+	var tree = get_tree()
+	if tree == null:
+		return
+
+	for audio_player in tree.get_nodes_in_group(GROUP_MUSIC):
+		_configure_music_player_for_pause(audio_player)
+
+func _configure_music_player_for_pause(audio_player: Node) -> void:
+	if not is_instance_valid(audio_player):
+		return
+
+	audio_player.process_mode = Node.PROCESS_MODE_ALWAYS
+	if audio_player is AudioStreamPlayer:
+		(audio_player as AudioStreamPlayer).stream_paused = false
+	elif audio_player is AudioStreamPlayer2D:
+		(audio_player as AudioStreamPlayer2D).stream_paused = false
+	elif audio_player is AudioStreamPlayer3D:
+		(audio_player as AudioStreamPlayer3D).stream_paused = false
 
 ## Starts a new ranked run timer and marks the run as unsaved.
 func start_run_timer() -> void:

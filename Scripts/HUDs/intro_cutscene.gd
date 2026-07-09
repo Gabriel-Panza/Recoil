@@ -31,6 +31,11 @@ func _ready() -> void:
 	_show_next_step()
 
 func _input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		get_viewport().set_input_as_handled()
+		_skip_cutscene()
+		return
+
 	if event is InputEventMouseButton:
 		var mouse_event = event as InputEventMouseButton
 		if mouse_event.pressed and mouse_event.button_index == MOUSE_BUTTON_LEFT:
@@ -111,6 +116,7 @@ func _build_ui() -> void:
 	advance_label.add_theme_color_override("font_color", Color(0.72, 0.66, 0.8, 0.9))
 	advance_label.add_theme_color_override("font_outline_color", Color.BLACK)
 	advance_label.add_theme_constant_override("outline_size", 3)
+	advance_label.add_theme_constant_override("line_spacing", 2)
 	add_child(advance_label)
 
 func _make_dialogue_style() -> StyleBoxFlat:
@@ -123,7 +129,7 @@ func _make_dialogue_style() -> StyleBoxFlat:
 
 func _load_steps_for_current_language() -> void:
 	current_steps = _get_pt_steps() if I18n.get_language() == I18n.LANG_PT_BR else _get_en_steps()
-	advance_label.text = "ESPACO / CLIQUE" if I18n.get_language() == I18n.LANG_PT_BR else "SPACE / CLICK"
+	advance_label.text = "ESPACO / CLIQUE\nESC: PULAR" if I18n.get_language() == I18n.LANG_PT_BR else "SPACE / CLICK\nESC: SKIP"
 
 func _show_next_step() -> void:
 	if is_transitioning:
@@ -145,6 +151,9 @@ func _finish_cutscene() -> void:
 
 	Global.intro_cutscene_return_target = Global.INTRO_CUTSCENE_RETURN_GAME
 	get_tree().change_scene_to_file(GAME_SCENE_PATH)
+
+func _skip_cutscene() -> void:
+	_finish_cutscene()
 
 func _apply_step(step: Dictionary) -> void:
 	var frame_index = int(step.get("frame", KEEP_FRAME))

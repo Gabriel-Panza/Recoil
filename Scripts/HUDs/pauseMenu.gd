@@ -20,6 +20,7 @@ const OPTIONS_MENU_DEFAULT_SEPARATION: int = 7
 const OPTIONS_LANGUAGE_BUTTON_CENTER: Vector2 = Vector2(46.5, 33)
 const OPTIONS_LANGUAGE_BUTTON_SIZE: Vector2 = Vector2(48.0, 28.0)
 const OPTIONS_LANGUAGE_BUTTON_FONT_SIZE: int = 16
+const DEATH_RECAP_BUTTON_RECT: Rect2 = Rect2(896.0, 32.0, 232.0, 52.0)
 
 var game_scene
 var player
@@ -38,11 +39,16 @@ var game_over: Panel
 var game_over_background: TextureRect
 var game_win: Panel
 var game_win_background: TextureRect
+var death_recap_parent: Panel
 var death_recap_background: Panel
 var death_recap_scroll: ScrollContainer
 var death_recap_label: Label
+var death_recap_button: Button
 var death_recap_updated: bool = false
+var death_recap_open: bool = false
 var language_button: Button
+var music_slider: HSlider
+var sfx_slider: HSlider
 
 var can_move: bool = true
 
@@ -64,12 +70,23 @@ func _ready() -> void:
 	game_over_background = get_node_or_null("GameOver/Fundo") as TextureRect
 	game_win = get_node_or_null(GAME_WIN_PATH)
 	game_win_background = get_node_or_null("GameWin/Fundo") as TextureRect
+	_setup_audio_sliders()
 	_setup_language_button()
 	I18n.language_changed.connect(_on_language_changed)
 	_refresh_localized_text()
 
 	if player:
 		player.connect("stats_updated", Callable(self, "update_status_labels"))
+
+func _setup_audio_sliders() -> void:
+	if options_menu == null:
+		return
+
+	music_slider = options_menu.get_node_or_null("VBoxContainer/HSlider") as HSlider
+	sfx_slider = options_menu.get_node_or_null("VBoxContainer/HSlider2") as HSlider
+	Global.configure_music_slider(music_slider)
+	Global.configure_sfx_slider(sfx_slider)
+	Global.apply_audio_volumes()
 
 func _setup_heal_after_wave_label() -> void:
 	if recoil_label == null:
@@ -142,8 +159,13 @@ func _setup_healing_received_label() -> void:
 	
 func _process(_delta: float) -> void:
 	update_status_labels()
-	if game_over and game_over.visible:
-		_update_death_recap()
+	var recap_parent = _get_active_recap_parent()
+	if recap_parent != null:
+		_setup_death_recap_ui(recap_parent)
+		_sync_death_recap_visibility(recap_parent)
+	else:
+		death_recap_open = false
+		_sync_death_recap_visibility()
 	if _is_end_screen_visible():
 		return
 
@@ -161,6 +183,7 @@ func _pause_game() -> void:
 	$"../HBoxContainer".visible = true
 	update_status_labels()
 	get_tree().paused = true
+	Global.keep_music_playing_during_pause()
 
 func _unpause_game() -> void:
 	if _is_end_screen_visible():
@@ -179,25 +202,47 @@ func _is_end_screen_visible() -> bool:
 func _is_popup_pause_active() -> bool:
 	return get_tree().paused and (pause_menu == null or not pause_menu.is_visible())
 
+func _get_active_recap_parent() -> Panel:
+	if game_over != null and game_over.visible:
+		return game_over
+	if game_win != null and game_win.visible:
+		return game_win
+	return null
+
 func _update_death_recap() -> void:
 	if death_recap_updated:
 		return
 
-	_setup_death_recap_ui()
+	var recap_parent = _get_active_recap_parent()
+	if recap_parent == null:
+		return
+	_setup_death_recap_ui(recap_parent)
 	if death_recap_label == null:
 		return
 
 	if player and player.has_method("get_death_recap_text"):
 		death_recap_label.text = player.get_death_recap_text()
 	else:
-		death_recap_label.text = I18n.t("recap.no_data")
+	death_recap_label.text = I18n.t("recap.no_data")
 	death_recap_updated = true
 
-func _setup_death_recap_ui() -> void:
-	if game_over == null or death_recap_label != null:
+func _setup_death_recap_ui(recap_parent: Panel) -> void:
+	if recap_parent == null:
 		return
 
-	death_recap_background = game_over.get_node_or_null("DeathRecapBackground")
+	if death_recap_parent != recap_parent:
+		death_recap_parent = recap_parent
+		death_recap_background = null
+		death_recap_scroll = null
+		death_recap_label = null
+		death_recap_button = null
+		death_recap_updated = false
+
+	_setup_death_recap_button(recap_parent)
+	if death_recap_label != null:
+		return
+
+	death_recap_background = recap_parent.get_node_or_null("DeathRecapBackground")
 	if death_recap_background == null:
 		death_recap_background = Panel.new()
 		death_recap_background.name = "DeathRecapBackground"
@@ -212,9 +257,10 @@ func _setup_death_recap_ui() -> void:
 		style.bg_color = Color(0.0, 0.0, 0.0, 0.62)
 		style.set_corner_radius_all(6)
 		death_recap_background.add_theme_stylebox_override("panel", style)
-		game_over.add_child(death_recap_background)
+		recap_parent.add_child(death_recap_background)
+	death_recap_background.visible = false
 
-	death_recap_scroll = game_over.get_node_or_null("DeathRecapScroll")
+	death_recap_scroll = recap_parent.get_node_or_null("DeathRecapScroll")
 	if death_recap_scroll == null:
 		death_recap_scroll = ScrollContainer.new()
 		death_recap_scroll.name = "DeathRecapScroll"
@@ -224,7 +270,8 @@ func _setup_death_recap_ui() -> void:
 		death_recap_scroll.offset_top = 76.0
 		death_recap_scroll.offset_right = 704.0
 		death_recap_scroll.offset_bottom = 548.0
-		game_over.add_child(death_recap_scroll)
+		recap_parent.add_child(death_recap_scroll)
+	death_recap_scroll.visible = false
 
 	death_recap_label = death_recap_scroll.get_node_or_null("DeathRecapLabel")
 	if death_recap_label == null:
@@ -237,6 +284,68 @@ func _setup_death_recap_ui() -> void:
 		death_recap_label.add_theme_color_override("font_color", Color(0.96, 0.88, 0.76, 1.0))
 		death_recap_label.add_theme_constant_override("outline_size", 3)
 		death_recap_scroll.add_child(death_recap_label)
+	_sync_death_recap_visibility(recap_parent)
+
+func _setup_death_recap_button(recap_parent: Panel) -> void:
+	death_recap_button = recap_parent.get_node_or_null("DeathRecapButton") as Button
+	if death_recap_button == null:
+		death_recap_button = Button.new()
+		death_recap_button.name = "DeathRecapButton"
+		death_recap_button.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+		death_recap_button.z_index = 2
+		recap_parent.add_child(death_recap_button)
+
+	death_recap_button.layout_mode = 0
+	death_recap_button.offset_left = DEATH_RECAP_BUTTON_RECT.position.x
+	death_recap_button.offset_top = DEATH_RECAP_BUTTON_RECT.position.y
+	death_recap_button.offset_right = DEATH_RECAP_BUTTON_RECT.position.x + DEATH_RECAP_BUTTON_RECT.size.x
+	death_recap_button.offset_bottom = DEATH_RECAP_BUTTON_RECT.position.y + DEATH_RECAP_BUTTON_RECT.size.y
+	death_recap_button.focus_mode = Control.FOCUS_NONE
+	death_recap_button.mouse_filter = Control.MOUSE_FILTER_STOP
+	death_recap_button.add_theme_font_size_override("font_size", 20)
+	death_recap_button.add_theme_constant_override("outline_size", 4)
+	death_recap_button.add_theme_color_override("font_color", Color(0.882353, 0.0, 0.0, 1.0))
+	death_recap_button.add_theme_color_override("font_hover_color", Color(1.0, 0.25, 0.2, 1.0))
+	death_recap_button.add_theme_color_override("font_pressed_color", Color(1.0, 0.72, 0.45, 1.0))
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.0, 0.0, 0.58)
+	style.border_color = Color(0.88, 0.12, 0.05, 0.92)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(4)
+	death_recap_button.add_theme_stylebox_override("normal", style)
+	death_recap_button.add_theme_stylebox_override("hover", style)
+	death_recap_button.add_theme_stylebox_override("pressed", style)
+	death_recap_button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	_update_death_recap_button_text()
+
+	var callable = Callable(self, "_on_death_recap_button_pressed")
+	if not death_recap_button.pressed.is_connected(callable):
+		death_recap_button.pressed.connect(callable)
+
+func _sync_death_recap_visibility(recap_parent: Panel = null) -> void:
+	if recap_parent == null:
+		recap_parent = _get_active_recap_parent()
+	var has_recap_parent = recap_parent != null
+	if death_recap_button != null:
+		death_recap_button.visible = has_recap_parent
+		_update_death_recap_button_text()
+	var show_recap = death_recap_open and has_recap_parent
+	if death_recap_background != null:
+		death_recap_background.visible = show_recap
+	if death_recap_scroll != null:
+		death_recap_scroll.visible = show_recap
+
+func _update_death_recap_button_text() -> void:
+	if death_recap_button == null:
+		return
+	death_recap_button.text = I18n.t("recap.hide_button") if death_recap_open else I18n.t("recap.button")
+
+func _on_death_recap_button_pressed() -> void:
+	death_recap_open = not death_recap_open
+	if death_recap_open:
+		death_recap_updated = false
+		_update_death_recap()
+	_sync_death_recap_visibility()
 
 func _on_options_button_pressed() -> void:
 	options_menu.show()
@@ -316,9 +425,10 @@ func _on_language_button_pressed() -> void:
 func _on_language_changed(_language: String) -> void:
 	_refresh_localized_text()
 	update_status_labels()
-	if game_over and game_over.visible:
+	if _get_active_recap_parent() != null and death_recap_open:
 		death_recap_updated = false
 		_update_death_recap()
+	_sync_death_recap_visibility()
 
 func _refresh_localized_text() -> void:
 	_update_game_over_texture()
@@ -337,6 +447,7 @@ func _refresh_localized_text() -> void:
 	var game_win_menu_label = get_node_or_null("GameWin/MarginContainer2/TextureButton/Label")
 	if game_win_menu_label is Label:
 		(game_win_menu_label as Label).text = I18n.t("common.menu")
+	_update_death_recap_button_text()
 
 func _update_game_over_texture() -> void:
 	if game_over_background == null:
@@ -353,14 +464,10 @@ func _update_game_win_texture() -> void:
 	game_win_background.texture = GAME_WIN_TEXTURE_PT if I18n.get_language() == I18n.LANG_PT_BR else GAME_WIN_TEXTURE_EN
 
 func _on_h_slider_value_changed(value: float) -> void:
-	Global.music_volume_db = value
-	for musica in get_tree().get_nodes_in_group(Global.GROUP_MUSIC):
-		musica.set_volume_db(value)
+	Global.set_music_volume_from_slider(value)
 
 func _on_h_slider_2_value_changed(value: float) -> void:
-	Global.sfx_volume_db = value
-	for som in get_tree().get_nodes_in_group(Global.GROUP_SFX):
-		som.set_volume_db(value)
+	Global.set_sfx_volume_from_slider(value)
 
 func _on_retry_button_pressed() -> void:
 	_finish_current_run_if_end_screen_visible()

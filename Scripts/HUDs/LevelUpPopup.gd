@@ -181,6 +181,7 @@ func _apply_popup_style() -> void:
 ## Shows the correct level-up option set for a normal, pre-boss, or boss reward.
 func show_popup(context: String = "normal", boss_pecado: int = 0) -> void:
 	get_tree().paused = true
+	Global.keep_music_playing_during_pause()
 	await get_tree().create_timer(0.25, true).timeout
 
 	current_mode = "level_up"
@@ -202,6 +203,7 @@ func show_popup(context: String = "normal", boss_pecado: int = 0) -> void:
 
 func show_active_discard_popup(new_option: String, active_slots: Dictionary) -> void:
 	get_tree().paused = true
+	Global.keep_music_playing_during_pause()
 	current_mode = "discard_active"
 	pending_active_option = new_option
 	pending_old_rare_option = ""
@@ -226,6 +228,7 @@ func show_active_discard_popup(new_option: String, active_slots: Dictionary) -> 
 
 func show_rare_discard_popup(old_options, new_option: String) -> void:
 	get_tree().paused = true
+	Global.keep_music_playing_during_pause()
 	current_mode = "discard_rare"
 	pending_active_option = ""
 	pending_rare_options = old_options.duplicate() if old_options is Array else [old_options]
@@ -252,6 +255,7 @@ func show_rare_discard_popup(old_options, new_option: String) -> void:
 
 func show_boss_passive_discard_popup(old_options, new_option: String) -> void:
 	get_tree().paused = true
+	Global.keep_music_playing_during_pause()
 	current_mode = "discard_boss_passive"
 	pending_active_option = ""
 	pending_rare_options = old_options.duplicate() if old_options is Array else [old_options]

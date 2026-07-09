@@ -149,16 +149,12 @@ alignment = 1
 [node name="HSlider" type="HSlider" parent="PauseMenu/OptionsMenu/VBoxContainer" unique_id=455302353]
 process_mode = 3
 layout_mode = 2
-min_value = -80.0
-max_value = 24.0
-value = -25.0
+value = 100.0
 
 [node name="HSlider2" type="HSlider" parent="PauseMenu/OptionsMenu/VBoxContainer" unique_id=964801628]
 process_mode = 3
 layout_mode = 2
-min_value = -80.0
-max_value = 24.0
-value = -25.0
+value = 100.0
 
 [node name="BackButton" type="TextureButton" parent="PauseMenu/OptionsMenu/VBoxContainer" unique_id=454821127]
 process_mode = 3
@@ -179,6 +175,16 @@ offset_left = -226.0
 offset_top = -62.0
 offset_right = 926.0
 offset_bottom = 586.0
+
+[node name="ColorRect" type="ColorRect" parent="GameOver" unique_id=1884770077]
+self_modulate = Color(0, 0, 0, 0.39215687)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = 16.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="Fundo" type="TextureRect" parent="GameOver" unique_id=597748921]
 z_index = 1
@@ -255,6 +261,16 @@ offset_left = -226.0
 offset_top = -62.0
 offset_right = 926.0
 offset_bottom = 586.0
+
+[node name="ColorRect" type="ColorRect" parent="GameWin" unique_id=65177292]
+self_modulate = Color(0, 0, 0, 0.39215687)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_right = 16.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="Fundo" type="TextureRect" parent="GameWin" unique_id=1225546281]
 layout_mode = 1

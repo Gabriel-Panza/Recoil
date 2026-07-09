@@ -36,6 +36,7 @@ const ELITE_UNSTABLE_EXPLOSION_DAMAGE: float = 42.0
 const ELITE_VAMPIRIC_HEAL_DAMAGE_RATIO: float = 0.65
 const ELITE_VAMPIRIC_MAX_HEAL_RATIO: float = 0.18
 const ELITE_OUTLINE_WIDTH: float = 2.0
+const FOOTSTEP_SFX_STREAM: AudioStream = preload("res://Music&SFX/SFX/FootStepsGravel_SFX.mp3")
 const ELITE_OUTLINE_COLORS = {
 	ELITE_ARMORED: Color(0.82, 0.86, 0.88, 1.0),
 	ELITE_UNSTABLE: Color(1.0, 0.64, 0.08, 1.0),
@@ -59,6 +60,7 @@ var health_feedback_base_modulate: Color = Color.WHITE
 var avoidance_side: int = 1
 var avoidance_memory_timer: float = 0.0
 var elite_variant: String = ELITE_NONE
+var footstep_sfx_player: AudioStreamPlayer2D
 @onready var aparencia = get_node_or_null("AnimatedAppearence")
 
 func _ready() -> void:
@@ -78,11 +80,13 @@ func _ready() -> void:
 			speed = 131
 	add_to_group(Global.GROUP_ENEMY)
 	_setup_enemy_body_collision()
+	_setup_footstep_sfx()
 	call_deferred("_setup_health_bar")
 
 func _physics_process(delta: float) -> void:
 	if player:
 		mover(delta)
+	_update_footstep_sfx()
 
 func mover(_delta: float) -> void:
 	var direction = _get_chase_direction_to_player()
@@ -509,6 +513,7 @@ func die() -> void:
 	current_health = 0
 	_update_health_bar()
 	set_physics_process(false)
+	_stop_footstep_sfx()
 	if elite_variant == ELITE_UNSTABLE:
 		_trigger_unstable_death_explosion()
 
@@ -574,6 +579,40 @@ func _get_damage_source_type_id_from_path(path: String) -> String:
 		"spread_enemy":
 			return "spread"
 	return ""
+
+func _setup_footstep_sfx() -> void:
+	if not _should_use_footstep_sfx():
+		return
+
+	footstep_sfx_player = get_node_or_null("FootstepSFX") as AudioStreamPlayer2D
+	if footstep_sfx_player == null:
+		footstep_sfx_player = AudioStreamPlayer2D.new()
+		footstep_sfx_player.name = "FootstepSFX"
+		add_child(footstep_sfx_player)
+
+	footstep_sfx_player.stream = Global.make_looping_audio_stream(FOOTSTEP_SFX_STREAM)
+	footstep_sfx_player.max_distance = 320.0
+	footstep_sfx_player.attenuation = 1.45
+	Global.register_audio_player(footstep_sfx_player, Global.GROUP_SFX, -18.0)
+
+func _should_use_footstep_sfx() -> bool:
+	return _get_damage_source_type_id() in ["melee", "tank"]
+
+func _update_footstep_sfx() -> void:
+	if footstep_sfx_player == null:
+		return
+
+	if is_dead or velocity.length() < 22.0:
+		_stop_footstep_sfx()
+		return
+
+	if not footstep_sfx_player.playing:
+		footstep_sfx_player.pitch_scale = randf_range(0.94, 1.06)
+		footstep_sfx_player.play()
+
+func _stop_footstep_sfx() -> void:
+	if footstep_sfx_player != null and footstep_sfx_player.playing:
+		footstep_sfx_player.stop()
 
 func on_player_damage_dealt(damage_amount: float, _target: Node) -> void:
 	if elite_variant != ELITE_VAMPIRIC or is_dead:
