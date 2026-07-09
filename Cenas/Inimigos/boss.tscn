@@ -1,6 +1,9 @@
 [gd_scene format=3 uid="uid://cug5y4r6000kg"]
 
 [ext_resource type="Script" uid="uid://brxnusu8kbo44" path="res://Scripts/Inimigos/boss.gd" id="1_ybw6v"]
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_gnx2o"]
+
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_mridg"]
 radius = 13.0
 height = 34.0
@@ -15,7 +18,7 @@ script = ExtResource("1_ybw6v")
 
 [node name="AparenciaAnimada" type="AnimatedSprite2D" parent="." unique_id=1536830730]
 scale = Vector2(1.5, 1.5)
-animation = &"pecado1"
+sprite_frames = SubResource("SpriteFrames_gnx2o")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1013482035]
 shape = SubResource("CapsuleShape2D_mridg")

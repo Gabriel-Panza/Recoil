@@ -172,6 +172,7 @@ const BOSS_CLEAR_HEAL_RATIO: float = 0.20
 const BOSS_SPAWN_DELAY_AFTER_ARENA_ARRIVAL: float = 0.5
 
 func _ready() -> void:
+	AudioManager.tocar_musica_jogo()
 	for musica in get_tree().get_nodes_in_group(Global.GROUP_MUSIC):
 		musica.set_volume_db(Global.music_volume_db)
 	for som in get_tree().get_nodes_in_group(Global.GROUP_SFX):

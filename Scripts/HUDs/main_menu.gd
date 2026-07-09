@@ -1,5 +1,4 @@
 extends Control
-
 const MAX_VISIBLE_RANKING_RUNS: int = 5
 const OPTIONS_MENU_DEFAULT_SEPARATION: int = 7
 const OPTIONS_LANGUAGE_BUTTON_CENTER: Vector2 = Vector2(51.4, 31.8)
@@ -79,6 +78,7 @@ func _ready() -> void:
 	I18n.language_changed.connect(_on_language_changed)
 	_refresh_localized_text()
 	_open_returned_cutscenes_gallery_if_requested()
+	AudioManager.tocar_musica_menu()
 
 func _open_returned_cutscenes_gallery_if_requested() -> void:
 	if not Global.open_cutscenes_gallery_on_menu_ready:
@@ -114,7 +114,7 @@ func _on_start_game_pressed() -> void:
 	_request_roulette_action("start")
 
 func _execute_start_game() -> void:
-	_play_sfx()
+	AudioManager.parar_musica()
 	Global.intro_cutscene_return_target = Global.INTRO_CUTSCENE_RETURN_GAME
 	Global.open_cutscenes_gallery_on_menu_ready = false
 	await get_tree().create_timer(0.1).timeout

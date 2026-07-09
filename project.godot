@@ -19,6 +19,7 @@ config/icon="res://Sprites/icon.svg"
 
 I18n="*res://Scripts/General/i18n.gd"
 Global="*uid://dkq71raesmyqv"
+AudioManager="*uid://552s1f15pxal"
 
 [display]
 
