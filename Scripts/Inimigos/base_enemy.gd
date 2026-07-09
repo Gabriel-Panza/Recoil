@@ -25,6 +25,9 @@ const SOFT_SEPARATION_PADDING: float = 10.0
 const SOFT_SEPARATION_FORCE: float = 0.48
 const SOFT_SEPARATION_IDLE_SPEED_MULTIPLIER: float = 0.35
 const BODY_RADIUS_FALLBACK: float = 18.0
+const AVOIDANCE_CANDIDATE_LIMIT: int = 12
+const AVOIDANCE_CANDIDATE_RADIUS: float = 176.0
+const AVOIDANCE_REFRESH_INTERVAL: int = 3
 const AGILE_COLLISION_BYPASS_GROUP: String = "AgileEnemyCollisionBypass"
 const ELITE_NONE: String = ""
 const ELITE_ARMORED: String = "armored"
@@ -37,6 +40,9 @@ const ELITE_VAMPIRIC_HEAL_DAMAGE_RATIO: float = 0.65
 const ELITE_VAMPIRIC_MAX_HEAL_RATIO: float = 0.18
 const ELITE_OUTLINE_WIDTH: float = 2.0
 const FOOTSTEP_SFX_STREAM: AudioStream = preload("res://Music&SFX/SFX/FootStepsGravel_SFX.mp3")
+const FOOTSTEP_SFX_VOICE_KEY: String = "enemy_footstep"
+const FOOTSTEP_SFX_MAX_VOICES: int = 5
+const FOOTSTEP_SFX_PLAY_DISTANCE: float = 360.0
 const ELITE_OUTLINE_COLORS = {
 	ELITE_ARMORED: Color(0.82, 0.86, 0.88, 1.0),
 	ELITE_UNSTABLE: Color(1.0, 0.64, 0.08, 1.0),
@@ -61,6 +67,9 @@ var avoidance_side: int = 1
 var avoidance_memory_timer: float = 0.0
 var elite_variant: String = ELITE_NONE
 var footstep_sfx_player: AudioStreamPlayer2D
+var has_footstep_sfx_voice: bool = false
+var body_collision_radius: float = BODY_RADIUS_FALLBACK
+var avoidance_enemy_candidates: Array = []
 @onready var aparencia = get_node_or_null("AnimatedAppearence")
 
 func _ready() -> void:
@@ -84,9 +93,74 @@ func _ready() -> void:
 	call_deferred("_setup_health_bar")
 
 func _physics_process(delta: float) -> void:
+	_refresh_enemy_avoidance_candidates_if_needed()
 	if player:
 		mover(delta)
 	_update_footstep_sfx()
+
+func _exit_tree() -> void:
+	_stop_footstep_sfx()
+
+func _refresh_enemy_avoidance_candidates_if_needed() -> void:
+	var physics_frame = Engine.get_physics_frames()
+	if not avoidance_enemy_candidates.is_empty() and int(physics_frame + get_instance_id()) % AVOIDANCE_REFRESH_INTERVAL != 0:
+		return
+
+	_refresh_enemy_avoidance_candidates()
+
+func _refresh_enemy_avoidance_candidates() -> void:
+	avoidance_enemy_candidates.clear()
+
+	var tree = get_tree()
+	if tree == null:
+		return
+
+	var enemies = tree.get_nodes_in_group(Global.GROUP_ENEMY)
+	if enemies.size() <= 1:
+		return
+
+	var selected_nodes: Array = []
+	var selected_distances: Array = []
+	var max_distance_squared = AVOIDANCE_CANDIDATE_RADIUS * AVOIDANCE_CANDIDATE_RADIUS
+	for enemy in enemies:
+		if _should_ignore_enemy_body_avoidance(enemy):
+			continue
+
+		var enemy_node = enemy as Node2D
+		var distance_squared = global_position.distance_squared_to(enemy_node.global_position)
+		if distance_squared > max_distance_squared:
+			continue
+
+		_add_enemy_avoidance_candidate(selected_nodes, selected_distances, enemy_node, distance_squared)
+
+	avoidance_enemy_candidates = selected_nodes
+
+func _add_enemy_avoidance_candidate(selected_nodes: Array, selected_distances: Array, enemy_node: Node2D, distance_squared: float) -> void:
+	if selected_nodes.size() < AVOIDANCE_CANDIDATE_LIMIT:
+		selected_nodes.append(enemy_node)
+		selected_distances.append(distance_squared)
+		return
+
+	var farthest_index = _get_farthest_avoidance_candidate_index(selected_distances)
+	if farthest_index < 0 or distance_squared >= float(selected_distances[farthest_index]):
+		return
+
+	selected_nodes[farthest_index] = enemy_node
+	selected_distances[farthest_index] = distance_squared
+
+func _get_farthest_avoidance_candidate_index(selected_distances: Array) -> int:
+	if selected_distances.is_empty():
+		return -1
+
+	var farthest_index = 0
+	var farthest_distance = float(selected_distances[0])
+	for i in range(1, selected_distances.size()):
+		var distance = float(selected_distances[i])
+		if distance > farthest_distance:
+			farthest_distance = distance
+			farthest_index = i
+
+	return farthest_index
 
 func mover(_delta: float) -> void:
 	var direction = _get_chase_direction_to_player()
@@ -260,7 +334,7 @@ func _get_blocking_enemy_side(move_dir: Vector2) -> int:
 	var chosen_side = 0
 	var self_radius = _get_body_collision_radius(self)
 
-	for enemy in get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
+	for enemy in avoidance_enemy_candidates:
 		if _should_ignore_enemy_body_avoidance(enemy):
 			continue
 
@@ -336,7 +410,7 @@ func _get_soft_separation_vector() -> Vector2:
 	var push = Vector2.ZERO
 	var self_radius = _get_body_collision_radius(self)
 
-	for enemy in get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
+	for enemy in avoidance_enemy_candidates:
 		if _should_ignore_enemy_body_avoidance(enemy):
 			continue
 
@@ -363,6 +437,12 @@ func _should_ignore_enemy_body_avoidance(enemy: Node) -> bool:
 	return is_in_group(AGILE_COLLISION_BYPASS_GROUP) or enemy.is_in_group(AGILE_COLLISION_BYPASS_GROUP)
 
 func _get_body_collision_radius(body: Node2D) -> float:
+	if body is BaseEnemy:
+		return (body as BaseEnemy).body_collision_radius
+
+	return _calculate_body_collision_radius(body)
+
+func _calculate_body_collision_radius(body: Node2D) -> float:
 	var collision = body.get_node_or_null("CollisionShape2D") as CollisionShape2D
 	if collision == null or collision.shape == null:
 		return BODY_RADIUS_FALLBACK
@@ -388,6 +468,12 @@ func _configure_enemy_sprite_sheet(
 	frame_spacing: Vector2i = Vector2i.ZERO
 ) -> void:
 	if aparencia == null:
+		return
+
+	var cache_key = _get_enemy_sprite_frames_cache_key(texture_path, frame_size, frames_per_row, states, pecado_group_rows, animation_speed, frame_spacing)
+	if Global.enemy_sprite_frames_cache.has(cache_key):
+		aparencia.sprite_frames = Global.enemy_sprite_frames_cache[cache_key]
+		aparencia.scale = visual_scale
 		return
 
 	var texture = load(texture_path) as Texture2D
@@ -418,7 +504,27 @@ func _configure_enemy_sprite_sheet(
 				sprite_frames.add_frame(animation_name, atlas_frame)
 
 	aparencia.sprite_frames = sprite_frames
+	Global.enemy_sprite_frames_cache[cache_key] = sprite_frames
 	aparencia.scale = visual_scale
+
+func _get_enemy_sprite_frames_cache_key(
+	texture_path: String,
+	frame_size: Vector2i,
+	frames_per_row: int,
+	states: Array,
+	pecado_group_rows: Dictionary,
+	animation_speed: float,
+	frame_spacing: Vector2i
+) -> String:
+	return "%s|%s|%d|%s|%s|%.3f|%s" % [
+		texture_path,
+		str(frame_size),
+		frames_per_row,
+		str(states),
+		str(pecado_group_rows),
+		animation_speed,
+		str(frame_spacing)
+	]
 
 func _play_pecado_animation(state_name: String = "") -> void:
 	if aparencia == null or aparencia.sprite_frames == null:
@@ -442,6 +548,7 @@ func _get_pecado_animation_name(pecado_id: int, state_name: String = "") -> Stri
 func _setup_enemy_body_collision() -> void:
 	collision_mask = collision_mask | Global.ENEMY_COLLISION_MASK
 	_shrink_body_collision_shape()
+	body_collision_radius = _calculate_body_collision_radius(self)
 
 func _shrink_body_collision_shape() -> void:
 	var collision = get_node_or_null("CollisionShape2D")
@@ -605,14 +712,23 @@ func _update_footstep_sfx() -> void:
 	if is_dead or velocity.length() < 22.0:
 		_stop_footstep_sfx()
 		return
+	if player != null and global_position.distance_to(player.global_position) > FOOTSTEP_SFX_PLAY_DISTANCE:
+		_stop_footstep_sfx()
+		return
 
 	if not footstep_sfx_player.playing:
+		if not has_footstep_sfx_voice and not Global.try_acquire_limited_sfx_voice(FOOTSTEP_SFX_VOICE_KEY, FOOTSTEP_SFX_MAX_VOICES):
+			return
+		has_footstep_sfx_voice = true
 		footstep_sfx_player.pitch_scale = randf_range(0.94, 1.06)
 		footstep_sfx_player.play()
 
 func _stop_footstep_sfx() -> void:
 	if footstep_sfx_player != null and footstep_sfx_player.playing:
 		footstep_sfx_player.stop()
+	if has_footstep_sfx_voice:
+		Global.release_limited_sfx_voice(FOOTSTEP_SFX_VOICE_KEY)
+		has_footstep_sfx_voice = false
 
 func on_player_damage_dealt(damage_amount: float, _target: Node) -> void:
 	if elite_variant != ELITE_VAMPIRIC or is_dead:

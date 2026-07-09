@@ -38,6 +38,9 @@ const POPUP_CENTER_OFFSET: Vector2 = Vector2(24.0, 0.0)
 
 var player
 var game_scene
+var level_up_rng := RandomNumberGenerator.new()
+var special_percent_regex := RegEx.new()
+var special_multiplier_regex := RegEx.new()
 
 var current_options: Array = []
 var saved_level_options: Array = []
@@ -62,7 +65,9 @@ signal rare_discard_selected(discarded_option, old_option, new_option)
 signal boss_passive_discard_selected(discarded_option, old_option, new_option)
 
 func _ready() -> void:
-	randomize()
+	level_up_rng.randomize()
+	special_percent_regex.compile("([+-])([0-9]+(?:\\.[0-9]+)?)%")
+	special_multiplier_regex.compile("\\bx([0-9]+(?:\\.[0-9]+)?)\\b")
 	game_scene = get_node_or_null(GAME_SCENE_PATH)
 	player = get_node_or_null(PLAYER_PATH)
 	_setup_title_label()
@@ -137,6 +142,21 @@ func _connect_buttons() -> void:
 			button.pressed.connect(callable)
 		if button.get_child_count() > 0 and button.get_child(0) is Control:
 			button.get_child(0).mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+func _rng_randf() -> float:
+	return level_up_rng.randf()
+
+func _shuffle_array(values: Array) -> void:
+	if values.size() < 2:
+		return
+
+	for i in range(values.size() - 1, 0, -1):
+		var swap_index = level_up_rng.randi_range(0, i)
+		if swap_index == i:
+			continue
+		var value = values[i]
+		values[i] = values[swap_index]
+		values[swap_index] = value
 
 func _apply_popup_style() -> void:
 	var frame = get_node_or_null("NinePatchRect")
@@ -321,13 +341,13 @@ func _build_contract_extra_roll_data() -> Dictionary:
 	var cursed_pool = _get_cursed_passive_options()
 	var passive_options = passive_pool.duplicate(true)
 	var cursed_options = cursed_pool.duplicate(true)
-	passive_options.shuffle()
-	cursed_options.shuffle()
+	_shuffle_array(passive_options)
+	_shuffle_array(cursed_options)
 
 	var final_options = []
 	var pools = []
 	for _i in range(OPTION_BUTTON_COUNT):
-		var should_roll_cursed = not cursed_options.is_empty() and (passive_options.is_empty() or randf() <= CONTRACT_EXTRA_CURSED_ROLL_CHANCE)
+		var should_roll_cursed = not cursed_options.is_empty() and (passive_options.is_empty() or _rng_randf() <= CONTRACT_EXTRA_CURSED_ROLL_CHANCE)
 		if should_roll_cursed:
 			final_options.append(cursed_options.pop_back())
 			pools.append(cursed_pool)
@@ -342,20 +362,20 @@ func _build_contract_extra_roll_data() -> Dictionary:
 
 func _select_normal_options(passive_pool: Array) -> Array:
 	var options = passive_pool.duplicate(true)
-	options.shuffle()
+	_shuffle_array(options)
 	return options.slice(0, OPTION_BUTTON_COUNT)
 
 func _select_pre_boss_options(rare_pool: Array, passive_pool: Array) -> Array:
 	var rare_options = rare_pool.duplicate(true)
 	var passive_options = passive_pool.duplicate(true)
-	rare_options.shuffle()
-	passive_options.shuffle()
+	_shuffle_array(rare_options)
+	_shuffle_array(passive_options)
 
 	var options = []
 	if rare_options.size() > 0:
 		options.append(rare_options[0])
 	options.append_array(passive_options.slice(0, OPTION_BUTTON_COUNT - options.size()))
-	options.shuffle()
+	_shuffle_array(options)
 	return options
 
 func _get_available_rare_options() -> Array:
@@ -390,12 +410,12 @@ func _get_available_passive_options() -> Array:
 		if option["id"] == "option_6":
 			if player and player.has_method("can_upgrade_heal_after_wave") and not player.can_upgrade_heal_after_wave():
 				continue
-			if randf() > HEAL_AFTER_WAVE_COMMON_ROLL_CHANCE:
+			if _rng_randf() > HEAL_AFTER_WAVE_COMMON_ROLL_CHANCE:
 				continue
 		if option["id"] == "option_7":
 			if player and player.has_method("can_upgrade_dash_cooldown_reduction") and not player.can_upgrade_dash_cooldown_reduction():
 				continue
-			if randf() > DASH_COOLDOWN_COMMON_ROLL_CHANCE:
+			if _rng_randf() > DASH_COOLDOWN_COMMON_ROLL_CHANCE:
 				continue
 		available_options.append(option.duplicate())
 
@@ -413,7 +433,7 @@ func _get_cursed_passive_options() -> Array:
 func _select_boss_options(boss_pool: Array, cursed_pool: Array) -> Array:
 	var options = boss_pool.duplicate(true)
 	var cursed_options = cursed_pool.duplicate(true)
-	cursed_options.shuffle()
+	_shuffle_array(cursed_options)
 	if cursed_options.size() > 0:
 		options.append(cursed_options[0])
 	return options
@@ -445,7 +465,7 @@ func _make_level_up_roll_data(final_options: Array, pools: Array) -> Dictionary:
 			pool = pools[i].duplicate(true)
 		if pool.is_empty():
 			pool = final_options.duplicate(true)
-		pool.shuffle()
+		_shuffle_array(pool)
 		normalized_pools.append(pool)
 
 	return {
@@ -458,7 +478,7 @@ func _roll_special_level_up_options(options: Array) -> Array:
 	var special_roll_chance = _get_special_level_up_roll_chance()
 	for option in options:
 		var rolled_option = option.duplicate(true)
-		if _can_roll_special_level_up(rolled_option) and randf() <= special_roll_chance:
+		if _can_roll_special_level_up(rolled_option) and _rng_randf() <= special_roll_chance:
 			var tier = _roll_special_level_up_tier()
 			rolled_option["special_level_up"] = true
 			rolled_option["special_level_up_tier"] = tier
@@ -472,7 +492,7 @@ func _get_special_level_up_roll_chance() -> float:
 	return SPECIAL_LEVEL_UP_ROLL_CHANCE
 
 func _roll_special_level_up_tier() -> String:
-	return SPECIAL_LEVEL_UP_LEGENDARY_TIER if randf() <= SPECIAL_LEVEL_UP_LEGENDARY_SHARE else SPECIAL_LEVEL_UP_EPIC_TIER
+	return SPECIAL_LEVEL_UP_LEGENDARY_TIER if _rng_randf() <= SPECIAL_LEVEL_UP_LEGENDARY_SHARE else SPECIAL_LEVEL_UP_EPIC_TIER
 
 func _get_special_level_up_tier_multiplier(tier: String) -> float:
 	return SPECIAL_LEVEL_UP_LEGENDARY_MULTIPLIER if tier == SPECIAL_LEVEL_UP_LEGENDARY_TIER else SPECIAL_LEVEL_UP_EPIC_MULTIPLIER
@@ -776,13 +796,9 @@ func _get_special_level_up_text(text: String, multiplier: float) -> String:
 	return _apply_special_level_up_percent_text(multiplier_text, multiplier)
 
 func _apply_special_level_up_percent_text(text: String, multiplier: float) -> String:
-	var regex = RegEx.new()
-	if regex.compile("([+-])([0-9]+(?:\\.[0-9]+)?)%") != OK:
-		return text
-
 	var result = ""
 	var last_end = 0
-	for match_result in regex.search_all(text):
+	for match_result in special_percent_regex.search_all(text):
 		result += text.substr(last_end, match_result.get_start() - last_end)
 		var groups = match_result.get_strings()
 		if groups.size() < 3:
@@ -797,13 +813,9 @@ func _apply_special_level_up_percent_text(text: String, multiplier: float) -> St
 	return result
 
 func _apply_special_level_up_multiplier_text(text: String, multiplier: float) -> String:
-	var regex = RegEx.new()
-	if regex.compile("\\bx([0-9]+(?:\\.[0-9]+)?)\\b") != OK:
-		return text
-
 	var result = ""
 	var last_end = 0
-	for match_result in regex.search_all(text):
+	for match_result in special_multiplier_regex.search_all(text):
 		result += text.substr(last_end, match_result.get_start() - last_end)
 		var groups = match_result.get_strings()
 		if groups.size() < 2:
@@ -898,7 +910,7 @@ func _roll_same_type_level_up_option_for_reroll(current_option: Dictionary, opti
 	if pool.is_empty():
 		return {}
 
-	pool.shuffle()
+	_shuffle_array(pool)
 	var rolled_options = _roll_special_level_up_options([pool[0]])
 	if rolled_options.is_empty():
 		return pool[0].duplicate(true)

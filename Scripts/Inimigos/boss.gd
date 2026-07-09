@@ -82,6 +82,9 @@ const LUST_COLOR: Color = Color(1.0, 0.09, 0.451, 1.0)
 const GREED_COLOR: Color = Color(1.0, 0.78, 0.0, 1.0)
 const PRIDE_LIGHT_COLOR: Color = Color(1.0, 0.961, 0.765, 1.0)
 const PRIDE_FIRE_COLOR: Color = Color(1.0, 0.46, 0.14, 1.0)
+const BOSS_FOOTSTEP_SFX_VOICE_KEY: String = "boss_footstep"
+const BOSS_FOOTSTEP_SFX_MAX_VOICES: int = 1
+const BOSS_FOOTSTEP_SFX_PLAY_DISTANCE: float = 500.0
 const PRIDE_EDGE_BEAM_WIDTH: float = 30.0
 const PRIDE_EDGE_BEAM_DELAY_PHASE_1: float = 0.75
 const PRIDE_EDGE_BEAM_DELAY_PHASE_2: float = 0.75
@@ -169,6 +172,7 @@ var pride_movement_mode: String = PRIDE_MOVEMENT_DEFAULT
 var boss_indicator_layer: CanvasLayer
 var boss_indicator_node: Node2D
 var footstep_sfx_player: AudioStreamPlayer2D
+var has_footstep_sfx_voice: bool = false
 
 func _ready() -> void:
 	z_index = Global.CHARACTER_RENDER_Z_INDEX
@@ -190,6 +194,9 @@ func _ready() -> void:
 		greed_previous_can_shoot = player.can_shoot
 	call_deferred("_setup_health_bar")
 	call_deferred("_begin_intro")
+
+func _exit_tree() -> void:
+	_stop_footstep_sfx()
 
 func _configure_boss_for_current_sin() -> void:
 	var config = BOSS_CONFIG.get(Global.pecado, BOSS_CONFIG[7])
@@ -2212,14 +2219,23 @@ func _update_footstep_sfx() -> void:
 	if is_dead or velocity.length() < 18.0:
 		_stop_footstep_sfx()
 		return
+	if player != null and global_position.distance_to(player.global_position) > BOSS_FOOTSTEP_SFX_PLAY_DISTANCE:
+		_stop_footstep_sfx()
+		return
 
 	if not footstep_sfx_player.playing:
+		if not has_footstep_sfx_voice and not Global.try_acquire_limited_sfx_voice(BOSS_FOOTSTEP_SFX_VOICE_KEY, BOSS_FOOTSTEP_SFX_MAX_VOICES):
+			return
+		has_footstep_sfx_voice = true
 		footstep_sfx_player.pitch_scale = randf_range(0.92, 1.04)
 		footstep_sfx_player.play()
 
 func _stop_footstep_sfx() -> void:
 	if footstep_sfx_player != null and footstep_sfx_player.playing:
 		footstep_sfx_player.stop()
+	if has_footstep_sfx_voice:
+		Global.release_limited_sfx_voice(BOSS_FOOTSTEP_SFX_VOICE_KEY)
+		has_footstep_sfx_voice = false
 
 func _add_circle_collision(parent: Node, radius: float) -> CollisionPolygon2D:
 	var collision = CollisionPolygon2D.new()

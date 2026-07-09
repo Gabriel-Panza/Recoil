@@ -32,6 +32,9 @@ const AUDIO_BASE_VOLUME_META: String = "base_audio_volume_db"
 
 var intro_cutscene_return_target: String = INTRO_CUTSCENE_RETURN_GAME
 var open_cutscenes_gallery_on_menu_ready: bool = false
+var limited_sfx_voice_counts: Dictionary = {}
+var looping_audio_stream_cache: Dictionary = {}
+var enemy_sprite_frames_cache: Dictionary = {}
 
 const STARTING_ARM_DATA = {
 	"fast": {
@@ -48,8 +51,8 @@ const STARTING_ARM_DATA = {
 	"heavy": {
 		"name": "Heavy Arm",
 		"description": "Slow shots with high damage and strong recoil for big repositioning plays.",
-		"attack_damage": 70.0,
-		"base_fire_rate": 2.0,
+		"attack_damage": 90.0,
+		"base_fire_rate": 2.1,
 		"min_fire_rate": 1.65,
 		"base_recoil_force": 750.0,
 		"friction": 600.0,
@@ -319,10 +322,34 @@ func make_looping_audio_stream(stream: AudioStream) -> AudioStream:
 	if stream == null:
 		return null
 
+	var cache_key = stream.resource_path if stream.resource_path != "" else str(stream.get_instance_id())
+	if looping_audio_stream_cache.has(cache_key):
+		return looping_audio_stream_cache[cache_key]
+
 	var looping_stream = stream.duplicate() as AudioStream
 	if looping_stream is AudioStreamMP3:
 		(looping_stream as AudioStreamMP3).loop = true
+	looping_audio_stream_cache[cache_key] = looping_stream
 	return looping_stream
+
+func try_acquire_limited_sfx_voice(voice_key: String, max_voices: int) -> bool:
+	if max_voices <= 0:
+		return false
+
+	var active_count = int(limited_sfx_voice_counts.get(voice_key, 0))
+	if active_count >= max_voices:
+		return false
+
+	limited_sfx_voice_counts[voice_key] = active_count + 1
+	return true
+
+func release_limited_sfx_voice(voice_key: String) -> void:
+	var active_count = int(limited_sfx_voice_counts.get(voice_key, 0))
+	if active_count <= 1:
+		limited_sfx_voice_counts.erase(voice_key)
+		return
+
+	limited_sfx_voice_counts[voice_key] = active_count - 1
 
 func _configure_volume_slider(slider: Range, value: float) -> void:
 	if slider == null:

@@ -1020,6 +1020,7 @@ func _setup_shot_sfx() -> void:
 	shot_sfx_player.stream = SHOT_SFX_STREAM
 	shot_sfx_player.max_distance = 520.0
 	shot_sfx_player.attenuation = 1.0
+	shot_sfx_player.max_polyphony = 4
 	Global.register_audio_player(shot_sfx_player, Global.GROUP_SFX, -3.0)
 
 func _play_shot_sfx() -> void:
@@ -1705,9 +1706,8 @@ func die() -> void:
 	capture_run_end("Defeat")
 	_finish_current_run()
 	# aparencia.play("death")
-	for musica in get_tree().get_nodes_in_group(Global.GROUP_MUSIC):
-		musica.stop()
 	get_tree().paused = true
+	Global.keep_music_playing_during_pause()
 	# $Lose.play()
 	await get_tree().create_timer(0.25, true).timeout
 	if game_over:
@@ -1716,9 +1716,8 @@ func die() -> void:
 func win() -> void:
 	capture_run_end("Victory")
 	_finish_current_run()
-	for musica in get_tree().get_nodes_in_group(Global.GROUP_MUSIC):
-		musica.stop()
 	get_tree().paused = true
+	Global.keep_music_playing_during_pause()
 	# $Win.play()
 	if game_win:
 		game_win.visible = true
