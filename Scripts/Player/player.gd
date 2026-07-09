@@ -2278,11 +2278,26 @@ func _get_damage_source_name(contact_source: Node) -> String:
 	if contact_source.is_in_group(Global.GROUP_BOSS):
 		return I18n.t("common.boss")
 
+	var source_name = _get_damage_source_display_name(contact_source)
+	if source_name != "":
+		return source_name
+
+	return I18n.t("common.unknown")
+
+func _get_damage_source_display_name(contact_source: Node) -> String:
+	if contact_source.has_method("get_damage_source_display_name"):
+		var display_name = str(contact_source.call("get_damage_source_display_name"))
+		if display_name != "":
+			return display_name
+
+	if contact_source.has_meta("damage_source_name"):
+		var meta_name = str(contact_source.get_meta("damage_source_name", ""))
+		if meta_name != "":
+			return meta_name
+
 	var source_name = str(contact_source.name)
-	if contact_source.has_method("get_elite_display_name"):
-		var elite_name = str(contact_source.call("get_elite_display_name"))
-		if elite_name != "":
-			return "%s %s" % [elite_name, source_name]
+	if source_name.begins_with("@") and contact_source.is_in_group(Global.GROUP_ENEMY):
+		return I18n.t("enemy.common")
 
 	return source_name
 

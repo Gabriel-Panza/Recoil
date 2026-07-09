@@ -542,6 +542,39 @@ func get_elite_display_name() -> String:
 			return I18n.t("elite.vampiric")
 	return ""
 
+func get_damage_source_display_name() -> String:
+	return I18n.t("enemy.%s" % _get_damage_source_type_id())
+
+func _get_damage_source_type_id() -> String:
+	var source_id = _get_damage_source_type_id_from_path(scene_file_path)
+	if source_id != "":
+		return source_id
+
+	var script_resource = get_script()
+	if script_resource != null:
+		source_id = _get_damage_source_type_id_from_path(str(script_resource.resource_path))
+		if source_id != "":
+			return source_id
+
+	return "common"
+
+func _get_damage_source_type_id_from_path(path: String) -> String:
+	if path == "":
+		return ""
+
+	match path.get_file().get_basename():
+		"melee_enemy":
+			return "melee"
+		"ranged_enemy":
+			return "ranged"
+		"tank_enemy":
+			return "tank"
+		"agile_enemy":
+			return "agile"
+		"spread_enemy":
+			return "spread"
+	return ""
+
 func on_player_damage_dealt(damage_amount: float, _target: Node) -> void:
 	if elite_variant != ELITE_VAMPIRIC or is_dead:
 		return

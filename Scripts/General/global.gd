@@ -22,6 +22,11 @@ const GROUND_AREA_VFX_LAYER_NAME: String = "GroundAreaVFX"
 const GROUND_AREA_VFX_Z_INDEX: int = 10
 const ENEMY_ATTACK_ACTIVE_COLOR_DARKENING: float = 0.3
 const AREA_AURA_VFX_DARKENING: float = 0.15
+const INTRO_CUTSCENE_RETURN_GAME: String = "game"
+const INTRO_CUTSCENE_RETURN_GALLERY: String = "gallery"
+
+var intro_cutscene_return_target: String = INTRO_CUTSCENE_RETURN_GAME
+var open_cutscenes_gallery_on_menu_ready: bool = false
 
 const STARTING_ARM_DATA = {
 	"fast": {

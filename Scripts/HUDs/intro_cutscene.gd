@@ -1,6 +1,7 @@
 extends Control
 
 const GAME_SCENE_PATH: String = "res://Cenas/General/gameScene.tscn"
+const MAIN_MENU_SCENE_PATH: String = "res://Cenas/HUDs/MainMenu.tscn"
 const CUTSCENE_FONT: FontFile = preload("res://Fonts/cg-pixel-4x5.otf")
 const FRAME_TEXTURES: Array[Texture2D] = [
 	preload("res://Sprites/Cutscene/Frame1.png"),
@@ -130,10 +131,20 @@ func _show_next_step() -> void:
 
 	current_step_index += 1
 	if current_step_index >= current_steps.size():
-		get_tree().change_scene_to_file(GAME_SCENE_PATH)
+		_finish_cutscene()
 		return
 
 	_apply_step(current_steps[current_step_index])
+
+func _finish_cutscene() -> void:
+	if Global.intro_cutscene_return_target == Global.INTRO_CUTSCENE_RETURN_GALLERY:
+		Global.open_cutscenes_gallery_on_menu_ready = true
+		Global.intro_cutscene_return_target = Global.INTRO_CUTSCENE_RETURN_GAME
+		get_tree().change_scene_to_file(MAIN_MENU_SCENE_PATH)
+		return
+
+	Global.intro_cutscene_return_target = Global.INTRO_CUTSCENE_RETURN_GAME
+	get_tree().change_scene_to_file(GAME_SCENE_PATH)
 
 func _apply_step(step: Dictionary) -> void:
 	var frame_index = int(step.get("frame", KEEP_FRAME))

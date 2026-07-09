@@ -54,7 +54,7 @@ const SLOTH_BOSS_PLAYER_VELOCITY_MULTIPLIER: float = 0.75
 const SLOTH_BOSS_ZONE_DPS: float = 2.0
 const SLOTH_BOSS_ENEMY_SLOW_EFFECT_RATIO: float = 0.1
 const SLOTH_BOSS_ENEMY_SLOW_REFERENCE_DASH_MULTIPLIER: float = 0.45
-const GLUTTONY_FOOD_SPAWN_INTERVAL: float = 2.0
+const GLUTTONY_FOOD_SPAWN_INTERVAL: float = 2.5
 const GLUTTONY_FOOD_SPEED_PHASE_1: float = 137.5
 const GLUTTONY_FOOD_SPEED_PHASE_2: float = 157.5
 const GLUTTONY_FOOD_DASH_DURATION: float = 0.3
@@ -679,7 +679,7 @@ func _update_gluttony_foods(_delta: float) -> void:
 		if food.global_position.distance_to(global_position) <= 40.0:
 			food.set_meta("gluttony_delivered", true)
 			gluttony_foods.erase(food)
-			var heal_amount = max_health * (0.15 if phase == 1 else 0.12)
+			var heal_amount = max_health * (0.10 if phase == 1 else 0.075)
 			heal(heal_amount)
 			_spawn_heal_particles(food.global_position)
 			_start_gluttony_food_dash()

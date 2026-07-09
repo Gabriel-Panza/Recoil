@@ -78,6 +78,15 @@ func _ready() -> void:
 	_setup_language_button()
 	I18n.language_changed.connect(_on_language_changed)
 	_refresh_localized_text()
+	_open_returned_cutscenes_gallery_if_requested()
+
+func _open_returned_cutscenes_gallery_if_requested() -> void:
+	if not Global.open_cutscenes_gallery_on_menu_ready:
+		return
+
+	Global.open_cutscenes_gallery_on_menu_ready = false
+	_refresh_secondary_panels()
+	_show_content_panel(cutscenes_panel)
 
 func _input(event: InputEvent) -> void:
 	if not _is_roulette_input_active():
@@ -106,6 +115,8 @@ func _on_start_game_pressed() -> void:
 
 func _execute_start_game() -> void:
 	_play_sfx()
+	Global.intro_cutscene_return_target = Global.INTRO_CUTSCENE_RETURN_GAME
+	Global.open_cutscenes_gallery_on_menu_ready = false
 	await get_tree().create_timer(0.1).timeout
 	get_tree().change_scene_to_file("res://Cenas/HUDs/IntroCutscene.tscn")
 	
@@ -159,6 +170,13 @@ func _on_credits_back_pressed() -> void:
 
 func _on_placeholder_cutscene_pressed() -> void:
 	_play_sfx()
+
+func _on_intro_cutscene_pressed() -> void:
+	_play_sfx()
+	Global.intro_cutscene_return_target = Global.INTRO_CUTSCENE_RETURN_GALLERY
+	Global.open_cutscenes_gallery_on_menu_ready = false
+	await get_tree().create_timer(0.1).timeout
+	get_tree().change_scene_to_file("res://Cenas/HUDs/IntroCutscene.tscn")
 
 func _show_content_panel(panel: Control) -> void:
 	_hide_content_panels()
@@ -401,12 +419,13 @@ func _populate_cutscenes_panel() -> void:
 		return
 	_clear_children(cutscenes_grid)
 
-	for i in range(6):
-		cutscenes_grid.add_child(_create_cutscene_card())
+	cutscenes_grid.add_child(_create_cutscene_card(I18n.t("cutscenes.intro_title"), Callable(self, "_on_intro_cutscene_pressed")))
+	for i in range(5):
+		cutscenes_grid.add_child(_create_cutscene_card(I18n.t("cutscenes.coming_soon"), Callable(self, "_on_placeholder_cutscene_pressed")))
 
-func _create_cutscene_card() -> Button:
+func _create_cutscene_card(label_text: String, callable: Callable) -> Button:
 	var card = Button.new()
-	card.text = I18n.t("cutscenes.coming_soon")
+	card.text = label_text
 	card.custom_minimum_size = Vector2(210.0, 120.0)
 	card.focus_mode = Control.FOCUS_NONE
 	card.alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -418,7 +437,6 @@ func _create_cutscene_card() -> Button:
 	card.add_theme_stylebox_override("normal", _make_card_style())
 	card.add_theme_stylebox_override("hover", _make_card_style(Color(0.18, 0.05, 0.06, 0.96), Color(1.0, 0.36, 0.18, 1.0)))
 	card.add_theme_stylebox_override("pressed", _make_card_style(Color(0.12, 0.03, 0.04, 0.98), Color(1.0, 0.48, 0.2, 1.0)))
-	var callable = Callable(self, "_on_placeholder_cutscene_pressed")
 	if not card.pressed.is_connected(callable):
 		card.pressed.connect(callable)
 	return card
