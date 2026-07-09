@@ -14,6 +14,12 @@ const WAVE_SPAWN_INTERVAL: float = 0.75
 const CAMERA_LIMIT_MARGIN: int = 50
 const ARENA_TILESET_TEXTURE = preload("res://Sprites/tileset_hell.png")
 const ENVY_ARENA_TILESET_TEXTURE = preload("res://Sprites/tileset_mirror.png")
+const NORMAL_ARENA_FLOOR_TEXTURE = preload("res://Sprites/arena_normal.png")
+const SLOTH_ARENA_FLOOR_TEXTURE = preload("res://Sprites/sloth_arena.png")
+const WRATH_ARENA_FLOOR_TEXTURE = preload("res://Sprites/wrath_arena.png")
+const LUST_ARENA_FLOOR_TEXTURE = preload("res://Sprites/lust_arena.png")
+const GREED_ARENA_FLOOR_TEXTURE = preload("res://Sprites/greed_arena.png")
+const PRIDE_ARENA_FLOOR_TEXTURE = preload("res://Sprites/pride_arena.png")
 const ARENA_TILE_SIZE: Vector2i = Vector2i(48, 48)
 const ARENA_TILESET_MARGIN: Vector2i = Vector2i(5, 8)
 const ARENA_GRID_SIZE: Vector2i = Vector2i(40, 25)
@@ -22,6 +28,7 @@ const ARENA_TILE_SOURCE_ID: int = 0
 const ARENA_TILESET_HELL: String = "hell"
 const ARENA_TILESET_MIRROR: String = "mirror"
 const ARENA_FILL_TILEMAP: String = "tilemap"
+const ARENA_FILL_TEXTURED_FLOOR: String = "textured_floor"
 const ARENA_FILL_ROUND_TILES: String = "round_tiles"
 const ARENA_FILL_MIRROR_SURFACE: String = "mirror_surface"
 const ARENA_DETAIL_MIRROR_PANELS: String = "mirror_panels"
@@ -564,6 +571,10 @@ func _add_arena_tile_layer(arena: Node2D, profile: Dictionary, arena_index: int)
 		_add_mirror_arena_surface(arena, profile, arena_index)
 		return
 
+	if str(profile.get("fill", ARENA_FILL_TILEMAP)) == ARENA_FILL_TEXTURED_FLOOR:
+		_add_textured_arena_floor_layer(arena, profile)
+		return
+
 	if str(profile.get("fill", ARENA_FILL_TILEMAP)) == ARENA_FILL_ROUND_TILES:
 		_add_round_arena_tile_layer(arena, profile, arena_index)
 		return
@@ -600,6 +611,51 @@ func _add_arena_tile_layer(arena: Node2D, profile: Dictionary, arena_index: int)
 
 			var atlas_coords = _get_arena_tile_atlas_coords(tile_coords, arena_index, profile)
 			tile_layer.set_cell(tile_coords, ARENA_TILE_SOURCE_ID, atlas_coords)
+
+func _add_textured_arena_floor_layer(arena: Node2D, profile: Dictionary) -> void:
+	var floor_texture = profile.get("floor_texture", null) as Texture2D
+	if floor_texture == null:
+		return
+
+	var floor = Polygon2D.new()
+	floor.name = "ArenaTileLayer"
+	floor.z_index = 0
+	floor.polygon = _build_arena_polygon(profile)
+	floor.texture = floor_texture
+	floor.uv = _build_floor_texture_uv(floor.polygon, floor_texture)
+	floor.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	arena.add_child(floor)
+
+func _build_floor_texture_uv(polygon: PackedVector2Array, texture: Texture2D) -> PackedVector2Array:
+	var uv = PackedVector2Array()
+	if polygon.is_empty() or texture == null:
+		return uv
+
+	var bounds = _get_local_polygon_bounds(polygon)
+	if bounds.size.x <= 0.0 or bounds.size.y <= 0.0:
+		return uv
+
+	var texture_size = Vector2(float(texture.get_width()), float(texture.get_height()))
+	var texture_aspect = texture_size.x / texture_size.y
+	var bounds_aspect = bounds.size.x / bounds.size.y
+	var visible_size = texture_size
+	var uv_origin = Vector2.ZERO
+
+	if texture_aspect > bounds_aspect:
+		visible_size.x = texture_size.y * bounds_aspect
+		uv_origin.x = (texture_size.x - visible_size.x) * 0.5
+	else:
+		visible_size.y = texture_size.x / bounds_aspect
+		uv_origin.y = (texture_size.y - visible_size.y) * 0.5
+
+	for point in polygon:
+		var normalized = Vector2(
+			(point.x - bounds.position.x) / bounds.size.x,
+			(point.y - bounds.position.y) / bounds.size.y
+		)
+		uv.append(uv_origin + Vector2(normalized.x * visible_size.x, normalized.y * visible_size.y))
+
+	return uv
 
 func _fill_rect_arena_tile_layer(tile_layer: TileMapLayer, profile: Dictionary, arena_index: int) -> void:
 	var size = profile.get("size", _get_arena_pixel_size()) as Vector2
@@ -971,9 +1027,9 @@ func _get_arena_profile(arena_index: int) -> Dictionary:
 	var base_size = _get_arena_pixel_size()
 	match arena_index:
 		0:
-			return {"shape": ARENA_SHAPE_RECT, "size": base_size, "tile_set": ARENA_TILESET_HELL}
+			return {"shape": ARENA_SHAPE_RECT, "size": base_size, "tile_set": ARENA_TILESET_HELL, "fill": ARENA_FILL_TEXTURED_FLOOR, "floor_texture": NORMAL_ARENA_FLOOR_TEXTURE}
 		1:
-			return {"shape": ARENA_SHAPE_RECT, "size": base_size, "tile_set": ARENA_TILESET_HELL}
+			return {"shape": ARENA_SHAPE_RECT, "size": base_size, "tile_set": ARENA_TILESET_HELL, "fill": ARENA_FILL_TEXTURED_FLOOR, "floor_texture": SLOTH_ARENA_FLOOR_TEXTURE}
 		2:
 			return {
 				"shape": ARENA_SHAPE_ELLIPSE,
@@ -1006,6 +1062,8 @@ func _get_arena_profile(arena_index: int) -> Dictionary:
 				"shape": ARENA_SHAPE_FLAME_CIRCLE,
 				"size": Vector2(base_size.y * 1.08, base_size.y * 0.98),
 				"tile_set": ARENA_TILESET_HELL,
+				"fill": ARENA_FILL_TEXTURED_FLOOR,
+				"floor_texture": WRATH_ARENA_FLOOR_TEXTURE,
 				"strict_tile_clip": true,
 				"floor_bleed": 1.035,
 				"border_width": 10.0,
@@ -1020,6 +1078,8 @@ func _get_arena_profile(arena_index: int) -> Dictionary:
 				"shape": ARENA_SHAPE_SERPENT,
 				"size": serpent_size,
 				"tile_set": ARENA_TILESET_HELL,
+				"fill": ARENA_FILL_TEXTURED_FLOOR,
+				"floor_texture": LUST_ARENA_FLOOR_TEXTURE,
 				"strict_tile_clip": true,
 				"floor_bleed": 1.04,
 				"border_width": 10.0,
@@ -1034,6 +1094,8 @@ func _get_arena_profile(arena_index: int) -> Dictionary:
 				"shape": ARENA_SHAPE_GOBLET,
 				"size": Vector2(base_size.x * 0.92, base_size.y * 1.02),
 				"tile_set": ARENA_TILESET_HELL,
+				"fill": ARENA_FILL_TEXTURED_FLOOR,
+				"floor_texture": GREED_ARENA_FLOOR_TEXTURE,
 				"anchors": [Vector2(0.0, -base_size.y * 0.25), Vector2.ZERO, Vector2(0.0, base_size.y * 0.3)]
 			}
 		7:
@@ -1041,6 +1103,8 @@ func _get_arena_profile(arena_index: int) -> Dictionary:
 				"shape": ARENA_SHAPE_CROWN,
 				"size": Vector2(base_size.x * 0.96, base_size.y * 1.0),
 				"tile_set": ARENA_TILESET_HELL,
+				"fill": ARENA_FILL_TEXTURED_FLOOR,
+				"floor_texture": PRIDE_ARENA_FLOOR_TEXTURE,
 				"strict_tile_clip": true,
 				"floor_bleed": 1.035,
 				"border_width": 10.0,

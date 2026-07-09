@@ -73,9 +73,9 @@ func _ready() -> void:
 		"fast":
 			speed = 142
 		"heavy":
-			speed = 126
+			speed = 125
 		"unstable":
-			speed = 132
+			speed = 131
 	add_to_group(Global.GROUP_ENEMY)
 	_setup_enemy_body_collision()
 	call_deferred("_setup_health_bar")

@@ -31,12 +31,17 @@ const CREDITS_GRID_SIZE: Vector2 = Vector2(1048.0, 438.0)
 const CREDITS_CARD_SIZE: Vector2 = Vector2(514.0, 132.0)
 const CREDITS_ART_SLOT_SIZE: Vector2 = Vector2(116.0, 116.0)
 const CREDITS_BACK_POSITION: Vector2 = Vector2(472.0, 574.0)
+const CREDIT_PORTRAIT_ARTHUR: Texture2D = preload("res://Sprites/Menu/Arthur.png")
+const CREDIT_PORTRAIT_DEBORA: Texture2D = preload("res://Sprites/Menu/Debora.png")
+const CREDIT_PORTRAIT_LOVISI: Texture2D = preload("res://Sprites/Menu/Lovisi.png")
+const CREDIT_PORTRAIT_CALBO: Texture2D = preload("res://Sprites/Menu/Calbo.png")
+const CREDIT_PORTRAIT_GABRIEL: Texture2D = preload("res://Sprites/Menu/Gabriel.png")
 const CREDIT_ENTRIES = [
-	{ "name": "Arthur \"Engispyro\"", "role_key": "credits.role.game_level_designer" },
-	{ "name": "Débora \"Miya\"", "role_key": "credits.role.artist_2d" },
-	{ "name": "Lovisi \"Phantom_gl\"", "role_key": "credits.role.programmer" },
-	{ "name": "Calbo \"K4rubo\"", "role_key": "credits.role.artist_2d" },
-	{ "name": "Gabriel \"ImaqtPlayer\"", "role_key": "credits.role.mentor_programmer" }
+	{ "name": "Arthur \"Engispyro\" Pinna", "role_key": "credits.role.game_level_designer" },
+	{ "name": "Debora \"Miya\" Serpa", "role_key": "credits.role.artist_2d" },
+	{ "name": "Guilherme \"Phantom_gl\" Lovisi", "role_key": "credits.role.programmer" },
+	{ "name": "Guilherme \"K4rubo\" Calbo", "role_key": "credits.role.artist_2d" },
+	{ "name": "Gabriel \"ImaqtPlayer\" Panza", "role_key": "credits.role.mentor_programmer" }
 ]
 
 @onready var ranking_panel: Control = $RankingPanel
@@ -78,6 +83,17 @@ func _input(event: InputEvent) -> void:
 	if not _is_roulette_input_active():
 		return
 
+	if event is InputEventMouseButton and event.pressed:
+		var mouse_event = event as InputEventMouseButton
+		if mouse_event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			get_viewport().set_input_as_handled()
+			_request_roulette_navigation_step(-1)
+			return
+		if mouse_event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			get_viewport().set_input_as_handled()
+			_request_roulette_navigation_step(1)
+			return
+
 	if event.is_action_pressed("ui_up"):
 		get_viewport().set_input_as_handled()
 		_request_roulette_navigation_step(-1)
@@ -91,7 +107,7 @@ func _on_start_game_pressed() -> void:
 func _execute_start_game() -> void:
 	_play_sfx()
 	await get_tree().create_timer(0.1).timeout
-	get_tree().change_scene_to_file("res://Cenas/General/gameScene.tscn")
+	get_tree().change_scene_to_file("res://Cenas/HUDs/IntroCutscene.tscn")
 	
 func _on_exit_button_pressed() -> void:
 	_request_roulette_action("exit")
@@ -311,9 +327,23 @@ func _populate_credits_panel() -> void:
 	_clear_children(credits_list)
 
 	for entry in CREDIT_ENTRIES:
-		credits_list.add_child(_create_credit_card(str(entry["name"]), I18n.t(str(entry["role_key"]))))
+		var person_name = str(entry["name"])
+		credits_list.add_child(_create_credit_card(person_name, I18n.t(str(entry["role_key"])), _get_credit_portrait(person_name)))
 
-func _create_credit_card(person_name: String, role_text: String) -> Control:
+func _get_credit_portrait(person_name: String) -> Texture2D:
+	if person_name.contains("Arthur"):
+		return CREDIT_PORTRAIT_ARTHUR
+	if person_name.contains("Miya"):
+		return CREDIT_PORTRAIT_DEBORA
+	if person_name.contains("Phantom_gl"):
+		return CREDIT_PORTRAIT_LOVISI
+	if person_name.contains("K4rubo"):
+		return CREDIT_PORTRAIT_CALBO
+	if person_name.contains("ImaqtPlayer"):
+		return CREDIT_PORTRAIT_GABRIEL
+	return null
+
+func _create_credit_card(person_name: String, role_text: String, portrait: Texture2D) -> Control:
 	var card = PanelContainer.new()
 	card.custom_minimum_size = CREDITS_CARD_SIZE
 	card.add_theme_stylebox_override("panel", _make_card_style())
@@ -325,9 +355,22 @@ func _create_credit_card(person_name: String, role_text: String) -> Control:
 
 	var art_slot = PanelContainer.new()
 	art_slot.custom_minimum_size = CREDITS_ART_SLOT_SIZE
+	art_slot.size = CREDITS_ART_SLOT_SIZE
+	art_slot.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	art_slot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	art_slot.clip_contents = true
 	art_slot.add_theme_stylebox_override("panel", _make_art_slot_style())
 	row.add_child(art_slot)
+
+	var portrait_rect = TextureRect.new()
+	portrait_rect.texture = portrait
+	portrait_rect.custom_minimum_size = Vector2.ZERO
+	portrait_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	portrait_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	portrait_rect.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	portrait_rect.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	portrait_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	art_slot.add_child(portrait_rect)
 
 	var text_box = VBoxContainer.new()
 	text_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -733,14 +776,36 @@ func _setup_selected_option_label(roulette_parent: Node) -> void:
 	selected_option_label.position = MENU_OPTION_LABEL_POSITION
 	selected_option_label.size = MENU_OPTION_LABEL_SIZE
 	selected_option_label.z_index = 12
-	selected_option_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	selected_option_label.mouse_filter = Control.MOUSE_FILTER_PASS
+	selected_option_label.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	selected_option_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	selected_option_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	selected_option_label.add_theme_font_size_override("font_size", MENU_OPTION_LABEL_FONT_SIZE)
 	selected_option_label.add_theme_color_override("font_color", Color8(168, 132, 243, 255))
 	selected_option_label.add_theme_color_override("font_outline_color", Color.BLACK)
 	selected_option_label.add_theme_constant_override("outline_size", 8)
+	var callable = Callable(self, "_on_selected_option_label_gui_input")
+	if not selected_option_label.gui_input.is_connected(callable):
+		selected_option_label.gui_input.connect(callable)
 	_set_selected_option_label_for_current_item(false)
+
+func _on_selected_option_label_gui_input(event: InputEvent) -> void:
+	if not (event is InputEventMouseButton):
+		return
+	var mouse_event = event as InputEventMouseButton
+	if not mouse_event.pressed or mouse_event.button_index != MOUSE_BUTTON_LEFT:
+		return
+	if not _is_roulette_input_active():
+		return
+	get_viewport().set_input_as_handled()
+	_request_selected_option_label_action()
+
+func _request_selected_option_label_action() -> void:
+	if roulette_selected_item_index < 0:
+		roulette_selected_item_index = _get_current_roulette_selected_item_index()
+	if roulette_selected_item_index < 0:
+		return
+	await _request_roulette_item_action(roulette_selected_item_index)
 
 func _set_selected_option_label_for_current_item(animate: bool, duration: float = ROULETTE_SPIN_DURATION) -> void:
 	var action_id = _get_selected_roulette_action_id()

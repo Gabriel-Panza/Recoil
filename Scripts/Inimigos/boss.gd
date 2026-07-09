@@ -16,6 +16,13 @@ const ENRAGE_STAT_MULTIPLIER: float = 1.25
 const PROJECTILE_SCENE = preload("res://Cenas/Inimigos/enemyProjectile.tscn")
 const MELEE_ENEMY_SCENE = preload("res://Cenas/Inimigos/melee_enemy.tscn")
 const RANGED_ENEMY_SCENE = preload("res://Cenas/Inimigos/ranged_enemy.tscn")
+const SLOTH_BOSS_SHEET = preload("res://Sprites/Bosses/Sloth_Spritesheet.png")
+const GLUTTONY_BOSS_SHEET = preload("res://Sprites/Bosses/Gluttony_Spritesheet.png")
+const ENVY_BOSS_SHEET = preload("res://Sprites/Bosses/Envy_Spritesheet.png")
+const WRATH_BOSS_SHEET = preload("res://Sprites/Bosses/Wrath_Spritesheet.png")
+const LUST_BOSS_SHEET = preload("res://Sprites/Bosses/Lust_Spritesheet.png")
+const GREED_BOSS_SHEET = preload("res://Sprites/Bosses/Greed_Spritesheet.png")
+const PRIDE_BOSS_SHEET = preload("res://Sprites/Bosses/Pride_Spritesheet.png")
 
 const WRATH_BOMB_RADIUS: float = 20.0
 const WRATH_BOMB_EXPLOSION_RADIUS: float = 110.0
@@ -31,6 +38,12 @@ const LUST_SERPENT_LASH_DAMAGE_DURATION: float = 0.32
 const LUST_SERPENT_LASH_SEGMENT_INTERVAL: float = 0.035
 const LUST_SERPENT_LASH_DAMAGE_MULTIPLIER: float = 0.85
 const LUST_SERPENT_LASH_HIT_META: String = "lust_serpent_lash_hit_id"
+const LUST_WALL_BASE_CHANCE_PHASE_1: float = 0.30
+const LUST_WALL_BASE_CHANCE_PHASE_2: float = 0.22
+const LUST_WALL_EXISTING_CHANCE_PENALTY: float = 0.12
+const LUST_WALL_MIN_CHANCE: float = 0.04
+const LUST_WALL_STOCK_LIMIT_PHASE_1: int = 4
+const LUST_WALL_STOCK_LIMIT_PHASE_2: int = 5
 const SLOTH_SLOW_ZONE_RADIUS: float = 100.0
 const SLOTH_SUMMON_SPAWN_INTERVAL: float = 3.0
 const SLOTH_ZONE_TELEGRAPH_DURATION: float = 0.75
@@ -42,11 +55,11 @@ const SLOTH_BOSS_ZONE_DPS: float = 2.0
 const SLOTH_BOSS_ENEMY_SLOW_EFFECT_RATIO: float = 0.1
 const SLOTH_BOSS_ENEMY_SLOW_REFERENCE_DASH_MULTIPLIER: float = 0.45
 const GLUTTONY_FOOD_SPAWN_INTERVAL: float = 2.0
-const GLUTTONY_FOOD_SPEED_PHASE_1: float = 135.0
-const GLUTTONY_FOOD_SPEED_PHASE_2: float = 155.0
-const GLUTTONY_FOOD_DASH_DURATION: float = 0.28
-const GLUTTONY_FOOD_DASH_DISTANCE_PHASE_1: float = 175.0
-const GLUTTONY_FOOD_DASH_DISTANCE_PHASE_2: float = 215.0
+const GLUTTONY_FOOD_SPEED_PHASE_1: float = 137.5
+const GLUTTONY_FOOD_SPEED_PHASE_2: float = 157.5
+const GLUTTONY_FOOD_DASH_DURATION: float = 0.3
+const GLUTTONY_FOOD_DASH_DISTANCE_PHASE_1: float = 177.5
+const GLUTTONY_FOOD_DASH_DISTANCE_PHASE_2: float = 217.5
 const GLUTTONY_FOOD_DASH_ARENA_MARGIN: float = 30.0
 const GLUTTONY_STRESS_DURATION_PHASE_1: float = 5.0
 const GLUTTONY_STRESS_DURATION_PHASE_2: float = 8.0
@@ -58,7 +71,7 @@ const GREED_TREASURE_RADIUS: float = 16.0
 const MIN_TELEGRAPH_DURATION: float = 0.75
 const MAX_BOSS_CIRCLE_VFX_RADIUS: float = 180.0
 const ISO_AOE_VISUAL_Y_SCALE: float = 0.7
-const DEFAULT_BOSS_VISUAL_SCALE: Vector2 = Vector2(1.5, 1.5)
+const DEFAULT_BOSS_VISUAL_SCALE: Vector2 = Vector2.ONE
 
 const SLOTH_COLOR: Color = Color(0.25, 0.95, 1.0, 1.0)
 const GLUTTONY_COLOR: Color = Color(0.961, 0.89, 0.263, 1.0)
@@ -72,12 +85,18 @@ const PRIDE_EDGE_BEAM_WIDTH: float = 30.0
 const PRIDE_EDGE_BEAM_DELAY_PHASE_1: float = 0.75
 const PRIDE_EDGE_BEAM_DELAY_PHASE_2: float = 0.75
 const PRIDE_EDGE_BEAM_DURATION: float = 0.4
-const PRIDE_EDGE_OVERLAY_CHANCE_PHASE_1: float = 0.32
-const PRIDE_EDGE_OVERLAY_CHANCE_PHASE_2: float = 0.46
-const PRIDE_EDGE_OVERLAY_COOLDOWN_PHASE_1: float = 4.25
-const PRIDE_EDGE_OVERLAY_COOLDOWN_PHASE_2: float = 3.2
+const PRIDE_EDGE_OVERLAY_CHANCE_PHASE_1: float = 0.45
+const PRIDE_EDGE_OVERLAY_CHANCE_PHASE_2: float = 0.58
+const PRIDE_EDGE_OVERLAY_COOLDOWN_PHASE_1: float = 3.8
+const PRIDE_EDGE_OVERLAY_COOLDOWN_PHASE_2: float = 2.9
 const PRIDE_EDGE_CROSSBAR_LENGTH: float = 155.0
 const PRIDE_EDGE_CROSSBAR_OFFSET_RATIO: float = 0.65
+const PRIDE_MOVEMENT_DEFAULT: String = "default"
+const PRIDE_MOVEMENT_LASER: String = "laser"
+const PRIDE_MOVEMENT_CLOSE: String = "close"
+const PRIDE_DEFAULT_DISTANCE: float = 220.0
+const PRIDE_LASER_DISTANCE: float = 280.0
+const PRIDE_CLOSE_DISTANCE: float = 125.0
 const PRIDE_FIRE_ORB_DAMAGE_MULTIPLIER: float = 0.65
 const PRIDE_AIMED_FIREBALL_DAMAGE_MULTIPLIER: float = 0.65
 const PRIDE_EDGE_BEAM_DAMAGE_MULTIPLIER: float = 0.8
@@ -90,13 +109,13 @@ const DAMAGE_FEEDBACK_COLOR: Color = Color(1.0, 0.08, 0.08, 1.0)
 const HEAL_FEEDBACK_COLOR: Color = Color(0.18, 1.0, 0.32, 1.0)
 
 const BOSS_CONFIG = {
-	1: { "max_health": 500, "speed": 0.0, "damage": 40, "state": BossState.SLOTH, "animation": "pecado1" },
-	2: { "max_health": 1850, "speed": 90.0, "damage": 50, "state": BossState.GLUTTONY, "animation": "pecado2", "visual_scale": Vector2(2.15, 2.15) },
-	3: { "max_health": 1200, "speed": 90.0, "damage": 50, "state": BossState.ENVY, "animation": "pecado3" },
-	4: { "max_health": 1500, "speed": 90.0, "damage": 75, "state": BossState.WRATH, "animation": "pecado4" },
-	5: { "max_health": 2250, "speed": 80.0, "damage": 50, "state": BossState.LUST, "animation": "pecado5" },
-	6: { "max_health": 2750, "speed": 80.0, "damage": 60, "state": BossState.GREED, "animation": "pecado6" },
-	7: { "max_health": 3500, "speed": 80.0, "damage": 80, "state": BossState.PRIDE, "animation": "pecado7" },
+	1: { "max_health": 500, "speed": 0.0, "damage": 40, "state": BossState.SLOTH, "animation": "pecado1", "sprite_sheet": SLOTH_BOSS_SHEET, "frame_size": Vector2i(44, 58), "frame_count": 8, "visual_scale": Vector2(1.35, 1.35) },
+	2: { "max_health": 1750, "speed": 90.0, "damage": 50, "state": BossState.GLUTTONY, "animation": "pecado2", "sprite_sheet": GLUTTONY_BOSS_SHEET, "frame_size": Vector2i(150, 140), "frame_count": 4, "visual_scale": Vector2(0.82, 0.82) },
+	3: { "max_health": 1200, "speed": 90.0, "damage": 50, "state": BossState.ENVY, "animation": "pecado3", "sprite_sheet": ENVY_BOSS_SHEET, "frame_size": Vector2i(69, 98), "frame_count": 4, "visual_scale": Vector2(0.9, 0.9) },
+	4: { "max_health": 1500, "speed": 90.0, "damage": 75, "state": BossState.WRATH, "animation": "pecado4", "sprite_sheet": WRATH_BOSS_SHEET, "frame_size": Vector2i(78, 74), "frame_count": 8, "visual_scale": Vector2(1.08, 1.08) },
+	5: { "max_health": 2000, "speed": 90.0, "damage": 60, "state": BossState.LUST, "animation": "pecado5", "sprite_sheet": LUST_BOSS_SHEET, "frame_size": Vector2i(60, 80), "frame_count": 6, "visual_scale": Vector2(1.08, 1.08) },
+	6: { "max_health": 3000, "speed": 90.0, "damage": 60, "state": BossState.GREED, "animation": "pecado6", "sprite_sheet": GREED_BOSS_SHEET, "frame_size": Vector2i(60, 88), "frame_count": 4, "visual_scale": Vector2(1.05, 1.05) },
+	7: { "max_health": 4000, "speed": 90.0, "damage": 90, "state": BossState.PRIDE, "animation": "pecado7", "sprite_sheet": PRIDE_BOSS_SHEET, "frame_size": Vector2i(109, 67), "frame_count": 6, "visual_scale": Vector2(0.98, 0.98) },
 }
 
 var current_health: int
@@ -105,6 +124,7 @@ var aparencia
 var health_bar: ProgressBar
 var health_feedback_tween: Tween
 var health_feedback_base_modulate: Color = Color.WHITE
+var boss_health_bar_y_offset: float = -36.0
 var is_dead: bool = false
 var is_enraged: bool = false
 var is_invulnerable: bool = false
@@ -144,6 +164,7 @@ var greed_tax_meter: float = 0.0
 var greed_previous_player_position: Vector2 = Vector2.ZERO
 var greed_previous_can_shoot: bool = true
 var pride_edge_overlay_cooldown: float = 0.0
+var pride_movement_mode: String = PRIDE_MOVEMENT_DEFAULT
 var boss_indicator_layer: CanvasLayer
 var boss_indicator_node: Node2D
 
@@ -155,7 +176,6 @@ func _ready() -> void:
 	add_to_group(Global.GROUP_ENEMY)
 	_setup_enemy_body_collision()
 	aparencia = $AparenciaAnimada
-	aparencia.scale *= 3
 	health_feedback_base_modulate = aparencia.modulate
 	_configure_boss_for_current_sin()
 	_setup_boss_edge_indicator()
@@ -175,8 +195,38 @@ func _configure_boss_for_current_sin() -> void:
 	damage = int(config["damage"])
 	current_state = config["state"]
 	if aparencia:
-		aparencia.scale = config.get("visual_scale", DEFAULT_BOSS_VISUAL_SCALE)
+		_configure_boss_sprite_frames(config)
+		var visual_scale = config.get("visual_scale", DEFAULT_BOSS_VISUAL_SCALE) as Vector2
+		aparencia.scale = visual_scale
+		var frame_size = config.get("frame_size", Vector2i(24, 24)) as Vector2i
+		boss_health_bar_y_offset = -float(frame_size.y) * visual_scale.y * 0.5 - 12.0
 	_play_boss_animation(str(config["animation"]))
+
+func _configure_boss_sprite_frames(config: Dictionary) -> void:
+	var sprite_sheet = config.get("sprite_sheet", null) as Texture2D
+	if sprite_sheet == null:
+		return
+
+	var animation_name = StringName(str(config.get("animation", "idle")))
+	var frame_size = config.get("frame_size", Vector2i(sprite_sheet.get_width(), sprite_sheet.get_height())) as Vector2i
+	var frame_count = int(config.get("frame_count", max(1, sprite_sheet.get_width() / max(frame_size.x, 1))))
+	var animation_speed = float(config.get("animation_speed", 5.0))
+	var sprite_frames = SpriteFrames.new()
+	if sprite_frames.has_animation(&"default"):
+		sprite_frames.remove_animation(&"default")
+	sprite_frames.add_animation(animation_name)
+	sprite_frames.set_animation_loop(animation_name, true)
+	sprite_frames.set_animation_speed(animation_name, animation_speed)
+
+	for frame_index in range(frame_count):
+		var frame_texture = AtlasTexture.new()
+		frame_texture.atlas = sprite_sheet
+		frame_texture.region = Rect2(frame_index * frame_size.x, 0, frame_size.x, frame_size.y)
+		sprite_frames.add_frame(animation_name, frame_texture)
+
+	aparencia.sprite_frames = sprite_frames
+	aparencia.animation = animation_name
+	aparencia.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 
 func _begin_intro() -> void:
 	current_sub_state = BossSubState.INTRO
@@ -320,17 +370,10 @@ func handle_lust(delta: float) -> void:
 	if not _can_start_action():
 		return
 
-	var roll = randf()
-	if phase == 1:
-		if roll < 0.58:
-			_start_lust_wall_pattern()
-		else:
-			_start_lust_serpent_lash()
+	if _should_lust_create_walls():
+		_start_lust_wall_pattern()
 	else:
-		if roll < 0.48:
-			_start_lust_wall_pattern()
-		else:
-			_start_lust_serpent_lash()
+		_start_lust_serpent_lash()
 
 func handle_greed(delta: float) -> void:
 	_move_toward_player(delta, 0.85)
@@ -350,19 +393,19 @@ func handle_pride(delta: float) -> void:
 		velocity = Vector2.ZERO
 		move_and_slide()
 	else:
-		_keep_distance_from_player(delta, 220.0)
+		_move_pride_for_current_attack(delta)
 
 	if not _can_start_action():
 		return
 
 	if phase == 1:
 		var roll = randf()
-		if roll < 0.42:
+		if roll < 0.38:
 			_start_pride_edge_bullet_hell(false)
-		elif roll < 0.62:
+		elif roll < 0.48:
 			_maybe_start_pride_edge_beam_overlay(false)
 			_start_pride_fire_orbs(false)
-		elif roll < 0.76:
+		elif roll < 0.70:
 			_maybe_start_pride_edge_beam_overlay(false)
 			_start_pride_light_cross(false)
 		elif roll < 0.90:
@@ -373,20 +416,20 @@ func handle_pride(delta: float) -> void:
 			_start_pride_judgement()
 	else:
 		var roll = randf()
-		if roll < 0.48:
+		if roll < 0.42:
 			_start_pride_edge_bullet_hell(true)
-		elif roll < 0.66:
+		elif roll < 0.50:
 			_maybe_start_pride_edge_beam_overlay(true)
 			_start_pride_fire_orbs(true)
-		elif roll < 0.80:
+		elif roll < 0.72:
 			_maybe_start_pride_edge_beam_overlay(true)
 			_start_pride_inverted_cross_pattern(true)
-		elif roll < 0.92:
-			_maybe_start_pride_edge_beam_overlay(true)
-			_start_pride_judgement()
-		else:
+		elif roll < 0.90:
 			_maybe_start_pride_edge_beam_overlay(true)
 			_start_pride_light_cross(true)
+		else:
+			_maybe_start_pride_edge_beam_overlay(true)
+			_start_pride_judgement()
 
 func _move_toward_player(_delta: float, speed_multiplier: float = 1.0) -> void:
 	if player == null:
@@ -396,7 +439,23 @@ func _move_toward_player(_delta: float, speed_multiplier: float = 1.0) -> void:
 	velocity = direction * _get_current_speed(speed_multiplier)
 	move_and_slide()
 
-func _keep_distance_from_player(_delta: float, desired_distance: float) -> void:
+func _move_pride_for_current_attack(delta: float) -> void:
+	match pride_movement_mode:
+		PRIDE_MOVEMENT_CLOSE:
+			_keep_distance_from_player(delta, PRIDE_CLOSE_DISTANCE, 0.98)
+		PRIDE_MOVEMENT_LASER:
+			_keep_distance_from_player(delta, PRIDE_LASER_DISTANCE, 0.78)
+		_:
+			_keep_distance_from_player(delta, PRIDE_DEFAULT_DISTANCE, 0.72)
+
+func _settle_pride_close_attack_position() -> void:
+	if player == null:
+		return
+	if global_position.distance_to(player.global_position) <= PRIDE_CLOSE_DISTANCE + 70.0:
+		return
+	await get_tree().create_timer(0.45, false).timeout
+
+func _keep_distance_from_player(_delta: float, desired_distance: float, speed_multiplier: float = 0.72) -> void:
 	if player == null:
 		return
 
@@ -409,7 +468,7 @@ func _keep_distance_from_player(_delta: float, desired_distance: float) -> void:
 		move_and_slide()
 		return
 
-	velocity = direction.normalized() * _get_current_speed(0.72)
+	velocity = direction.normalized() * _get_current_speed(speed_multiplier)
 	move_and_slide()
 
 func _get_current_speed(speed_multiplier: float = 1.0) -> float:
@@ -1047,11 +1106,33 @@ func _explode_wrath_bomb(bomb: Area2D, force_boss_damage: bool) -> void:
 	if (force_boss_damage or was_pushed) and _is_point_inside_iso_aoe(global_position, explosion_position, WRATH_BOMB_EXPLOSION_RADIUS):
 		take_self_damage(max_health * 0.10)
 
+func _should_lust_create_walls() -> bool:
+	var active_wall_count = _get_active_lust_wall_count()
+	if active_wall_count >= _get_lust_wall_stock_limit():
+		return false
+
+	var chance = LUST_WALL_BASE_CHANCE_PHASE_1 if phase == 1 else LUST_WALL_BASE_CHANCE_PHASE_2
+	chance -= float(active_wall_count) * LUST_WALL_EXISTING_CHANCE_PENALTY
+	return randf() < max(chance, LUST_WALL_MIN_CHANCE)
+
+func _get_active_lust_wall_count() -> int:
+	var active_count = 0
+	for wall in active_lust_walls.duplicate():
+		if is_instance_valid(wall):
+			active_count += 1
+		else:
+			active_lust_walls.erase(wall)
+	return active_count
+
+func _get_lust_wall_stock_limit() -> int:
+	return LUST_WALL_STOCK_LIMIT_PHASE_1 if phase == 1 else LUST_WALL_STOCK_LIMIT_PHASE_2
+
 func _start_lust_wall_pattern() -> void:
 	is_performing_action = true
 	current_sub_state = BossSubState.TELEGRAPH
-	var wall_count = 3 if phase == 1 else 4
-	var wall_lifetime = 4.8 if phase == 1 else 6.2
+	var available_wall_slots = max(_get_lust_wall_stock_limit() - _get_active_lust_wall_count(), 1)
+	var wall_count = min(2 if phase == 1 else 3, available_wall_slots)
+	var wall_lifetime = 4.2 if phase == 1 else 5.0
 	var telegraph_duration = MIN_TELEGRAPH_DURATION
 	for i in range(wall_count):
 		var horizontal = (i % 2 == 0)
@@ -1080,11 +1161,14 @@ func _create_lust_wall(wall_position: Vector2, size: Vector2, breakable: bool, l
 	wall.collision_layer = Global.WALL_LAYER_MASK
 	wall.collision_mask = 0
 	wall.set_meta("breakable", breakable)
+	wall.set_meta("owner_boss", self)
 	wall.set_meta("lifetime", lifetime)
 	wall.set_meta("size", size)
 
 	_add_rect_collision(wall, size)
 	_add_rect_visual(wall, size, _with_alpha(LUST_COLOR, 0.82) if breakable else Color(0.24, 0.03, 0.12, 0.92), 14)
+	add_collision_exception_with(wall)
+	wall.add_collision_exception_with(self)
 
 	if breakable:
 		wall.set_meta("hits_remaining", LUST_BREAKABLE_WALL_MAX_HITS)
@@ -1105,7 +1189,7 @@ func _create_lust_wall(wall_position: Vector2, size: Vector2, breakable: bool, l
 
 	_add_child_at_global(_get_vfx_parent(), wall, wall_position)
 	active_lust_walls.append(wall)
-	_trim_node_array(active_lust_walls, 7 if phase == 1 else 10)
+	_trim_node_array(active_lust_walls, _get_lust_wall_stock_limit())
 
 func _start_lust_serpent_lash() -> void:
 	is_performing_action = true
@@ -1363,8 +1447,10 @@ func _update_greed_tax(delta: float) -> void:
 			_spawn_burst_particles(player.global_position, _with_alpha(GREED_COLOR, 0.9), 28, 0.3, 150.0)
 
 func _start_pride_fire_orbs(overlap: bool) -> void:
+	pride_movement_mode = PRIDE_MOVEMENT_CLOSE
 	is_performing_action = true
 	current_sub_state = BossSubState.TELEGRAPH
+	await _settle_pride_close_attack_position()
 	var waves = 2 if not overlap else 3
 	for wave in range(waves):
 		var projectile_count = 10 if phase == 1 else 16
@@ -1384,6 +1470,7 @@ func _start_pride_fire_orbs(overlap: bool) -> void:
 	_finish_action(1.5 if phase == 1 else 1.0)
 
 func _start_pride_light_cross(overlap: bool) -> void:
+	pride_movement_mode = PRIDE_MOVEMENT_LASER
 	is_performing_action = true
 	_spawn_pride_light_beams(overlap)
 	if overlap:
@@ -1397,6 +1484,7 @@ func _start_pride_light_cross(overlap: bool) -> void:
 	_finish_action(1.5 if phase == 1 else 0.9)
 
 func _start_pride_edge_bullet_hell(overlap: bool) -> void:
+	pride_movement_mode = PRIDE_MOVEMENT_LASER
 	is_performing_action = true
 	current_sub_state = BossSubState.SPECIAL
 	var telegraph_delay = PRIDE_EDGE_BEAM_DELAY_PHASE_1 if phase == 1 else PRIDE_EDGE_BEAM_DELAY_PHASE_2
@@ -1510,6 +1598,7 @@ func _create_pride_edge_beam_after_delay(beam_center: Vector2, beam_size: Vector
 	_spawn_burst_particles(beam_center, _with_alpha(PRIDE_LIGHT_COLOR, 0.55), 8, 0.18, 80.0)
 
 func _start_pride_inverted_cross_pattern(overlap: bool) -> void:
+	pride_movement_mode = PRIDE_MOVEMENT_LASER
 	is_performing_action = true
 	current_sub_state = BossSubState.TELEGRAPH
 	var cross_count = 1 if phase == 1 else 2
@@ -1621,6 +1710,7 @@ func _create_pride_beams_after_delay(center: Vector2, beam_size: Vector2, rotati
 		_create_damaging_area(center, beam_size, rotation_angle, _get_pride_damage(PRIDE_LIGHT_BEAM_DAMAGE_MULTIPLIER), _with_alpha(PRIDE_LIGHT_COLOR, 0.35), 0.5)
 
 func _start_pride_judgement() -> void:
+	pride_movement_mode = PRIDE_MOVEMENT_LASER
 	is_performing_action = true
 	is_invulnerable = true
 	current_sub_state = BossSubState.SPECIAL
@@ -1963,6 +2053,8 @@ func _finish_action(cooldown: float) -> void:
 	current_sub_state = BossSubState.RECOVERY
 	action_cooldown = cooldown
 	is_performing_action = false
+	if current_state == BossState.PRIDE:
+		pride_movement_mode = PRIDE_MOVEMENT_DEFAULT
 	current_sub_state = BossSubState.DECIDE
 
 func _spawn_enemy_projectile(spawn_position: Vector2, projectile_direction: Vector2, projectile_damage: float, color: Color, projectile_speed: float = 500.0) -> Area2D:
@@ -2132,6 +2224,9 @@ func _add_ring_visual(parent: Node, radius: float, color: Color, width: float, v
 	return ring
 
 func _get_health_bar_y_offset() -> float:
+	if boss_health_bar_y_offset < -1.0:
+		return boss_health_bar_y_offset
+
 	var collision = get_node_or_null("CollisionShape2D")
 	if collision and collision.shape:
 		if collision.shape is CapsuleShape2D:

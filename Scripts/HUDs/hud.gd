@@ -16,6 +16,8 @@ var active_skill_r_label: Label
 var passive_status_label: Label
 var skill_status_top_background: TextureRect
 var skill_status_list_background: NinePatchRect
+var arm_mutation_toast: Panel
+var arm_mutation_toast_tween: Tween
 const SKILL_STATUS_TOP_TEXTURE = preload("res://Sprites/Menu/hud_skills_and_passives.png")
 const SKILL_STATUS_LIST_TEXTURE = preload("res://Sprites/Menu/hud_list_of_passives.png")
 const HUD_PIXEL_FONT = preload("res://Fonts/cg-pixel-4x5.otf")
@@ -34,6 +36,9 @@ const ACTIVE_SKILL_E_OFFSET = Vector2(46.0, 28.0)
 const ACTIVE_SKILL_R_OFFSET = Vector2(46.0, 62.0)
 const SKILL_STATUS_BACKGROUND_ALPHA = 0.72
 const SKILL_STATUS_LABEL_ALPHA = 0.88
+const ARM_MUTATION_TOAST_SIZE: Vector2 = Vector2(520.0, 118.0)
+const ARM_MUTATION_TOAST_BOTTOM_MARGIN: float = 44.0
+const ARM_MUTATION_TOAST_HOLD_TIME: float = 4.0
 
 func _ready() -> void:
 	player = get_node_or_null(PLAYER_PATH)
@@ -58,6 +63,8 @@ func _ready() -> void:
 		player.connect("xp_updated", Callable(self, "_on_xp_updated"))
 		player.connect("level_updated", Callable(self, "_on_level_updated"))
 		player.connect("stats_updated", Callable(self, "_update_status_hud_labels"))
+		if player.has_signal("arm_mutation_unlocked"):
+			player.connect("arm_mutation_unlocked", Callable(self, "_on_arm_mutation_unlocked"))
 		_refresh_localized_text()
 		_update_status_hud_labels()
 	else:
@@ -333,6 +340,105 @@ func _on_level_updated(level, current_xp, xp_to_next_level) -> void:
 	$ProgressBar.max_value = xp_to_next_level
 	level_up_popup.show_popup(player.level_up_context, player.level_up_boss_pecado)
 
+func _on_arm_mutation_unlocked(tier: int, _arm_id: String, mutation_name: String, mutation_description: String, color: Color) -> void:
+	_show_arm_mutation_toast(tier, mutation_name, mutation_description, color)
+
+func _show_arm_mutation_toast(tier: int, mutation_name: String, mutation_description: String, color: Color) -> void:
+	_clear_arm_mutation_toast()
+
+	var panel = Panel.new()
+	panel.name = "ArmMutationToast"
+	panel.size = ARM_MUTATION_TOAST_SIZE
+	panel.position = _get_arm_mutation_toast_position() + Vector2(0.0, 10.0)
+	panel.z_index = 90
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.modulate = Color(1.0, 1.0, 1.0, 0.0)
+	panel.add_theme_stylebox_override("panel", PopupStyle.make_style(PopupStyle.PANEL_BG, Color(color.r, color.g, color.b, 0.95), 3))
+	add_child(panel)
+	arm_mutation_toast = panel
+
+	var margin = MarginContainer.new()
+	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", 18)
+	margin.add_theme_constant_override("margin_top", 12)
+	margin.add_theme_constant_override("margin_right", 18)
+	margin.add_theme_constant_override("margin_bottom", 12)
+	panel.add_child(margin)
+
+	var layout = VBoxContainer.new()
+	layout.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layout.alignment = BoxContainer.ALIGNMENT_CENTER
+	margin.add_child(layout)
+
+	var title = _make_arm_mutation_toast_label(
+		I18n.t("arm_mutation.toast_title", [_get_arm_mutation_tier_label(tier)]),
+		Color(color.r, color.g, color.b, 1.0),
+		15,
+		4
+	)
+	layout.add_child(title)
+
+	var name_label = _make_arm_mutation_toast_label(mutation_name, PopupStyle.TITLE_COLOR, 22, 5)
+	layout.add_child(name_label)
+
+	var description = _make_arm_mutation_toast_label(mutation_description, PopupStyle.TEXT_COLOR, 13, 3)
+	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	description.custom_minimum_size = Vector2(ARM_MUTATION_TOAST_SIZE.x - 44.0, 34.0)
+	layout.add_child(description)
+
+	arm_mutation_toast_tween = create_tween().bind_node(panel)
+	arm_mutation_toast_tween.tween_property(panel, "modulate:a", 1.0, 0.18).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	arm_mutation_toast_tween.parallel().tween_property(panel, "position", _get_arm_mutation_toast_position(), 0.18).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	arm_mutation_toast_tween.tween_interval(ARM_MUTATION_TOAST_HOLD_TIME)
+	arm_mutation_toast_tween.tween_property(panel, "modulate:a", 0.0, 0.28).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	arm_mutation_toast_tween.tween_callback(Callable(self, "_queue_free_arm_mutation_toast").bind(panel))
+
+func _make_arm_mutation_toast_label(text: String, color: Color, font_size: int, outline_size: int) -> Label:
+	var label = Label.new()
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_override("font", HUD_PIXEL_FONT)
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 1.0))
+	label.add_theme_constant_override("outline_size", outline_size)
+	label.add_theme_font_size_override("font_size", font_size)
+	label.text = text
+	return label
+
+func _get_arm_mutation_toast_position() -> Vector2:
+	var viewport_size = get_viewport_rect().size
+	return Vector2(
+		(viewport_size.x - ARM_MUTATION_TOAST_SIZE.x) * 0.5,
+		max(96.0, viewport_size.y - ARM_MUTATION_TOAST_SIZE.y - ARM_MUTATION_TOAST_BOTTOM_MARGIN)
+	)
+
+func _get_arm_mutation_tier_label(tier: int) -> String:
+	match tier:
+		1:
+			return "I"
+		2:
+			return "II"
+		3:
+			return "III"
+	return str(tier)
+
+func _clear_arm_mutation_toast() -> void:
+	if arm_mutation_toast_tween != null:
+		arm_mutation_toast_tween.kill()
+		arm_mutation_toast_tween = null
+	if is_instance_valid(arm_mutation_toast):
+		arm_mutation_toast.queue_free()
+	arm_mutation_toast = null
+
+func _queue_free_arm_mutation_toast(panel: Panel) -> void:
+	if arm_mutation_toast == panel:
+		arm_mutation_toast = null
+		arm_mutation_toast_tween = null
+	if is_instance_valid(panel):
+		panel.queue_free()
+
 func _apply_effect(option) -> void:
 	var option_data = option if option is Dictionary else {}
 	var option_id = str(option_data.get("id", option))
@@ -542,6 +648,8 @@ func _remove_boss_passive_effect(option: String) -> void:
 			player.lust_for_vengeance_enabled = false
 		"greed_cursed_level":
 			_disable_golden_debt()
+	if player.has_method("clear_option_visuals"):
+		player.clear_option_visuals(option)
 
 func _enable_golden_debt() -> void:
 	if player.has_method("enable_golden_debt"):
@@ -641,6 +749,8 @@ func _remove_rare_effect(option: String) -> void:
 			else:
 				player.splintered_chamber_enabled = false
 				player.splintered_chamber_shot_count = 0
+	if player.has_method("clear_option_visuals"):
+		player.clear_option_visuals(option)
 
 func _finish_effect_application() -> void:
 	if player.pause_control:

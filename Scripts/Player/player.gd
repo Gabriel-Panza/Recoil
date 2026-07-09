@@ -204,7 +204,7 @@ var splintered_chamber_enabled: bool = false
 var splintered_chamber_shot_count: int = 0
 var max_dash_charges: int = 1
 var double_dash_charges: int = 1
-var reroll_tokens: int = 1
+var reroll_tokens: int = 2
 var sloth_slow_aura_enabled: bool = false
 var gluttony_heal_kill_enabled: bool = false
 var envy_mirror_shot_enabled: bool = false
@@ -223,6 +223,7 @@ var sloth_aura_vfx: Node2D
 var envy_clone_vfx: Node2D
 var envy_clone_fire_timer: float = 0.0
 var passive_status_vfx: Dictionary = {}
+var active_ability_vfx_nodes: Dictionary = {}
 var debug_invincible_enabled: bool = false
 var run_upgrade_history: Array = []
 var run_contract_history: Array = []
@@ -258,6 +259,7 @@ signal level_updated(level, current_xp, xp_to_next_level)
 signal hp_updated(health, maxHealth)
 signal stats_updated()
 signal rerolls_updated(reroll_tokens)
+signal arm_mutation_unlocked(tier, arm_id, mutation_name, mutation_description, color)
 
 # --- ESTADOS DO JOGADOR ---
 var can_shoot: bool = true
@@ -385,6 +387,16 @@ func apply_arm_mutation(target_tier: int) -> bool:
 	for tier in range(arm_mutation_tier + 1, clamped_tier + 1):
 		arm_mutation_tier = tier
 		_record_arm_mutation_unlock(tier)
+		var mutation_data = _get_arm_mutation_data(current_arm_id, tier)
+		if not mutation_data.is_empty():
+			emit_signal(
+				"arm_mutation_unlocked",
+				tier,
+				current_arm_id,
+				I18n.mutation_name(current_arm_id, tier, str(mutation_data.get("name", "Mutation"))),
+				I18n.mutation_description(current_arm_id, tier, str(mutation_data.get("description", ""))),
+				_get_arm_mutation_color(current_arm_id)
+			)
 
 	_reset_arm_mutation_runtime_state()
 	_spawn_burst_particles(global_position, _get_arm_mutation_color(current_arm_id), 34, 0.38, 170.0)
@@ -926,6 +938,8 @@ func _physics_process(delta: float) -> void:
 	if sloth_slow_aura_enabled:
 		_ensure_sloth_slow_aura_vfx()
 		_apply_sloth_slow_aura(delta)
+	elif is_instance_valid(sloth_aura_vfx):
+		_destroy_sloth_slow_aura_vfx()
 
 	if envy_clone_active:
 		_update_envy_clone_active(delta)
@@ -1816,9 +1830,34 @@ func learn_active_ability(option_id: String) -> bool:
 
 func replace_active_ability(slot: String, option_id: String) -> void:
 	if slot == "E" or slot == "R":
+		var old_option = str(active_abilities.get(slot, ""))
+		if old_option != "" and old_option != option_id:
+			clear_option_visuals(old_option)
 		active_abilities[slot] = option_id
 		active_ability_cooldown_remaining[slot] = 0.0
 		emit_signal("stats_updated")
+
+func clear_option_visuals(option_id: String) -> void:
+	match option_id:
+		"sloth_slow_aura":
+			_destroy_sloth_slow_aura_vfx()
+		"Recoil_Explosion":
+			_remove_passive_status_vfx("recoil_explosion")
+		"Double_Dash":
+			_remove_passive_status_vfx("double_dash")
+		"Offensive_Dash":
+			_remove_passive_status_vfx("offensive_dash")
+		"lust_for_vengeance":
+			_remove_passive_status_vfx("vengeance")
+		"sloth_field", "lust_for_perfection":
+			_clear_active_ability_vfx(option_id)
+		"envy_mirror_clone":
+			envy_clone_active = false
+			envy_clone_fire_timer = 0.0
+			if is_instance_valid(envy_clone_vfx) and not envy_clone_vfx.is_queued_for_deletion():
+				envy_clone_vfx.queue_free()
+			envy_clone_vfx = null
+			_clear_active_ability_vfx(option_id)
 
 func get_active_ability_slots() -> Dictionary:
 	return active_abilities.duplicate()
@@ -2250,7 +2289,7 @@ func _get_damage_source_name(contact_source: Node) -> String:
 func activate_sloth_field() -> void:
 	var field_position = global_position
 	var field_radius = MAX_ABILITY_AREA_RADIUS
-	_spawn_field_vfx(field_position, field_radius, Color(0.25, 0.95, 1.0, 0.54), 5.0)
+	_spawn_field_vfx(field_position, field_radius, Color(0.25, 0.95, 1.0, 0.54), 5.0, "sloth_field")
 
 	var slowed_enemies: Array = []
 	var elapsed = 0.0
@@ -2324,11 +2363,11 @@ func activate_wrath_burst() -> void:
 
 func activate_lust_for_perfection() -> void:
 	is_invulnerable = true
-	_spawn_attached_aura(110.0, Color(1.0, 0.82, 0.98, 0.42), 3.0)
+	_spawn_attached_aura(110.0, Color(1.0, 0.82, 0.98, 0.42), 3.0, "lust_for_perfection")
 	await get_tree().create_timer(3.0, false).timeout
 	is_invulnerable = false
 	_set_temporary_damage_taken_multiplier(2.0)
-	_spawn_attached_aura(130.0, Color(1.0, 0.16, 0.36, 0.38), 5.0)
+	_spawn_attached_aura(130.0, Color(1.0, 0.16, 0.36, 0.38), 5.0, "lust_for_perfection")
 	await get_tree().create_timer(5.0, false).timeout
 	_set_temporary_damage_taken_multiplier(1.0)
 
@@ -2552,9 +2591,10 @@ func _spawn_burst_particles(spawn_position: Vector2, color: Color, amount: int =
 	var cleanup_timer = tree.create_timer(lifetime + 0.25, false)
 	cleanup_timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(particles))
 
-func _spawn_field_vfx(center: Vector2, radius: float, color: Color, duration: float) -> void:
+func _spawn_field_vfx(center: Vector2, radius: float, color: Color, duration: float, source_option_id: String = "") -> void:
 	radius = min(radius, MAX_ABILITY_AREA_RADIUS)
-	_spawn_ring_vfx(center, radius, color, duration)
+	var ring_vfx = _spawn_ring_vfx(center, radius, color, duration)
+	_register_active_ability_vfx(source_option_id, ring_vfx)
 
 	var particles = CPUParticles2D.new()
 	particles.amount = 80
@@ -2575,6 +2615,7 @@ func _spawn_field_vfx(center: Vector2, radius: float, color: Color, duration: fl
 	particles.z_as_relative = false
 	particles.global_position = center
 	particles.emitting = true
+	_register_active_ability_vfx(source_option_id, particles)
 
 	var tree = get_tree()
 	if tree == null:
@@ -2582,7 +2623,7 @@ func _spawn_field_vfx(center: Vector2, radius: float, color: Color, duration: fl
 	var cleanup_timer = tree.create_timer(duration, false)
 	cleanup_timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(particles))
 
-func _spawn_attached_aura(radius: float, color: Color, duration: float) -> void:
+func _spawn_attached_aura(radius: float, color: Color, duration: float, source_option_id: String = "") -> void:
 	radius = min(radius, MAX_ABILITY_AREA_RADIUS)
 	var aura = Node2D.new()
 	aura.name = "TimedAuraVFX"
@@ -2604,6 +2645,7 @@ func _spawn_attached_aura(radius: float, color: Color, duration: float) -> void:
 	particles.color = _get_area_aura_vfx_color(color)
 	aura.add_child(particles)
 	particles.emitting = true
+	_register_active_ability_vfx(source_option_id, aura)
 
 	var tree = get_tree()
 	if tree == null:
@@ -2611,7 +2653,7 @@ func _spawn_attached_aura(radius: float, color: Color, duration: float) -> void:
 	var cleanup_timer = tree.create_timer(duration, false)
 	cleanup_timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(aura))
 
-func _spawn_ring_vfx(center: Vector2, radius: float, color: Color, duration: float) -> void:
+func _spawn_ring_vfx(center: Vector2, radius: float, color: Color, duration: float) -> Node2D:
 	radius = min(radius, MAX_ABILITY_AREA_RADIUS)
 	var ring_vfx = Node2D.new()
 	ring_vfx.name = "FilledRingVFX"
@@ -2620,7 +2662,7 @@ func _spawn_ring_vfx(center: Vector2, radius: float, color: Color, duration: flo
 	var parent = _get_ground_area_vfx_parent()
 	if parent == null:
 		ring_vfx.queue_free()
-		return
+		return null
 
 	parent.add_child(ring_vfx)
 	ring_vfx.global_position = center
@@ -2629,6 +2671,7 @@ func _spawn_ring_vfx(center: Vector2, radius: float, color: Color, duration: flo
 	var tween = create_tween()
 	tween.tween_property(ring_vfx, "modulate:a", 0.0, duration).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 	tween.tween_callback(Callable(self, "_queue_free_if_valid").bind(ring_vfx))
+	return ring_vfx
 
 func _add_ring_to_node(parent: Node, radius: float, color: Color, width: float) -> Line2D:
 	radius = min(radius, MAX_ABILITY_AREA_RADIUS)
@@ -2656,10 +2699,13 @@ func _update_passive_status_vfx(delta: float) -> void:
 	_set_passive_ring_vfx_enabled("recoil_explosion", recoil_explosion_enabled, 28.0, PASSIVE_RING_COLOR, 1.5)
 	_set_passive_ring_vfx_enabled("offensive_dash", offensive_dash_enabled, 31.0, PASSIVE_RING_COLOR, 1.5)
 
-	var dash_charge_vfx = _ensure_double_dash_vfx()
-	if is_instance_valid(dash_charge_vfx):
-		_update_double_dash_vfx(dash_charge_vfx)
-		dash_charge_vfx.rotation += delta * 1.7
+	if max_dash_charges > 1:
+		var dash_charge_vfx = _ensure_double_dash_vfx()
+		if is_instance_valid(dash_charge_vfx):
+			_update_double_dash_vfx(dash_charge_vfx)
+			dash_charge_vfx.rotation += delta * 1.7
+	else:
+		_remove_passive_status_vfx("double_dash")
 
 	_set_passive_ring_vfx_enabled("vengeance", lust_for_vengeance_enabled and current_health >= max_health, 34.0, Color(1.0, 0.24, 0.46, 0.34), 1.6)
 
@@ -2899,6 +2945,29 @@ func _ensure_sloth_slow_aura_vfx() -> void:
 	sloth_aura_vfx.add_child(particles)
 	particles.emitting = true
 
+func _destroy_sloth_slow_aura_vfx() -> void:
+	if is_instance_valid(sloth_aura_vfx) and not sloth_aura_vfx.is_queued_for_deletion():
+		sloth_aura_vfx.queue_free()
+	sloth_aura_vfx = null
+
+func _register_active_ability_vfx(option_id: String, node: Node) -> void:
+	if option_id == "" or not is_instance_valid(node):
+		return
+
+	var tracked_nodes: Array = active_ability_vfx_nodes.get(option_id, [])
+	tracked_nodes.append(node)
+	active_ability_vfx_nodes[option_id] = tracked_nodes
+
+func _clear_active_ability_vfx(option_id: String) -> void:
+	if option_id == "":
+		return
+
+	var tracked_nodes: Array = active_ability_vfx_nodes.get(option_id, [])
+	for node in tracked_nodes:
+		if is_instance_valid(node) and not node.is_queued_for_deletion():
+			node.queue_free()
+	active_ability_vfx_nodes.erase(option_id)
+
 func _spawn_clone_vfx(duration: float) -> void:
 	if is_instance_valid(envy_clone_vfx):
 		envy_clone_vfx.queue_free()
@@ -2983,7 +3052,7 @@ func _aim_player_mirror_visual(parent: Node, direction: Vector2) -> void:
 		animated_visual.play()
 
 func _queue_free_if_valid(node: Node) -> void:
-	if is_instance_valid(node):
+	if is_instance_valid(node) and not node.is_queued_for_deletion():
 		node.queue_free()
 
 

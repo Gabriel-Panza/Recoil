@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://djwqyysvafvyy"
-path="res://.godot/imported/tmp_font_samples_you_win.png-224596c897446d3698c3ba05c3206716.ctex"
+uid="uid://busbv5xq2eyri"
+path="res://.godot/imported/arena_normal.png-f81024d618be70b80269dc9fabd28d25.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://tmp_font_samples_you_win.png"
-dest_files=["res://.godot/imported/tmp_font_samples_you_win.png-224596c897446d3698c3ba05c3206716.ctex"]
+source_file="res://Sprites/arena_normal.png"
+dest_files=["res://.godot/imported/arena_normal.png-f81024d618be70b80269dc9fabd28d25.ctex"]
 
 [params]
 

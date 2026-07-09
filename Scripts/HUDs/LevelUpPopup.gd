@@ -596,6 +596,8 @@ func _update_reroll_button(button: Button, option_index: int, is_blocked: bool, 
 	var reroll_button = _get_or_create_reroll_button(button, option_index)
 	var rerolls_left = _get_player_reroll_tokens()
 	var can_show = current_mode == "level_up" and show_skip and not is_rolling_options and not is_blocked and rerolls_left > 0
+	if can_show and option_index >= 0 and option_index < current_options.size():
+		can_show = not _get_same_type_reroll_option_pool(current_options[option_index], option_index).is_empty()
 	reroll_button.visible = can_show
 	reroll_button.disabled = not can_show
 	reroll_button.text = I18n.t("levelup.reroll")
@@ -872,7 +874,7 @@ func _on_reroll_button_pressed(option_index: int) -> void:
 		return
 	if option_index < 0 or option_index >= current_options.size():
 		return
-	var replacement = _roll_same_type_level_up_option_for_reroll(current_options[option_index])
+	var replacement = _roll_same_type_level_up_option_for_reroll(current_options[option_index], option_index)
 	if replacement.is_empty():
 		return
 	if player == null or not player.has_method("consume_reroll_token") or not player.consume_reroll_token():
@@ -887,8 +889,8 @@ func _on_reroll_button_pressed(option_index: int) -> void:
 	if _is_legendary_special_level_up_option(replacement):
 		_spawn_special_level_up_confetti()
 
-func _roll_same_type_level_up_option_for_reroll(current_option: Dictionary) -> Dictionary:
-	var pool = _get_same_type_reroll_option_pool(current_option)
+func _roll_same_type_level_up_option_for_reroll(current_option: Dictionary, option_index: int) -> Dictionary:
+	var pool = _get_same_type_reroll_option_pool(current_option, option_index)
 	if pool.is_empty():
 		return {}
 
@@ -898,7 +900,7 @@ func _roll_same_type_level_up_option_for_reroll(current_option: Dictionary) -> D
 		return pool[0].duplicate(true)
 	return rolled_options[0]
 
-func _get_same_type_reroll_option_pool(current_option: Dictionary) -> Array:
+func _get_same_type_reroll_option_pool(current_option: Dictionary, option_index: int = -1) -> Array:
 	var rarity = str(current_option.get("rarity", ""))
 	var pool = []
 	match rarity:
@@ -913,7 +915,7 @@ func _get_same_type_reroll_option_pool(current_option: Dictionary) -> Array:
 		_:
 			pool = _get_available_passive_options()
 
-	return _filter_reroll_pool(pool, str(current_option.get("id", "")))
+	return _filter_reroll_pool(pool, str(current_option.get("id", "")), _get_current_option_ids_except(option_index))
 
 func _get_available_boss_reroll_options() -> Array:
 	var active_slots = player.get_active_ability_slots() if player and player.has_method("get_active_ability_slots") else {}
@@ -935,11 +937,26 @@ func _get_available_boss_reroll_options() -> Array:
 
 	return pool
 
-func _filter_reroll_pool(pool: Array, current_option_id: String) -> Array:
+func _get_current_option_ids_except(option_index: int) -> Array:
+	var ids = []
+	for i in range(current_options.size()):
+		if i == option_index:
+			continue
+
+		var option = current_options[i]
+		if option is Dictionary:
+			var option_id = str(option.get("id", ""))
+			if option_id != "" and option_id not in ids:
+				ids.append(option_id)
+	return ids
+
+func _filter_reroll_pool(pool: Array, current_option_id: String, excluded_option_ids: Array = []) -> Array:
 	var filtered_pool = []
 	for option in pool:
 		var option_id = str(option.get("id", ""))
 		if option_id == current_option_id:
+			continue
+		if option_id in excluded_option_ids:
 			continue
 		if option_id in blocked_level_option_ids:
 			continue
