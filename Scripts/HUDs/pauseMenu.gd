@@ -223,8 +223,8 @@ func _update_death_recap() -> void:
 	if player and player.has_method("get_death_recap_text"):
 		death_recap_label.text = player.get_death_recap_text()
 	else:
-	death_recap_label.text = I18n.t("recap.no_data")
-	death_recap_updated = true
+		death_recap_label.text = I18n.t("recap.no_data")
+		death_recap_updated = true
 
 func _setup_death_recap_ui(recap_parent: Panel) -> void:
 	if recap_parent == null:
