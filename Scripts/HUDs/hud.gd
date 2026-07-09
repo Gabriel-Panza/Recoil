@@ -16,6 +16,7 @@ var active_skill_r_label: Label
 var passive_status_label: Label
 var skill_status_top_background: TextureRect
 var skill_status_list_background: NinePatchRect
+var arm_mutation_toast_layer: CanvasLayer
 var arm_mutation_toast: Panel
 var arm_mutation_toast_tween: Tween
 const SKILL_STATUS_TOP_TEXTURE = preload("res://Sprites/Menu/hud_skills_and_passives.png")
@@ -39,6 +40,8 @@ const SKILL_STATUS_LABEL_ALPHA = 0.88
 const ARM_MUTATION_TOAST_SIZE: Vector2 = Vector2(520.0, 118.0)
 const ARM_MUTATION_TOAST_BOTTOM_MARGIN: float = 44.0
 const ARM_MUTATION_TOAST_HOLD_TIME: float = 4.0
+const ARM_MUTATION_TOAST_LAYER: int = 125
+const ARM_MUTATION_TOAST_SCREEN_MARGIN: float = 24.0
 
 func _ready() -> void:
 	player = get_node_or_null(PLAYER_PATH)
@@ -80,7 +83,7 @@ func _on_language_changed(_language: String) -> void:
 func _refresh_localized_text() -> void:
 	if active_skill_title_label != null:
 		active_skill_title_label.text = I18n.t("hud.active_skills")
-		active_skill_title_label.tooltip_text = I18n.t("hud.active_skills_tooltip")
+		active_skill_title_label.tooltip_text = Global.wrap_tooltip_text(I18n.t("hud.active_skills_tooltip"))
 	if passive_status_label != null and passive_status_label.text == "":
 		passive_status_label.text = "- %s" % I18n.t("common.none")
 	var level_label = get_node_or_null("Label")
@@ -185,7 +188,7 @@ func _setup_passive_status_label() -> void:
 	passive_status_label.add_theme_font_size_override("font_size", 12)
 	passive_status_label.add_theme_constant_override("line_spacing", 0)
 	passive_status_label.text = "- %s" % I18n.t("common.none")
-	passive_status_label.tooltip_text = I18n.t("hud.no_passives")
+	passive_status_label.tooltip_text = Global.wrap_tooltip_text(I18n.t("hud.no_passives"))
 	_apply_skill_status_label_alpha(passive_status_label)
 	add_child(passive_status_label)
 
@@ -222,7 +225,7 @@ func _style_active_skill_hud_title_label(label: Label) -> void:
 	label.add_theme_constant_override("outline_size", 0)
 	label.add_theme_font_size_override("font_size", 15)
 	label.text = I18n.t("hud.active_skills")
-	label.tooltip_text = I18n.t("hud.active_skills_tooltip")
+	label.tooltip_text = Global.wrap_tooltip_text(I18n.t("hud.active_skills_tooltip"))
 
 func _apply_skill_status_label_alpha(label: Label) -> void:
 	if label == null:
@@ -275,7 +278,8 @@ func _update_passive_status_label() -> void:
 	_append_passive_tooltip_lines(tooltip_lines, I18n.t("hud.rare_passives_tooltip"), rare_summaries)
 
 	passive_status_label.text = "\n".join(passive_lines)
-	passive_status_label.tooltip_text = "\n".join(tooltip_lines) if not tooltip_lines.is_empty() else I18n.t("hud.no_special_passives")
+	var passive_tooltip = "\n".join(tooltip_lines) if not tooltip_lines.is_empty() else I18n.t("hud.no_special_passives")
+	passive_status_label.tooltip_text = Global.wrap_tooltip_text(passive_tooltip)
 	_update_skill_status_background(passive_lines.size())
 
 func _get_special_passive_slot_text(summaries: Array, slot_index: int) -> String:
@@ -314,7 +318,7 @@ func _update_active_skill_hud_label(label: Label, slot: String) -> void:
 	var ability_id = str(slots.get(slot, ""))
 	if ability_id == "":
 		label.text = I18n.t("common.none")
-		label.tooltip_text = I18n.t("hud.no_active")
+		label.tooltip_text = Global.wrap_tooltip_text(I18n.t("hud.no_active"))
 		return
 
 	var ability_name = player.get_active_ability_name(ability_id) if player.has_method("get_active_ability_name") else ability_id
@@ -324,7 +328,8 @@ func _update_active_skill_hud_label(label: Label, slot: String) -> void:
 	else:
 		label.text = ability_name
 
-	label.tooltip_text = player.get_active_ability_description(ability_id) if player.has_method("get_active_ability_description") else ability_name
+	var tooltip = player.get_active_ability_description(ability_id) if player.has_method("get_active_ability_description") else ability_name
+	label.tooltip_text = Global.wrap_tooltip_text(tooltip)
 
 func _on_hp_updated(current_hp, max_health) -> void:
 	$ProgressBar2.max_value = max_health
@@ -346,18 +351,33 @@ func _on_arm_mutation_unlocked(tier: int, _arm_id: String, mutation_name: String
 func _show_arm_mutation_toast(tier: int, mutation_name: String, mutation_description: String, color: Color) -> void:
 	_clear_arm_mutation_toast()
 
+	arm_mutation_toast_layer = CanvasLayer.new()
+	arm_mutation_toast_layer.name = "ArmMutationToastLayer"
+	arm_mutation_toast_layer.layer = ARM_MUTATION_TOAST_LAYER
+	arm_mutation_toast_layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(arm_mutation_toast_layer)
+
+	var root = Control.new()
+	root.name = "ArmMutationToastRoot"
+	root.process_mode = Node.PROCESS_MODE_ALWAYS
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	arm_mutation_toast_layer.add_child(root)
+
 	var panel = Panel.new()
 	panel.name = "ArmMutationToast"
-	panel.size = ARM_MUTATION_TOAST_SIZE
-	panel.position = _get_arm_mutation_toast_position() + Vector2(0.0, 10.0)
-	panel.z_index = 90
+	panel.process_mode = Node.PROCESS_MODE_ALWAYS
+	panel.custom_minimum_size = _get_arm_mutation_toast_size()
+	panel.size = _get_arm_mutation_toast_size()
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.modulate = Color(1.0, 1.0, 1.0, 0.0)
 	panel.add_theme_stylebox_override("panel", PopupStyle.make_style(PopupStyle.PANEL_BG, Color(color.r, color.g, color.b, 0.95), 3))
-	add_child(panel)
+	_anchor_arm_mutation_toast_panel(panel)
+	root.add_child(panel)
 	arm_mutation_toast = panel
 
 	var margin = MarginContainer.new()
+	margin.process_mode = Node.PROCESS_MODE_ALWAYS
 	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
 	margin.add_theme_constant_override("margin_left", 18)
@@ -367,6 +387,7 @@ func _show_arm_mutation_toast(tier: int, mutation_name: String, mutation_descrip
 	panel.add_child(margin)
 
 	var layout = VBoxContainer.new()
+	layout.process_mode = Node.PROCESS_MODE_ALWAYS
 	layout.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	layout.alignment = BoxContainer.ALIGNMENT_CENTER
 	margin.add_child(layout)
@@ -384,12 +405,12 @@ func _show_arm_mutation_toast(tier: int, mutation_name: String, mutation_descrip
 
 	var description = _make_arm_mutation_toast_label(mutation_description, PopupStyle.TEXT_COLOR, 13, 3)
 	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	description.custom_minimum_size = Vector2(ARM_MUTATION_TOAST_SIZE.x - 44.0, 34.0)
+	description.custom_minimum_size = Vector2(_get_arm_mutation_toast_size().x - 44.0, 34.0)
 	layout.add_child(description)
 
 	arm_mutation_toast_tween = create_tween().bind_node(panel)
+	arm_mutation_toast_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	arm_mutation_toast_tween.tween_property(panel, "modulate:a", 1.0, 0.18).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	arm_mutation_toast_tween.parallel().tween_property(panel, "position", _get_arm_mutation_toast_position(), 0.18).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	arm_mutation_toast_tween.tween_interval(ARM_MUTATION_TOAST_HOLD_TIME)
 	arm_mutation_toast_tween.tween_property(panel, "modulate:a", 0.0, 0.28).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 	arm_mutation_toast_tween.tween_callback(Callable(self, "_queue_free_arm_mutation_toast").bind(panel))
@@ -402,10 +423,31 @@ func _make_arm_mutation_toast_label(text: String, color: Color, font_size: int, 
 	label.add_theme_font_override("font", HUD_PIXEL_FONT)
 	label.add_theme_color_override("font_color", color)
 	label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 1.0))
-	label.add_theme_constant_override("outline_size", outline_size)
+	label.add_theme_constant_override("outline_size", _get_web_safe_toast_outline_size(outline_size))
 	label.add_theme_font_size_override("font_size", font_size)
 	label.text = text
 	return label
+
+func _get_arm_mutation_toast_size() -> Vector2:
+	var viewport_size = get_viewport_rect().size
+	var max_width = max(viewport_size.x - ARM_MUTATION_TOAST_SCREEN_MARGIN * 2.0, 260.0)
+	return Vector2(min(ARM_MUTATION_TOAST_SIZE.x, max_width), ARM_MUTATION_TOAST_SIZE.y)
+
+func _anchor_arm_mutation_toast_panel(panel: Control) -> void:
+	var toast_size = _get_arm_mutation_toast_size()
+	panel.anchor_left = 0.5
+	panel.anchor_top = 1.0
+	panel.anchor_right = 0.5
+	panel.anchor_bottom = 1.0
+	panel.offset_left = -toast_size.x * 0.5
+	panel.offset_right = toast_size.x * 0.5
+	panel.offset_top = -ARM_MUTATION_TOAST_BOTTOM_MARGIN - toast_size.y
+	panel.offset_bottom = -ARM_MUTATION_TOAST_BOTTOM_MARGIN
+
+func _get_web_safe_toast_outline_size(outline_size: int) -> int:
+	if Global.is_web_build():
+		return mini(outline_size, 2)
+	return outline_size
 
 func _get_arm_mutation_toast_position() -> Vector2:
 	var viewport_size = get_viewport_rect().size
@@ -428,16 +470,20 @@ func _clear_arm_mutation_toast() -> void:
 	if arm_mutation_toast_tween != null:
 		arm_mutation_toast_tween.kill()
 		arm_mutation_toast_tween = null
+	if is_instance_valid(arm_mutation_toast_layer):
+		arm_mutation_toast_layer.queue_free()
+	arm_mutation_toast_layer = null
 	if is_instance_valid(arm_mutation_toast):
 		arm_mutation_toast.queue_free()
 	arm_mutation_toast = null
 
-func _queue_free_arm_mutation_toast(panel: Panel) -> void:
+func _queue_free_arm_mutation_toast(panel) -> void:
 	if arm_mutation_toast == panel:
 		arm_mutation_toast = null
 		arm_mutation_toast_tween = null
-	if is_instance_valid(panel):
-		panel.queue_free()
+	if is_instance_valid(arm_mutation_toast_layer):
+		arm_mutation_toast_layer.queue_free()
+	arm_mutation_toast_layer = null
 
 func _apply_effect(option) -> void:
 	var option_data = option if option is Dictionary else {}

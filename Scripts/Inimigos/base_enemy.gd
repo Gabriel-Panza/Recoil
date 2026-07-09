@@ -39,7 +39,7 @@ const ELITE_UNSTABLE_EXPLOSION_DAMAGE: float = 42.0
 const ELITE_VAMPIRIC_HEAL_DAMAGE_RATIO: float = 0.65
 const ELITE_VAMPIRIC_MAX_HEAL_RATIO: float = 0.18
 const ELITE_OUTLINE_WIDTH: float = 2.0
-const FOOTSTEP_SFX_STREAM: AudioStream = preload("res://Music&SFX/SFX/FootStepsGravel_SFX.mp3")
+const FOOTSTEP_SFX_STREAM: AudioStream = preload("res://Music&SFX/SFX/FootStepsGravel_SFX.wav")
 const FOOTSTEP_SFX_VOICE_KEY: String = "enemy_footstep"
 const FOOTSTEP_SFX_MAX_VOICES: int = 5
 const FOOTSTEP_SFX_PLAY_DISTANCE: float = 360.0
@@ -66,7 +66,7 @@ var health_feedback_base_modulate: Color = Color.WHITE
 var avoidance_side: int = 1
 var avoidance_memory_timer: float = 0.0
 var elite_variant: String = ELITE_NONE
-var footstep_sfx_player: AudioStreamPlayer2D
+var footstep_sfx_player: AudioStreamPlayer
 var has_footstep_sfx_voice: bool = false
 var body_collision_radius: float = BODY_RADIUS_FALLBACK
 var avoidance_enemy_candidates: Array = []
@@ -430,8 +430,10 @@ func _get_soft_separation_vector() -> Vector2:
 
 	return push
 
-func _should_ignore_enemy_body_avoidance(enemy: Node) -> bool:
-	if enemy == self or not is_instance_valid(enemy) or not (enemy is Node2D):
+func _should_ignore_enemy_body_avoidance(enemy) -> bool:
+	if enemy == null or not is_instance_valid(enemy):
+		return true
+	if enemy == self or not (enemy is Node2D):
 		return true
 
 	return is_in_group(AGILE_COLLISION_BYPASS_GROUP) or enemy.is_in_group(AGILE_COLLISION_BYPASS_GROUP)
@@ -608,7 +610,7 @@ func _play_health_feedback(color: Color) -> void:
 	health_feedback_tween.tween_property(aparencia, "modulate", health_feedback_base_modulate, 0.12)
 	health_feedback_tween.tween_callback(Callable(self, "_clear_health_feedback_tween").bind(health_feedback_tween))
 
-func _clear_health_feedback_tween(tween: Tween) -> void:
+func _clear_health_feedback_tween(tween) -> void:
 	if health_feedback_tween == tween:
 		health_feedback_tween = null
 
@@ -691,18 +693,18 @@ func _setup_footstep_sfx() -> void:
 	if not _should_use_footstep_sfx():
 		return
 
-	footstep_sfx_player = get_node_or_null("FootstepSFX") as AudioStreamPlayer2D
+	footstep_sfx_player = get_node_or_null("FootstepSFX") as AudioStreamPlayer
 	if footstep_sfx_player == null:
-		footstep_sfx_player = AudioStreamPlayer2D.new()
+		footstep_sfx_player = AudioStreamPlayer.new()
 		footstep_sfx_player.name = "FootstepSFX"
 		add_child(footstep_sfx_player)
 
 	footstep_sfx_player.stream = Global.make_looping_audio_stream(FOOTSTEP_SFX_STREAM)
-	footstep_sfx_player.max_distance = 320.0
-	footstep_sfx_player.attenuation = 1.45
 	Global.register_audio_player(footstep_sfx_player, Global.GROUP_SFX, -18.0)
 
 func _should_use_footstep_sfx() -> bool:
+	if Global.is_web_build():
+		return false
 	return _get_damage_source_type_id() in ["melee", "tank"]
 
 func _update_footstep_sfx() -> void:

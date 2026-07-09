@@ -64,17 +64,22 @@ func shoot() -> void:
 	is_shooting_animation = true
 	_play_pecado_animation("charge")
 	await get_tree().create_timer(SHOOT_CHARGE_TIME, false).timeout
-	if not is_inside_tree() or player == null:
+	if not is_inside_tree() or not is_instance_valid(player):
 		is_shooting_animation = false
 		return
 
 	_fire_projectiles()
 	_play_pecado_animation("shoot")
 	await get_tree().create_timer(SHOOT_FLASH_TIME, false).timeout
+	if not is_inside_tree():
+		return
 	is_shooting_animation = false
 	_play_pecado_animation("walk")
 
 func _fire_projectiles() -> void:
+	if not is_instance_valid(player):
+		return
+
 	var projectile = projectile_scene.instantiate()
 	projectile.global_position = global_position
 	var aim_direction = global_position.direction_to(player.global_position)

@@ -67,19 +67,26 @@ func _process_hit_queue() -> void:
 	if hit_queue.is_empty():
 		return
 
+	hit_queue = hit_queue.filter(func(target): return _is_valid_hit_target(target))
+	if hit_queue.is_empty():
+		return
+
 	hit_queue.sort_custom(func(a, b): 
 		return global_position.distance_squared_to(a.global_position) < global_position.distance_squared_to(b.global_position)
 	)
 
 	for target in hit_queue:
-		if not is_instance_valid(target):
+		if not _is_valid_hit_target(target):
 			continue
 
 		if target.is_in_group(Global.GROUP_ENEMY) and target.has_method("take_damage"):
 			if target in pierced_targets:
 				continue
 
-			var enemy_damage = damage if damage != null else player.attack_damage
+			var enemy_damage = _get_enemy_hit_damage()
+			if enemy_damage <= 0.0:
+				queue_free()
+				return
 			target.take_damage(enemy_damage)
 			_notify_player_projectile_enemy_hit(target, enemy_damage)
 			pierced_targets.append(target)
@@ -101,6 +108,16 @@ func _process_hit_queue() -> void:
 		return
 
 	hit_queue.clear()
+
+func _is_valid_hit_target(target) -> bool:
+	return target != null and is_instance_valid(target) and target is Node2D
+
+func _get_enemy_hit_damage() -> float:
+	if damage != null:
+		return float(damage)
+	if is_instance_valid(player) and player.get("attack_damage") != null:
+		return float(player.get("attack_damage"))
+	return 0.0
 
 func _consume_pierce() -> bool:
 	var remaining = int(get_meta("pierce_remaining", 0))
@@ -166,7 +183,8 @@ func _is_wall_body(body: Node) -> bool:
 	if body == null:
 		return false
 
-	return (body.collision_layer & Global.WALL_LAYER_MASK) != 0
+	var collision_layer = body.get("collision_layer")
+	return collision_layer != null and (int(collision_layer) & Global.WALL_LAYER_MASK) != 0
 
 func _get_arena_bounce_normal() -> Vector2:
 	var tree = get_tree()

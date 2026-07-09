@@ -39,6 +39,7 @@ var game_over: Panel
 var game_over_background: TextureRect
 var game_win: Panel
 var game_win_background: TextureRect
+var stats_panel: Control
 var death_recap_parent: Panel
 var death_recap_background: Panel
 var death_recap_scroll: ScrollContainer
@@ -49,6 +50,7 @@ var death_recap_open: bool = false
 var language_button: Button
 var music_slider: HSlider
 var sfx_slider: HSlider
+var level_up_stats_preview_visible: bool = false
 
 var can_move: bool = true
 
@@ -70,6 +72,7 @@ func _ready() -> void:
 	game_over_background = get_node_or_null("GameOver/Fundo") as TextureRect
 	game_win = get_node_or_null(GAME_WIN_PATH)
 	game_win_background = get_node_or_null("GameWin/Fundo") as TextureRect
+	stats_panel = get_node_or_null("../HBoxContainer") as Control
 	_setup_audio_sliders()
 	_setup_language_button()
 	I18n.language_changed.connect(_on_language_changed)
@@ -77,6 +80,7 @@ func _ready() -> void:
 
 	if player:
 		player.connect("stats_updated", Callable(self, "update_status_labels"))
+	_sync_stats_panel_visibility()
 
 func _setup_audio_sliders() -> void:
 	if options_menu == null:
@@ -180,8 +184,7 @@ func _pause_game() -> void:
 		return
 
 	pause_menu.show()
-	$"../HBoxContainer".visible = true
-	update_status_labels()
+	_sync_stats_panel_visibility()
 	get_tree().paused = true
 	Global.keep_music_playing_during_pause()
 
@@ -193,8 +196,23 @@ func _unpause_game() -> void:
 	if language_button != null:
 		language_button.hide()
 	pause_menu.hide()
-	$"../HBoxContainer".visible = false
+	_sync_stats_panel_visibility()
 	get_tree().paused = false
+
+func set_level_up_stats_preview_visible(should_show: bool) -> void:
+	level_up_stats_preview_visible = should_show
+	_sync_stats_panel_visibility()
+
+func _sync_stats_panel_visibility() -> void:
+	if stats_panel == null or not is_instance_valid(stats_panel):
+		stats_panel = get_node_or_null("../HBoxContainer") as Control
+	if stats_panel == null:
+		return
+
+	var should_show = level_up_stats_preview_visible or (pause_menu != null and pause_menu.visible)
+	stats_panel.visible = should_show
+	if should_show:
+		update_status_labels()
 
 func _is_end_screen_visible() -> bool:
 	return (game_over and game_over.visible) or (game_win and game_win.visible)
@@ -436,7 +454,7 @@ func _refresh_localized_text() -> void:
 
 	if language_button != null:
 		language_button.text = I18n.t("settings.language_button")
-		language_button.tooltip_text = I18n.t("settings.language_tooltip")
+		_set_control_tooltip(language_button, I18n.t("settings.language_tooltip"))
 
 	var retry_label = get_node_or_null("GameOver/MarginContainer/TextureButton/Label")
 	if retry_label is Label:
@@ -493,10 +511,10 @@ func update_status_labels() -> void:
 	if player:
 		if health_label:
 			health_label.text = I18n.t("hud.health", [player.current_health, player.max_health])
-			health_label.tooltip_text = I18n.t("hud.health_tooltip")
+			_set_control_tooltip(health_label, I18n.t("hud.health_tooltip"))
 		if attack_label:
 			attack_label.text = I18n.t("hud.attack", [player.attack_damage])
-			attack_label.tooltip_text = I18n.t("hud.attack_tooltip")
+			_set_control_tooltip(attack_label, I18n.t("hud.attack_tooltip"))
 		if atk_speed_label:
 			var attack_speed_percent = (1.0 / max(player.fire_rate, 0.001)) * 100.0
 			if player.has_method("get_attack_speed_percent"):
@@ -507,18 +525,18 @@ func update_status_labels() -> void:
 			var arm_upgrade_scale_percent = player.get_attack_speed_upgrade_scale_percent() if player.has_method("get_attack_speed_upgrade_scale_percent") else 100.0
 			var arm_name = player.get_current_arm_name() if player.has_method("get_current_arm_name") else I18n.t("common.base")
 			atk_speed_label.text = I18n.t("hud.atk_speed", [attack_speed_percent])
-			atk_speed_label.tooltip_text = I18n.t("hud.atk_speed_tooltip", [arm_name, base_shot_cooldown, shot_cooldown, arm_upgrade_scale_percent, max_attack_speed_percent])
+			_set_control_tooltip(atk_speed_label, I18n.t("hud.atk_speed_tooltip", [arm_name, base_shot_cooldown, shot_cooldown, arm_upgrade_scale_percent, max_attack_speed_percent]))
 		if recoil_label:
 			recoil_label.text = I18n.t("hud.recoil", [player.recoil_force / 100.0])
 			var max_recoil_force = player.get_max_recoil_force() if player.has_method("get_max_recoil_force") else 800.0
-			recoil_label.tooltip_text = I18n.t("hud.recoil_tooltip", [max_recoil_force / 100.0])
+			_set_control_tooltip(recoil_label, I18n.t("hud.recoil_tooltip", [max_recoil_force / 100.0]))
 		if heal_after_wave_label:
 			var heal_after_wave_percent = player.get_heal_after_wave_percent() if player.has_method("get_heal_after_wave_percent") else 0.0
 			heal_after_wave_label.visible = heal_after_wave_percent > 0.0
 			if heal_after_wave_label.visible:
 				var max_heal_after_wave_percent = player.get_max_heal_after_wave_percent() if player.has_method("get_max_heal_after_wave_percent") else 15.0
 				heal_after_wave_label.text = I18n.t("hud.heal_wave", [heal_after_wave_percent])
-				heal_after_wave_label.tooltip_text = I18n.t("hud.heal_wave_tooltip", [heal_after_wave_percent, max_heal_after_wave_percent])
+				_set_control_tooltip(heal_after_wave_label, I18n.t("hud.heal_wave_tooltip", [heal_after_wave_percent, max_heal_after_wave_percent]))
 		if dash_cooldown_label:
 			var dash_cooldown_reduction_percent = player.get_dash_cooldown_reduction_percent() if player.has_method("get_dash_cooldown_reduction_percent") else 0.0
 			dash_cooldown_label.visible = dash_cooldown_reduction_percent > 0.0
@@ -527,11 +545,11 @@ func update_status_labels() -> void:
 				var base_dash_cooldown = player.get_base_dash_cooldown() if player.has_method("get_base_dash_cooldown") else 5.0
 				var current_dash_cooldown = player.get_dash_cooldown() if player.has_method("get_dash_cooldown") else player.dash_cooldown
 				dash_cooldown_label.text = I18n.t("hud.dash_cd", [dash_cooldown_reduction_percent])
-				dash_cooldown_label.tooltip_text = I18n.t("hud.dash_cd_tooltip", [dash_cooldown_reduction_percent, base_dash_cooldown, current_dash_cooldown, max_dash_cooldown_reduction_percent])
+				_set_control_tooltip(dash_cooldown_label, I18n.t("hud.dash_cd_tooltip", [dash_cooldown_reduction_percent, base_dash_cooldown, current_dash_cooldown, max_dash_cooldown_reduction_percent]))
 		if healing_received_label:
 			var healing_received_percent = player.get_healing_received_percent() if player.has_method("get_healing_received_percent") else 100.0
 			healing_received_label.text = I18n.t("hud.heal_received", [healing_received_percent])
-			healing_received_label.tooltip_text = I18n.t("hud.heal_received_tooltip")
+			_set_control_tooltip(healing_received_label, I18n.t("hud.heal_received_tooltip"))
 		_update_active_skill_labels()
 
 func _update_active_skill_labels() -> void:
@@ -544,14 +562,14 @@ func _update_active_skill_slot_label(label: Label, slot: String) -> void:
 
 	if not player.has_method("get_active_ability_slots"):
 		label.text = "%s: -" % slot
-		label.tooltip_text = I18n.t("hud.no_active")
+		_set_control_tooltip(label, I18n.t("hud.no_active"))
 		return
 
 	var active_slots = player.get_active_ability_slots()
 	var ability_id = active_slots.get(slot, "")
 	if ability_id == "":
 		label.text = "%s: -" % slot
-		label.tooltip_text = I18n.t("hud.no_active")
+		_set_control_tooltip(label, I18n.t("hud.no_active"))
 		return
 
 	var skill_name = ability_id
@@ -570,4 +588,9 @@ func _update_active_skill_slot_label(label: Label, slot: String) -> void:
 	else:
 		label.text = "%s: %s" % [slot, skill_name]
 
-	label.tooltip_text = "%s\n%s: %.1fs" % [skill_description, I18n.t("common.cooldown"), cooldown]
+	_set_control_tooltip(label, "%s\n%s: %.1fs" % [skill_description, I18n.t("common.cooldown"), cooldown])
+
+func _set_control_tooltip(control: Control, text: String) -> void:
+	if control == null:
+		return
+	control.tooltip_text = Global.wrap_tooltip_text(text)

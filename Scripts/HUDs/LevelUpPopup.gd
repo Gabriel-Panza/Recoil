@@ -35,9 +35,11 @@ const CONFETTI_SCALE_MIN: float = 6.0
 const CONFETTI_SCALE_MAX: float = 14.0
 const STYLED_BACKGROUND_NODE_NAME: String = "StyledPopupBackground"
 const POPUP_CENTER_OFFSET: Vector2 = Vector2(24.0, 0.0)
+const PAUSE_CONTROL_PATH: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/PauseControl"
 
 var player
 var game_scene
+var pause_control
 var level_up_rng := RandomNumberGenerator.new()
 var special_percent_regex := RegEx.new()
 var special_multiplier_regex := RegEx.new()
@@ -70,6 +72,7 @@ func _ready() -> void:
 	special_multiplier_regex.compile("\\bx([0-9]+(?:\\.[0-9]+)?)\\b")
 	game_scene = get_node_or_null(GAME_SCENE_PATH)
 	player = get_node_or_null(PLAYER_PATH)
+	pause_control = get_node_or_null(PAUSE_CONTROL_PATH)
 	_setup_title_label()
 	_setup_skip_button()
 	_connect_buttons()
@@ -106,7 +109,7 @@ func _setup_skip_button() -> void:
 
 	PopupStyle.apply_button(skip_button)
 	skip_button.text = I18n.t("levelup.skip")
-	skip_button.tooltip_text = I18n.t("levelup.skip_tooltip")
+	skip_button.tooltip_text = _wrap_tooltip_text(I18n.t("levelup.skip_tooltip"))
 	var skip_callable = Callable(self, "_on_skip_button_pressed")
 	if not skip_button.pressed.is_connected(skip_callable):
 		skip_button.pressed.connect(skip_callable)
@@ -115,7 +118,7 @@ func _on_language_changed(_language: String) -> void:
 	_refresh_title_label()
 	if skip_button:
 		skip_button.text = I18n.t("levelup.skip")
-		skip_button.tooltip_text = I18n.t("levelup.skip_tooltip")
+		skip_button.tooltip_text = _wrap_tooltip_text(I18n.t("levelup.skip_tooltip"))
 	if visible and not is_rolling_options:
 		_render_options(current_options, skip_button != null and skip_button.visible)
 
@@ -202,6 +205,7 @@ func _apply_popup_style() -> void:
 func show_popup(context: String = "normal", boss_pecado: int = 0) -> void:
 	get_tree().paused = true
 	Global.keep_music_playing_during_pause()
+	_set_pause_stats_preview_visible(true)
 	await get_tree().create_timer(0.25, true).timeout
 
 	current_mode = "level_up"
@@ -508,7 +512,7 @@ func _render_options(options: Array, show_skip: bool) -> void:
 		skip_button.visible = show_skip
 		skip_button.disabled = is_rolling_options
 		skip_button.text = I18n.t("levelup.skip")
-		skip_button.tooltip_text = I18n.t("levelup.skip_tooltip")
+		skip_button.tooltip_text = _wrap_tooltip_text(I18n.t("levelup.skip_tooltip"))
 	var container = get_node_or_null("VBoxContainer")
 	if container == null:
 		return
@@ -591,10 +595,11 @@ func _apply_option_to_button(button: Button, option: Dictionary, is_blocked: boo
 		label.add_theme_font_size_override("font_size", OPTION_LABEL_FONT_SIZE)
 		label.add_theme_color_override("font_color", PopupStyle.DISABLED_TEXT_COLOR if is_blocked else rarity_color)
 		label.add_theme_color_override("font_outline_color", Color(rarity_color.r * 0.35, rarity_color.g * 0.25, rarity_color.b * 0.2, 1.0))
-	button.tooltip_text = tooltip
+	button.tooltip_text = _wrap_tooltip_text(tooltip)
 	if is_blocked:
 		var blocked_tooltip = I18n.t("levelup.blocked_tooltip")
-		button.tooltip_text = blocked_tooltip if tooltip == "" else "%s\n%s" % [tooltip, blocked_tooltip]
+		var full_tooltip = blocked_tooltip if tooltip == "" else "%s\n%s" % [tooltip, blocked_tooltip]
+		button.tooltip_text = _wrap_tooltip_text(full_tooltip)
 	if label:
 		label.tooltip_text = button.tooltip_text
 	button.self_modulate = Color(0.62, 0.62, 0.62, 1.0) if is_blocked else Color.WHITE
@@ -625,7 +630,7 @@ func _update_reroll_button(button: Button, option_index: int, is_blocked: bool, 
 	reroll_button.visible = can_show
 	reroll_button.disabled = not can_show
 	reroll_button.text = I18n.t("levelup.reroll")
-	reroll_button.tooltip_text = I18n.t("levelup.reroll_tooltip", [rerolls_left])
+	reroll_button.tooltip_text = _wrap_tooltip_text(I18n.t("levelup.reroll_tooltip", [rerolls_left]))
 
 func _get_or_create_reroll_button(button: Button, option_index: int) -> Button:
 	var reroll_button_name = "RerollButton%d" % option_index
@@ -1079,6 +1084,7 @@ func _complete_level_up_choice() -> void:
 func _close_popup() -> void:
 	slot_roll_generation += 1
 	is_rolling_options = false
+	_set_pause_stats_preview_visible(false)
 	_clear_all_special_level_up_button_effects()
 	_clear_special_level_up_confetti()
 	hide()
@@ -1091,6 +1097,15 @@ func _close_popup() -> void:
 		skip_button.visible = false
 		skip_button.disabled = false
 	get_tree().paused = false
+
+func _set_pause_stats_preview_visible(should_show: bool) -> void:
+	if pause_control == null or not is_instance_valid(pause_control):
+		pause_control = get_node_or_null(PAUSE_CONTROL_PATH)
+	if pause_control != null and pause_control.has_method("set_level_up_stats_preview_visible"):
+		pause_control.set_level_up_stats_preview_visible(should_show)
+
+func _wrap_tooltip_text(text: String) -> String:
+	return Global.wrap_tooltip_text(text)
 
 func _clear_all_special_level_up_button_effects() -> void:
 	var container = get_node_or_null("VBoxContainer")

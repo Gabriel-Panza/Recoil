@@ -7,7 +7,7 @@ extends CharacterBody2D
 @export var fire_rate: float = 1.1
 const STARTING_FIRE_RATE: float = 1.1
 const DEFAULT_MIN_FIRE_RATE: float = 0.25
-const SHOT_SFX_STREAM: AudioStream = preload("res://Music&SFX/SFX/Shot_SFX.mp3")
+const SHOT_SFX_STREAM: AudioStream = preload("res://Music&SFX/SFX/Shot_SFX.wav")
 var min_fire_rate: float = DEFAULT_MIN_FIRE_RATE
 var base_fire_rate: float = 1.1
 var attack_speed_bonus: float = 0.0
@@ -283,7 +283,7 @@ const GAME_WIN_PATH: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD
 var pause_control: Control
 var game_over: Panel
 var game_win: Panel
-var shot_sfx_player: AudioStreamPlayer2D
+var shot_sfx_player: AudioStreamPlayer
 
 var type_animation = "walk_down"
 
@@ -1011,16 +1011,14 @@ func shoot(direction: Vector2) -> void:
 		_trigger_recoil_explosion()
 
 func _setup_shot_sfx() -> void:
-	shot_sfx_player = get_node_or_null("ShotSFX") as AudioStreamPlayer2D
+	shot_sfx_player = get_node_or_null("ShotSFX") as AudioStreamPlayer
 	if shot_sfx_player == null:
-		shot_sfx_player = AudioStreamPlayer2D.new()
+		shot_sfx_player = AudioStreamPlayer.new()
 		shot_sfx_player.name = "ShotSFX"
 		add_child(shot_sfx_player)
 
 	shot_sfx_player.stream = SHOT_SFX_STREAM
-	shot_sfx_player.max_distance = 520.0
-	shot_sfx_player.attenuation = 1.0
-	shot_sfx_player.max_polyphony = 4
+	shot_sfx_player.max_polyphony = Global.get_sfx_polyphony_limit(4)
 	Global.register_audio_player(shot_sfx_player, Global.GROUP_SFX, -3.0)
 
 func _play_shot_sfx() -> void:
@@ -2116,7 +2114,7 @@ func _play_health_feedback(color: Color) -> void:
 	health_feedback_tween.tween_property(aparencia, "modulate", health_feedback_base_modulate, 0.12)
 	health_feedback_tween.tween_callback(Callable(self, "_clear_health_feedback_tween").bind(health_feedback_tween))
 
-func _clear_health_feedback_tween(tween: Tween) -> void:
+func _clear_health_feedback_tween(tween) -> void:
 	if health_feedback_tween == tween:
 		health_feedback_tween = null
 
@@ -2997,7 +2995,7 @@ func _spawn_heal_mote(from_position: Vector2, heal_amount: float, curve_offset: 
 	tween.parallel().tween_property(mote, "scale", Vector2(0.45, 0.45), duration)
 	tween.tween_callback(Callable(self, "_finish_heal_mote").bind(mote, heal_amount, mote.color))
 
-func _update_heal_mote(progress: float, mote: Polygon2D, from_position: Vector2, curve_offset: Vector2) -> void:
+func _update_heal_mote(progress: float, mote, from_position: Vector2, curve_offset: Vector2) -> void:
 	if not is_instance_valid(mote):
 		return
 
@@ -3006,7 +3004,7 @@ func _update_heal_mote(progress: float, mote: Polygon2D, from_position: Vector2,
 	mote.global_position = from_position.lerp(target_position, progress) + curve
 	mote.rotation = progress * TAU
 
-func _finish_heal_mote(mote: Polygon2D, heal_amount: float, color: Color) -> void:
+func _finish_heal_mote(mote, heal_amount: float, color: Color) -> void:
 	var arrival_position = global_position
 	if is_instance_valid(mote):
 		arrival_position = mote.global_position
@@ -3149,7 +3147,7 @@ func _aim_player_mirror_visual(parent: Node, direction: Vector2) -> void:
 		animated_visual.flip_h = direction.x < 0.0
 		animated_visual.play()
 
-func _queue_free_if_valid(node: Node) -> void:
+func _queue_free_if_valid(node) -> void:
 	if is_instance_valid(node) and not node.is_queued_for_deletion():
 		node.queue_free()
 

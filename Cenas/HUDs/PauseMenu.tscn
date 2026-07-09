@@ -309,7 +309,7 @@ text = "Menu"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="SFX" type="AudioStreamPlayer2D" parent="." unique_id=1612802006 groups=["SFX"]]
+[node name="SFX" type="AudioStreamPlayer" parent="." unique_id=1612802006 groups=["SFX"]]
 volume_db = -10.0
 
 [connection signal="pressed" from="PauseMenu/HBoxContainer/VBoxContainer/ResumeButton" to="." method="_unpause_game"]

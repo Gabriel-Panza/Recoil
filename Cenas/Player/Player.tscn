@@ -241,10 +241,10 @@ collision_mask = 4
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Hitbox" unique_id=129379797]
 shape = SubResource("CapsuleShape2D_ybxfy")
 
-[node name="Win" type="AudioStreamPlayer2D" parent="." unique_id=1862766686]
+[node name="Win" type="AudioStreamPlayer" parent="." unique_id=1862766686]
 volume_db = -10.0
 
-[node name="Lose" type="AudioStreamPlayer2D" parent="." unique_id=1593843345]
+[node name="Lose" type="AudioStreamPlayer" parent="." unique_id=1593843345]
 volume_db = -10.0
 
 [connection signal="area_entered" from="Hitbox" to="." method="_on_hitbox_area_entered"]

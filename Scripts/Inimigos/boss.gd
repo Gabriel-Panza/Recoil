@@ -23,7 +23,7 @@ const WRATH_BOSS_SHEET = preload("res://Sprites/Bosses/Wrath_Spritesheet.png")
 const LUST_BOSS_SHEET = preload("res://Sprites/Bosses/Lust_Spritesheet.png")
 const GREED_BOSS_SHEET = preload("res://Sprites/Bosses/Greed_Spritesheet.png")
 const PRIDE_BOSS_SHEET = preload("res://Sprites/Bosses/Pride_Spritesheet.png")
-const FOOTSTEP_SFX_STREAM: AudioStream = preload("res://Music&SFX/SFX/FootStepsGravel_SFX.mp3")
+const FOOTSTEP_SFX_STREAM: AudioStream = preload("res://Music&SFX/SFX/FootStepsGravel_SFX.wav")
 
 const WRATH_BOMB_RADIUS: float = 20.0
 const WRATH_BOMB_EXPLOSION_RADIUS: float = 110.0
@@ -68,6 +68,9 @@ const ENVY_CLONE_MAX_HEALTH: float = 180.0
 const ENVY_CLONE_VISUAL_MODULATE: Color = Color(0.55, 0.95, 1.0, 0.56)
 const ENVY_PINCER_TELEGRAPH_DURATION: float = 0.75
 const ENVY_SWAP_TELEGRAPH_DURATION: float = 0.75
+const ENVY_ATTACK_DISTANCE_PHASE_1: float = 115.0
+const ENVY_ATTACK_DISTANCE_PHASE_2: float = 105.0
+const ENVY_ATTACK_READY_BUFFER: float = 70.0
 const GREED_TREASURE_RADIUS: float = 16.0
 const MIN_TELEGRAPH_DURATION: float = 0.75
 const MAX_BOSS_CIRCLE_VFX_RADIUS: float = 180.0
@@ -171,7 +174,7 @@ var pride_edge_overlay_cooldown: float = 0.0
 var pride_movement_mode: String = PRIDE_MOVEMENT_DEFAULT
 var boss_indicator_layer: CanvasLayer
 var boss_indicator_node: Node2D
-var footstep_sfx_player: AudioStreamPlayer2D
+var footstep_sfx_player: AudioStreamPlayer
 var has_footstep_sfx_voice: bool = false
 
 func _ready() -> void:
@@ -335,16 +338,17 @@ func handle_gluttony(delta: float) -> void:
 		_start_gluttony_body_slam()
 
 func handle_envy(delta: float) -> void:
-	if phase == 1:
-		_keep_distance_from_player(delta, 180.0)
-	else:
-		_move_toward_player(delta, 1.0 + (0.25 if envy_boss_buff_remaining > 0.0 else 0.0))
+	var desired_attack_distance = _get_envy_attack_distance()
+	var movement_multiplier = 0.88 if phase == 1 else 1.05 + (0.25 if envy_boss_buff_remaining > 0.0 else 0.0)
+	_keep_distance_from_player(delta, desired_attack_distance, movement_multiplier)
 
 	if not is_instance_valid(envy_clone) and not is_performing_action:
 		_start_envy_clone()
 		return
 
 	if not _can_start_action() or not is_instance_valid(envy_clone):
+		return
+	if not _is_envy_close_enough_to_attack():
 		return
 
 	var roll = randf()
@@ -360,6 +364,14 @@ func handle_envy(delta: float) -> void:
 			_start_envy_position_swap()
 		else:
 			_start_envy_boss_shot()
+
+func _get_envy_attack_distance() -> float:
+	return ENVY_ATTACK_DISTANCE_PHASE_1 if phase == 1 else ENVY_ATTACK_DISTANCE_PHASE_2
+
+func _is_envy_close_enough_to_attack() -> bool:
+	if player == null:
+		return false
+	return global_position.distance_to(player.global_position) <= _get_envy_attack_distance() + ENVY_ATTACK_READY_BUFFER
 
 func handle_wrath(delta: float) -> void:
 	_move_toward_player(delta, 1.05)
@@ -719,13 +731,13 @@ func _start_gluttony_food_dash() -> void:
 	gluttony_food_dash_tween.tween_property(self, "global_position", dash_target, GLUTTONY_FOOD_DASH_DURATION).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	gluttony_food_dash_tween.tween_callback(Callable(self, "_finish_gluttony_food_dash").bind(gluttony_food_dash_tween))
 
-func _finish_gluttony_food_dash(tween: Tween) -> void:
+func _finish_gluttony_food_dash(tween) -> void:
 	if gluttony_food_dash_tween == tween:
 		gluttony_food_dash_tween = null
 	is_gluttony_food_dashing = false
 	velocity = Vector2.ZERO
 
-func _on_gluttony_food_exited(food: Node) -> void:
+func _on_gluttony_food_exited(food) -> void:
 	if is_cleaning_up or is_dead:
 		return
 	if is_instance_valid(food) and bool(food.get_meta("gluttony_delivered", false)):
@@ -1091,7 +1103,7 @@ func _update_wrath_bombs(delta: float) -> void:
 		if fuse <= 0.0:
 			_explode_wrath_bomb(bomb, false)
 
-func _on_wrath_bomb_body_entered(body: Node, bomb: Area2D) -> void:
+func _on_wrath_bomb_body_entered(body: Node, bomb) -> void:
 	if not is_instance_valid(bomb):
 		return
 	if body.is_in_group(Global.GROUP_PLAYER):
@@ -1099,7 +1111,7 @@ func _on_wrath_bomb_body_entered(body: Node, bomb: Area2D) -> void:
 	elif body != self:
 		_explode_wrath_bomb(bomb, false)
 
-func _explode_wrath_bomb(bomb: Area2D, force_boss_damage: bool) -> void:
+func _explode_wrath_bomb(bomb, force_boss_damage: bool) -> void:
 	if not is_instance_valid(bomb):
 		return
 
@@ -1378,11 +1390,11 @@ func _update_greed_treasures(delta: float) -> void:
 			active_treasures.erase(treasure)
 			treasure.queue_free()
 
-func _on_greed_treasure_body_entered(body: Node, treasure: Area2D) -> void:
+func _on_greed_treasure_body_entered(body: Node, treasure) -> void:
 	if body.is_in_group(Global.GROUP_PLAYER):
 		_collect_greed_treasure_for_player(treasure)
 
-func _collect_greed_treasure_for_player(treasure: Area2D) -> void:
+func _collect_greed_treasure_for_player(treasure) -> void:
 	if not is_instance_valid(treasure):
 		return
 	active_treasures.erase(treasure)
@@ -1390,7 +1402,7 @@ func _collect_greed_treasure_for_player(treasure: Area2D) -> void:
 	_spawn_burst_particles(player.global_position, _with_alpha(GREED_COLOR, 0.9), 18, 0.28, 110.0)
 	_apply_temporary_player_attack_boost(1.25, 5.0)
 
-func _collect_greed_treasure_for_boss(treasure: Area2D) -> void:
+func _collect_greed_treasure_for_boss(treasure) -> void:
 	if not is_instance_valid(treasure):
 		return
 	active_treasures.erase(treasure)
@@ -1761,7 +1773,7 @@ func _spawn_pride_judgement_beam(beam_position: Vector2, beam_size: Vector2) -> 
 	_spawn_rect_telegraph(beam_position, beam_size, 0.0, _with_alpha(PRIDE_LIGHT_COLOR, 0.23), 0.75)
 	_create_damaging_area_after_delay(beam_position, beam_size, 0.0, _get_pride_damage(PRIDE_JUDGEMENT_BEAM_DAMAGE_MULTIPLIER), _with_alpha(PRIDE_LIGHT_COLOR, 0.38), 0.75, 0.5)
 
-func _on_projectile_hit_special_area(area: Area2D, projectile: Area2D) -> void:
+func _on_projectile_hit_special_area(area, projectile) -> void:
 	if not is_instance_valid(area):
 		return
 
@@ -1803,11 +1815,11 @@ func _damage_lust_wall(wall: Node, _amount: float, hit_position: Vector2) -> voi
 		_spawn_burst_particles(wall.global_position, _with_alpha(LUST_COLOR, 0.82), 24, 0.28, 130.0)
 		wall.queue_free()
 
-func _on_lust_serpent_lash_body_entered(body: Node, area: Area2D) -> void:
+func _on_lust_serpent_lash_body_entered(body: Node, area) -> void:
 	if body.is_in_group(Global.GROUP_PLAYER):
 		_damage_lust_lash_player(body, area)
 
-func _damage_lust_lash_player(target: Node, area: Area2D) -> void:
+func _damage_lust_lash_player(target: Node, area) -> void:
 	if not is_instance_valid(target) or not is_instance_valid(area):
 		return
 
@@ -1905,7 +1917,7 @@ func _play_health_feedback(color: Color) -> void:
 	health_feedback_tween.tween_property(aparencia, "modulate", health_feedback_base_modulate, 0.12)
 	health_feedback_tween.tween_callback(Callable(self, "_clear_health_feedback_tween").bind(health_feedback_tween))
 
-func _clear_health_feedback_tween(tween: Tween) -> void:
+func _clear_health_feedback_tween(tween) -> void:
 	if health_feedback_tween == tween:
 		health_feedback_tween = null
 
@@ -2106,7 +2118,7 @@ func _create_damaging_area(area_position: Vector2, size: Vector2, area_rotation:
 	var cleanup_timer = tree.create_timer(duration, false)
 	cleanup_timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(area))
 
-func _on_damaging_area_body_entered(body: Node, area: Area2D) -> void:
+func _on_damaging_area_body_entered(body: Node, area) -> void:
 	if body.is_in_group(Global.GROUP_PLAYER):
 		body.take_damage(float(area.get_meta("damage", damage)), area.global_position)
 
@@ -2198,18 +2210,18 @@ func _setup_footstep_sfx() -> void:
 	if not _should_use_footstep_sfx():
 		return
 
-	footstep_sfx_player = get_node_or_null("FootstepSFX") as AudioStreamPlayer2D
+	footstep_sfx_player = get_node_or_null("FootstepSFX") as AudioStreamPlayer
 	if footstep_sfx_player == null:
-		footstep_sfx_player = AudioStreamPlayer2D.new()
+		footstep_sfx_player = AudioStreamPlayer.new()
 		footstep_sfx_player.name = "FootstepSFX"
 		add_child(footstep_sfx_player)
 
 	footstep_sfx_player.stream = Global.make_looping_audio_stream(FOOTSTEP_SFX_STREAM)
-	footstep_sfx_player.max_distance = 420.0
-	footstep_sfx_player.attenuation = 1.35
 	Global.register_audio_player(footstep_sfx_player, Global.GROUP_SFX, -15.0)
 
 func _should_use_footstep_sfx() -> bool:
+	if Global.is_web_build():
+		return false
 	return current_state != BossState.SLOTH and current_state != BossState.GLUTTONY
 
 func _update_footstep_sfx() -> void:
@@ -2667,6 +2679,6 @@ func _trim_node_array(nodes: Array, max_count: int) -> void:
 		if is_instance_valid(node):
 			node.queue_free()
 
-func _queue_free_if_valid(node: Node) -> void:
+func _queue_free_if_valid(node) -> void:
 	if is_instance_valid(node):
 		node.queue_free()

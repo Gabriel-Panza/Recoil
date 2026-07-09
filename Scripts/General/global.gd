@@ -29,6 +29,13 @@ const AUDIO_SLIDER_MAX_VALUE: float = 100.0
 const AUDIO_MUTE_DB: float = -80.0
 const AUDIO_MAX_DB: float = 0.0
 const AUDIO_BASE_VOLUME_META: String = "base_audio_volume_db"
+const WEB_SFX_MAX_POLYPHONY: int = 2
+const DEFAULT_TOOLTIP_WRAP_CHARS: int = 62
+const WEB_SFX_VOICE_LIMITS = {
+	"enemy_footstep": 0,
+	"boss_footstep": 0,
+	"player_shot": 2
+}
 
 var intro_cutscene_return_target: String = INTRO_CUTSCENE_RETURN_GAME
 var open_cutscenes_gallery_on_menu_ready: bool = false
@@ -36,11 +43,49 @@ var limited_sfx_voice_counts: Dictionary = {}
 var looping_audio_stream_cache: Dictionary = {}
 var enemy_sprite_frames_cache: Dictionary = {}
 
+func wrap_tooltip_text(text: String, max_line_chars: int = DEFAULT_TOOLTIP_WRAP_CHARS) -> String:
+	if text == "" or max_line_chars <= 0:
+		return text
+
+	var wrapped_lines := PackedStringArray()
+	var normalized_text = text.replace("\r\n", "\n").replace("\r", "\n")
+	for raw_line in normalized_text.split("\n", true):
+		if raw_line.length() <= max_line_chars:
+			wrapped_lines.append(raw_line)
+			continue
+		_append_wrapped_tooltip_line(wrapped_lines, raw_line, max_line_chars)
+
+	return "\n".join(wrapped_lines)
+
+func _append_wrapped_tooltip_line(wrapped_lines: PackedStringArray, raw_line: String, max_line_chars: int) -> void:
+	var current_line = ""
+	for word in raw_line.split(" ", false):
+		var remaining_word = word
+		while remaining_word.length() > max_line_chars:
+			if current_line != "":
+				wrapped_lines.append(current_line)
+				current_line = ""
+			wrapped_lines.append(remaining_word.substr(0, max_line_chars))
+			remaining_word = remaining_word.substr(max_line_chars)
+
+		if remaining_word == "":
+			continue
+		if current_line == "":
+			current_line = remaining_word
+		elif current_line.length() + remaining_word.length() + 1 <= max_line_chars:
+			current_line += " " + remaining_word
+		else:
+			wrapped_lines.append(current_line)
+			current_line = remaining_word
+
+	if current_line != "":
+		wrapped_lines.append(current_line)
+
 const STARTING_ARM_DATA = {
 	"fast": {
 		"name": "Fast Arm",
 		"description": "Weak shots, high fire rate, and short recoil for tighter control.",
-		"attack_damage": 30.0,
+		"attack_damage": 33.0,
 		"base_fire_rate": 0.5,
 		"min_fire_rate": 0.3,
 		"base_recoil_force": 380.0,
@@ -52,7 +97,7 @@ const STARTING_ARM_DATA = {
 		"name": "Heavy Arm",
 		"description": "Slow shots with high damage and strong recoil for big repositioning plays.",
 		"attack_damage": 90.0,
-		"base_fire_rate": 2.1,
+		"base_fire_rate": 2.15,
 		"min_fire_rate": 1.65,
 		"base_recoil_force": 750.0,
 		"friction": 600.0,
@@ -62,9 +107,9 @@ const STARTING_ARM_DATA = {
 	"unstable": {
 		"name": "Unstable Arm",
 		"description": "Projectiles pierce one target and ricochet once, but come back dangerous.",
-		"attack_damage": 40.0,
+		"attack_damage": 45.0,
 		"base_fire_rate": 1.35,
-		"min_fire_rate": 0.9,
+		"min_fire_rate": 0.85,
 		"base_recoil_force": 577.5,
 		"friction": 750.0,
 		"attack_speed_upgrade_multiplier": 0.5,
@@ -306,6 +351,8 @@ func register_audio_player(player: Node, group_name: String, base_volume_db: flo
 
 	if group_name == GROUP_MUSIC:
 		_configure_music_player_for_pause(player)
+	elif group_name == GROUP_SFX:
+		_configure_sfx_player_for_web(player)
 	if not player.is_in_group(group_name):
 		player.add_to_group(group_name)
 	player.set_meta(AUDIO_BASE_VOLUME_META, base_volume_db)
@@ -329,15 +376,18 @@ func make_looping_audio_stream(stream: AudioStream) -> AudioStream:
 	var looping_stream = stream.duplicate() as AudioStream
 	if looping_stream is AudioStreamMP3:
 		(looping_stream as AudioStreamMP3).loop = true
+	elif looping_stream is AudioStreamWAV:
+		(looping_stream as AudioStreamWAV).loop_mode = AudioStreamWAV.LOOP_FORWARD
 	looping_audio_stream_cache[cache_key] = looping_stream
 	return looping_stream
 
 func try_acquire_limited_sfx_voice(voice_key: String, max_voices: int) -> bool:
-	if max_voices <= 0:
+	var effective_max_voices = get_limited_sfx_voice_limit(voice_key, max_voices)
+	if effective_max_voices <= 0:
 		return false
 
 	var active_count = int(limited_sfx_voice_counts.get(voice_key, 0))
-	if active_count >= max_voices:
+	if active_count >= effective_max_voices:
 		return false
 
 	limited_sfx_voice_counts[voice_key] = active_count + 1
@@ -350,6 +400,30 @@ func release_limited_sfx_voice(voice_key: String) -> void:
 		return
 
 	limited_sfx_voice_counts[voice_key] = active_count - 1
+
+func get_limited_sfx_voice_limit(voice_key: String, default_limit: int) -> int:
+	if not is_web_build():
+		return default_limit
+
+	return min(default_limit, int(WEB_SFX_VOICE_LIMITS.get(voice_key, default_limit)))
+
+func get_sfx_polyphony_limit(default_limit: int) -> int:
+	if not is_web_build():
+		return default_limit
+
+	return min(default_limit, WEB_SFX_MAX_POLYPHONY)
+
+func is_web_build() -> bool:
+	return OS.has_feature("web")
+
+func _configure_sfx_player_for_web(audio_player: Node) -> void:
+	if not is_web_build() or not is_instance_valid(audio_player):
+		return
+	if not (audio_player is AudioStreamPlayer or audio_player is AudioStreamPlayer2D or audio_player is AudioStreamPlayer3D):
+		return
+
+	var current_polyphony = int(audio_player.get("max_polyphony"))
+	audio_player.set("max_polyphony", get_sfx_polyphony_limit(max(current_polyphony, 1)))
 
 func _configure_volume_slider(slider: Range, value: float) -> void:
 	if slider == null:

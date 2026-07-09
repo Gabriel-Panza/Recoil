@@ -93,7 +93,7 @@ func _setup_audio() -> void:
 	if not music_player.playing:
 		music_player.play()
 
-	var button_sfx = get_node_or_null("SFX_Button") as AudioStreamPlayer2D
+	var button_sfx = get_node_or_null("SFX_Button") as AudioStreamPlayer
 	if button_sfx != null:
 		button_sfx.autoplay = false
 		button_sfx.stop()
@@ -237,7 +237,7 @@ func _refresh_ranking() -> void:
 func _add_ranking_label(text: String, tooltip: String = "") -> void:
 	var label = Label.new()
 	label.text = text
-	label.tooltip_text = tooltip
+	label.tooltip_text = Global.wrap_tooltip_text(tooltip)
 	label.add_theme_color_override("font_color", Color(0.88, 0.0, 0.0))
 	label.add_theme_constant_override("outline_size", 4)
 	label.add_theme_font_size_override("font_size", 24)
@@ -997,7 +997,7 @@ func _on_language_changed(_language: String) -> void:
 func _refresh_localized_text() -> void:
 	if language_button != null:
 		language_button.text = I18n.t("settings.language_button")
-		language_button.tooltip_text = I18n.t("settings.language_tooltip")
+		language_button.tooltip_text = Global.wrap_tooltip_text(I18n.t("settings.language_tooltip"))
 	_set_selected_option_label_for_current_item(false)
 	var title = get_node_or_null("RankingPanel/Title")
 	if title is Label:

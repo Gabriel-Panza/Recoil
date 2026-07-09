@@ -279,7 +279,7 @@ theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 24
 text = "Back"
 
-[node name="SFX_Button" type="AudioStreamPlayer2D" parent="." unique_id=1121777857]
+[node name="SFX_Button" type="AudioStreamPlayer" parent="." unique_id=1121777857]
 volume_db = 6.0
 autoplay = true
 

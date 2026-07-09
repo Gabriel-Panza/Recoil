@@ -293,7 +293,7 @@ func _show_starting_arm_selection() -> void:
 			I18n.arm_summary(arm_id, str(option["summary"])),
 			I18n.arm_details(arm_id, str(option["details"]))
 		]
-		button.tooltip_text = I18n.arm_details(arm_id, str(option["details"]))
+		button.tooltip_text = Global.wrap_tooltip_text(I18n.arm_details(arm_id, str(option["details"])))
 		button.add_theme_font_size_override("font_size", 17)
 		button.add_theme_color_override("font_color", Color(1.0, 0.95, 0.82, 1.0))
 		button.add_theme_stylebox_override("normal", _make_starting_arm_style(Color(0.16, 0.07, 0.075, 0.98), Color(0.52, 0.18, 0.12, 0.95), 2))
