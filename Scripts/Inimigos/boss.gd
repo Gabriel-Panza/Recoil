@@ -29,6 +29,12 @@ const WRATH_BOMB_RADIUS: float = 20.0
 const WRATH_BOMB_EXPLOSION_RADIUS: float = 110.0
 const WRATH_BOMB_PUSH_SPEED: float = 550.0
 const WRATH_BOMB_DAMAGE: float = 40.0
+const WRATH_FISSURE_WIDTH: float = 46.0
+const WRATH_FISSURE_LENGTH_PHASE_1: float = 330.0
+const WRATH_FISSURE_LENGTH_PHASE_2: float = 430.0
+const WRATH_FISSURE_DAMAGE_MULTIPLIER: float = 0.78
+const WRATH_FISSURE_TELEGRAPH_DURATION: float = 0.46
+const WRATH_FISSURE_DAMAGE_DURATION: float = 0.32
 const LUST_WALL_THICKNESS: float = 24.0
 const LUST_WALL_LENGTH: float = 260.0
 const LUST_BREAKABLE_WALL_MAX_HITS: int = 2
@@ -72,6 +78,14 @@ const ENVY_ATTACK_DISTANCE_PHASE_1: float = 115.0
 const ENVY_ATTACK_DISTANCE_PHASE_2: float = 105.0
 const ENVY_ATTACK_READY_BUFFER: float = 70.0
 const GREED_TREASURE_RADIUS: float = 16.0
+const GREED_TREASURE_LIMIT_PHASE_1: int = 5
+const GREED_TREASURE_LIMIT_PHASE_2: int = 7
+const GREED_TREASURE_TELEGRAPH_DURATION: float = 0.56
+const GREED_COIN_WARNING_DURATION: float = 0.54
+const GREED_PLAYER_TREASURE_HEAL_RATIO: float = 0.045
+const GREED_BOSS_TREASURE_HEAL_RATIO: float = 0.035
+const GREED_JACKPOT_STACK_INTERVAL: int = 3
+const GREED_JACKPOT_DAMAGE_MULTIPLIER: float = 0.55
 const MIN_TELEGRAPH_DURATION: float = 0.75
 const MAX_BOSS_CIRCLE_VFX_RADIUS: float = 180.0
 const ISO_AOE_VISUAL_Y_SCALE: float = 0.7
@@ -119,9 +133,9 @@ const BOSS_CONFIG = {
 	1: { "max_health": 500, "speed": 0.0, "damage": 40, "state": BossState.SLOTH, "animation": "pecado1", "sprite_sheet": SLOTH_BOSS_SHEET, "frame_size": Vector2i(44, 58), "frame_count": 8, "visual_scale": Vector2(1.35, 1.35) },
 	2: { "max_health": 1050, "speed": 90.0, "damage": 50, "state": BossState.GLUTTONY, "animation": "pecado2", "sprite_sheet": GLUTTONY_BOSS_SHEET, "frame_size": Vector2i(150, 140), "frame_count": 4, "visual_scale": Vector2(0.82, 0.82) },
 	3: { "max_health": 1200, "speed": 90.0, "damage": 50, "state": BossState.ENVY, "animation": "pecado3", "sprite_sheet": ENVY_BOSS_SHEET, "frame_size": Vector2i(69, 98), "frame_count": 4, "visual_scale": Vector2(0.9, 0.9) },
-	4: { "max_health": 1500, "speed": 90.0, "damage": 75, "state": BossState.WRATH, "animation": "pecado4", "sprite_sheet": WRATH_BOSS_SHEET, "frame_size": Vector2i(78, 74), "frame_count": 8, "visual_scale": Vector2(1.08, 1.08) },
-	5: { "max_health": 2000, "speed": 90.0, "damage": 60, "state": BossState.LUST, "animation": "pecado5", "sprite_sheet": LUST_BOSS_SHEET, "frame_size": Vector2i(60, 80), "frame_count": 6, "visual_scale": Vector2(1.08, 1.08) },
-	6: { "max_health": 3000, "speed": 90.0, "damage": 60, "state": BossState.GREED, "animation": "pecado6", "sprite_sheet": GREED_BOSS_SHEET, "frame_size": Vector2i(60, 88), "frame_count": 4, "visual_scale": Vector2(1.05, 1.05) },
+	4: { "max_health": 1500, "speed": 90.0, "damage": 90, "state": BossState.WRATH, "animation": "pecado4", "sprite_sheet": WRATH_BOSS_SHEET, "frame_size": Vector2i(78, 74), "frame_count": 8, "visual_scale": Vector2(1.08, 1.08) },
+	5: { "max_health": 2000, "speed": 90.0, "damage": 66, "state": BossState.LUST, "animation": "pecado5", "sprite_sheet": LUST_BOSS_SHEET, "frame_size": Vector2i(60, 80), "frame_count": 6, "visual_scale": Vector2(1.08, 1.08) },
+	6: { "max_health": 3000, "speed": 90.0, "damage": 75, "state": BossState.GREED, "animation": "pecado6", "sprite_sheet": GREED_BOSS_SHEET, "frame_size": Vector2i(60, 88), "frame_count": 4, "visual_scale": Vector2(1.05, 1.05) },
 	7: { "max_health": 4000, "speed": 90.0, "damage": 90, "state": BossState.PRIDE, "animation": "pecado7", "sprite_sheet": PRIDE_BOSS_SHEET, "frame_size": Vector2i(109, 67), "frame_count": 6, "visual_scale": Vector2(0.98, 0.98) },
 }
 
@@ -374,14 +388,21 @@ func _is_envy_close_enough_to_attack() -> bool:
 	return global_position.distance_to(player.global_position) <= _get_envy_attack_distance() + ENVY_ATTACK_READY_BUFFER
 
 func handle_wrath(delta: float) -> void:
-	_move_toward_player(delta, 1.05)
+	_move_toward_player(delta, 1.15)
 	if not _can_start_action():
 		return
 
+	var roll = randf()
 	if phase == 1:
-		_start_wrath_bomb_volley(3, 2.85)
+		if roll < 0.62:
+			_start_wrath_bomb_volley(3, 2.5)
+		else:
+			_start_wrath_fissure_combo(2)
 	else:
-		_start_wrath_bomb_volley(5, 2.05)
+		if roll < 0.46:
+			_start_wrath_bomb_volley(5, 1.75)
+		else:
+			_start_wrath_fissure_combo(3)
 
 func handle_lust(delta: float) -> void:
 	_move_toward_player(delta, 0.7)
@@ -399,17 +420,52 @@ func handle_lust(delta: float) -> void:
 		_start_lust_serpent_lash()
 
 func handle_greed(delta: float) -> void:
-	_move_toward_player(delta, 0.85)
+	_move_greed(delta)
 	if not _can_start_action():
 		return
 
 	var roll = randf()
-	if roll < 0.5:
-		_start_greed_treasure_drop(3 if phase == 1 else 5)
-	elif roll < 0.82:
+	var active_treasure_count = _get_active_greed_treasure_count()
+	var should_drop_more_treasure = active_treasure_count < (3 if phase == 1 else 4)
+	if should_drop_more_treasure and roll < 0.62:
+		_start_greed_treasure_drop(4 if phase == 1 else 6)
+	elif roll < 0.76:
 		_start_greed_coin_rain()
 	else:
 		_start_greed_tax_mark()
+
+func _move_greed(delta: float) -> void:
+	var target_treasure = _get_closest_active_greed_treasure()
+	if target_treasure != null:
+		var distance = global_position.distance_to(target_treasure.global_position)
+		if distance > GREED_TREASURE_RADIUS + 28.0:
+			velocity = global_position.direction_to(target_treasure.global_position) * _get_current_speed(1.1)
+			move_and_slide()
+			return
+
+	_move_toward_player(delta, 1.0)
+
+func _get_closest_active_greed_treasure() -> Node2D:
+	var closest: Node2D = null
+	var closest_distance = INF
+	for treasure in active_treasures.duplicate():
+		if not is_instance_valid(treasure):
+			active_treasures.erase(treasure)
+			continue
+		var distance = global_position.distance_squared_to(treasure.global_position)
+		if distance < closest_distance:
+			closest_distance = distance
+			closest = treasure
+	return closest
+
+func _get_active_greed_treasure_count() -> int:
+	var active_count = 0
+	for treasure in active_treasures.duplicate():
+		if is_instance_valid(treasure):
+			active_count += 1
+		else:
+			active_treasures.erase(treasure)
+	return active_count
 
 func handle_pride(delta: float) -> void:
 	if is_invulnerable:
@@ -1054,9 +1110,48 @@ func _start_wrath_bomb_volley(amount: int, fuse_time: float) -> void:
 		if is_dead or player == null:
 			return
 		_create_wrath_bomb(bomb_position, target, fuse_time)
-		await get_tree().create_timer(0.8 if phase == 1 else 0.6, false).timeout
+		await get_tree().create_timer(0.62 if phase == 1 else 0.5, false).timeout
 
-	_finish_action(0.6 if phase == 1 else 0.45)
+	_finish_action(0.5 if phase == 1 else 0.35)
+
+func _start_wrath_fissure_combo(fissure_count: int) -> void:
+	is_performing_action = true
+	current_sub_state = BossSubState.TELEGRAPH
+	_spawn_action_charge_vfx(global_position, 92.0, WRATH_COLOR, WRATH_FISSURE_TELEGRAPH_DURATION, 30)
+	await get_tree().create_timer(WRATH_FISSURE_TELEGRAPH_DURATION, false).timeout
+
+	current_sub_state = BossSubState.ATTACK
+	for i in range(fissure_count):
+		if is_dead or player == null:
+			return
+		var source_position = _clamp_to_current_arena(global_position + Vector2.RIGHT.rotated(randf_range(-PI, PI)) * randf_range(20.0, 72.0), 34.0)
+		var target_position = player.global_position
+		if player.get("velocity") != null:
+			target_position += player.velocity * (0.10 if phase == 1 else 0.16)
+		var direction = source_position.direction_to(_clamp_to_current_arena(target_position, 34.0))
+		if direction == Vector2.ZERO:
+			direction = Vector2.RIGHT.rotated(randf_range(-PI, PI))
+		direction = direction.rotated(deg_to_rad(randf_range(-10.0, 10.0)))
+		_spawn_wrath_fissure(source_position, direction, _get_wrath_fissure_length(), WRATH_FISSURE_TELEGRAPH_DURATION)
+		if i < fissure_count - 1:
+			await get_tree().create_timer(0.17 if phase == 1 else 0.12, false).timeout
+
+	_finish_action(0.62 if phase == 1 else 0.42)
+
+func _get_wrath_fissure_length() -> float:
+	return WRATH_FISSURE_LENGTH_PHASE_2 if phase == 2 else WRATH_FISSURE_LENGTH_PHASE_1
+
+func _spawn_wrath_fissure(origin: Vector2, direction: Vector2, length: float, telegraph_delay: float) -> void:
+	if direction == Vector2.ZERO:
+		return
+
+	var normalized_direction = direction.normalized()
+	var center = _clamp_to_current_arena(origin + normalized_direction * length * 0.5, 28.0)
+	var size = Vector2(length, WRATH_FISSURE_WIDTH + (8.0 if phase == 2 else 0.0))
+	var angle = normalized_direction.angle()
+	var fissure_damage = max(float(roundi(float(damage) * WRATH_FISSURE_DAMAGE_MULTIPLIER / 5.0) * 5), 5.0)
+	_spawn_rect_telegraph(center, size, angle, _with_alpha(WRATH_COLOR, 0.26), telegraph_delay)
+	_create_damaging_area_after_delay(center, size, angle, fissure_damage, _with_alpha(WRATH_COLOR, 0.38), telegraph_delay, WRATH_FISSURE_DAMAGE_DURATION)
 
 func _create_wrath_bomb(from_position: Vector2, target_position: Vector2, fuse_time: float) -> void:
 	var bomb = Area2D.new()
@@ -1128,6 +1223,11 @@ func _explode_wrath_bomb(bomb, force_boss_damage: bool) -> void:
 
 	if (force_boss_damage or was_pushed) and _is_point_inside_iso_aoe(global_position, explosion_position, WRATH_BOMB_EXPLOSION_RADIUS):
 		take_self_damage(max_health * 0.10)
+	elif not was_pushed and player != null and (phase == 2 or randf() < 0.35):
+		var aftershock_direction = explosion_position.direction_to(player.global_position)
+		if aftershock_direction == Vector2.ZERO:
+			aftershock_direction = Vector2.RIGHT.rotated(randf_range(-PI, PI))
+		_spawn_wrath_fissure(explosion_position, aftershock_direction, _get_wrath_fissure_length() * 0.72, 0.34)
 
 func _should_lust_create_walls() -> bool:
 	var active_wall_count = _get_active_lust_wall_count()
@@ -1352,21 +1452,35 @@ func _start_lust_invulnerability() -> void:
 func _start_greed_treasure_drop(amount: int) -> void:
 	is_performing_action = true
 	current_sub_state = BossSubState.TELEGRAPH
-	var telegraph_duration = MIN_TELEGRAPH_DURATION
+	var telegraph_duration = GREED_TREASURE_TELEGRAPH_DURATION
 	for i in range(amount):
-		var pos = _get_random_arena_position_near_player(80.0, 300.0)
+		var pos = _get_greed_treasure_drop_position(i, amount)
 		var telegraph = _spawn_circle_telegraph(pos, GREED_TREASURE_RADIUS + 14.0, _with_alpha(GREED_COLOR, 0.24), telegraph_duration)
 		await get_tree().create_timer(telegraph_duration, false).timeout
 		_queue_free_if_valid(telegraph)
 		_create_greed_treasure(pos)
-	_finish_action(1.1 if phase == 1 else 0.8)
+	_finish_action(0.8 if phase == 1 else 0.6)
+
+func _get_greed_treasure_drop_position(index: int, amount: int) -> Vector2:
+	if player == null:
+		return _get_random_arena_position_anywhere(GREED_TREASURE_RADIUS + 20.0)
+
+	var route_t = float(index + 1) / float(amount + 1)
+	var route_position = global_position.lerp(player.global_position, route_t)
+	var route_direction = global_position.direction_to(player.global_position)
+	if route_direction == Vector2.ZERO:
+		route_direction = Vector2.RIGHT.rotated(randf_range(-PI, PI))
+	var side = -1.0 if index % 2 == 0 else 1.0
+	var lateral = Vector2(-route_direction.y, route_direction.x) * side * randf_range(38.0, 86.0)
+	var jitter = Vector2.RIGHT.rotated(randf_range(-PI, PI)) * randf_range(0.0, 34.0)
+	return _clamp_to_current_arena(route_position + lateral + jitter, GREED_TREASURE_RADIUS + 24.0)
 
 func _create_greed_treasure(treasure_position: Vector2) -> void:
 	var treasure = Area2D.new()
 	treasure.name = "GreedTreasure"
 	treasure.collision_layer = 0
 	treasure.collision_mask = Global.PLAYER_LAYER_MASK
-	treasure.set_meta("lifetime", 6.6)
+	treasure.set_meta("lifetime", 5.6 if phase == 1 else 4.8)
 
 	_add_circle_collision(treasure, GREED_TREASURE_RADIUS)
 	_add_circle_visual(treasure, GREED_TREASURE_RADIUS, _with_alpha(GREED_COLOR, 0.88), 14)
@@ -1375,6 +1489,7 @@ func _create_greed_treasure(treasure_position: Vector2) -> void:
 	treasure.body_entered.connect(Callable(self, "_on_greed_treasure_body_entered").bind(treasure))
 	_add_child_at_global(_get_vfx_parent(), treasure, treasure_position)
 	active_treasures.append(treasure)
+	_trim_node_array(active_treasures, GREED_TREASURE_LIMIT_PHASE_2 if phase == 2 else GREED_TREASURE_LIMIT_PHASE_1)
 
 func _update_greed_treasures(delta: float) -> void:
 	for treasure in active_treasures.duplicate():
@@ -1401,6 +1516,10 @@ func _collect_greed_treasure_for_player(treasure) -> void:
 	treasure.queue_free()
 	_spawn_burst_particles(player.global_position, _with_alpha(GREED_COLOR, 0.9), 18, 0.28, 110.0)
 	_apply_temporary_player_attack_boost(1.25, 5.0)
+	if player != null and player.has_method("heal") and player.get("max_health") != null:
+		player.heal(float(player.get("max_health")) * GREED_PLAYER_TREASURE_HEAL_RATIO)
+	greed_money_stacks = max(greed_money_stacks - 1, 0)
+	greed_shield_remaining = max(greed_shield_remaining - 1.25, 0.0)
 
 func _collect_greed_treasure_for_boss(treasure) -> void:
 	if not is_instance_valid(treasure):
@@ -1409,8 +1528,16 @@ func _collect_greed_treasure_for_boss(treasure) -> void:
 	treasure.queue_free()
 	greed_money_stacks = min(greed_money_stacks + 1, 8)
 	greed_shield_remaining = max(greed_shield_remaining, 2.6)
+	heal(float(max_health) * GREED_BOSS_TREASURE_HEAL_RATIO)
 	_spawn_marker_on_node(self, 54.0, GREED_COLOR, greed_shield_remaining)
 	_spawn_burst_particles(global_position, _with_alpha(GREED_COLOR, 0.9), 24, 0.32, 130.0)
+	if greed_money_stacks % GREED_JACKPOT_STACK_INTERVAL == 0:
+		_spawn_greed_jackpot_burst()
+
+func _spawn_greed_jackpot_burst() -> void:
+	var projectile_count = 8 + min(greed_money_stacks, 8)
+	_spawn_ring_vfx(global_position, 96.0, _with_alpha(GREED_COLOR, 0.58), 0.35)
+	_spawn_radial_projectiles_from(global_position, projectile_count, float(damage) * GREED_JACKPOT_DAMAGE_MULTIPLIER, _with_alpha(GREED_COLOR, 0.9), 360.0 if phase == 1 else 430.0, randf_range(0.0, TAU))
 
 func _apply_temporary_player_attack_boost(multiplier: float, duration: float) -> void:
 	if player == null:
@@ -1432,26 +1559,26 @@ func _start_greed_coin_rain() -> void:
 	current_sub_state = BossSubState.TELEGRAPH
 	var projectile_count = 8 + greed_money_stacks * 2
 	projectile_count = min(projectile_count, 26)
-	var warning_duration = MIN_TELEGRAPH_DURATION
+	var warning_duration = GREED_COIN_WARNING_DURATION
 	for i in range(projectile_count):
 		var target_position = _get_random_arena_position_anywhere(32.0)
 		var spawn_position = target_position + Vector2(0.0, -340.0 - randf_range(0.0, 120.0))
 		_spawn_falling_warning(target_position, GREED_COLOR, warning_duration)
 		await get_tree().create_timer(warning_duration, false).timeout
-		_spawn_enemy_projectile(spawn_position, Vector2.DOWN, float(damage) * 0.72, _with_alpha(GREED_COLOR, 0.95), 520.0)
-		await get_tree().create_timer(0.3 if phase == 2 else 0.5, false).timeout
-	_finish_action(1.25 if phase == 1 else 0.75)
+		_spawn_enemy_projectile(spawn_position, Vector2.DOWN, float(damage) * 0.72, _with_alpha(GREED_COLOR, 0.95), 585.0 if phase == 1 else 650.0)
+		await get_tree().create_timer(0.35 if phase == 1 else 0.28, false).timeout
+	_finish_action(0.9 if phase == 1 else 0.6)
 
 func _start_greed_tax_mark() -> void:
 	is_performing_action = true
 	greed_tax_active = true
-	greed_tax_timer = 5.0 if phase == 1 else 3.5
+	greed_tax_timer = 4.5 if phase == 1 else 3.0
 	greed_tax_meter = 0.0
 	greed_previous_player_position = player.global_position
 	greed_previous_can_shoot = player.can_shoot
 	_spawn_marker_on_node(player, 42.0, GREED_COLOR, greed_tax_timer)
-	_spawn_action_charge_vfx(global_position, 70.0, GREED_COLOR, 0.8, 26)
-	_finish_action(1.0)
+	_spawn_action_charge_vfx(global_position, 70.0, GREED_COLOR, 0.66, 26)
+	_finish_action(0.8)
 
 func _update_greed_tax(delta: float) -> void:
 	if not greed_tax_active or player == null:
@@ -2503,7 +2630,7 @@ func _spawn_falling_warning(spawn_position: Vector2, color: Color, duration: flo
 func _add_loop_particles(parent: Node, particle_name: String, color: Color, amount: int, lifetime: float, min_velocity: float, max_velocity: float, visual_z_index: int) -> CPUParticles2D:
 	var particles = CPUParticles2D.new()
 	particles.name = particle_name
-	particles.amount = amount
+	particles.amount = Global.get_web_particle_amount(amount)
 	particles.lifetime = lifetime
 	particles.direction = Vector2.UP
 	particles.spread = 180.0
@@ -2617,7 +2744,7 @@ func _spawn_attached_aura(radius: float, color: Color, duration: float) -> void:
 
 func _spawn_burst_particles(spawn_position: Vector2, color: Color, amount: int = 22, lifetime: float = 0.28, velocity_amount: float = 120.0) -> void:
 	var particles = CPUParticles2D.new()
-	particles.amount = amount
+	particles.amount = Global.get_web_particle_amount(amount)
 	particles.one_shot = true
 	particles.explosiveness = 1.0
 	particles.lifetime = lifetime

@@ -36,7 +36,6 @@ const CREDIT_PORTRAIT_DEBORA: Texture2D = preload("res://Sprites/Menu/Debora.png
 const CREDIT_PORTRAIT_LOVISI: Texture2D = preload("res://Sprites/Menu/Lovisi.png")
 const CREDIT_PORTRAIT_CALBO: Texture2D = preload("res://Sprites/Menu/Calbo.png")
 const CREDIT_PORTRAIT_GABRIEL: Texture2D = preload("res://Sprites/Menu/Gabriel.png")
-const MENU_MUSIC_STREAM: AudioStream = preload("res://Music&SFX/Music/Recoil Menu OST.mp3")
 const CREDIT_ENTRIES = [
 	{ "name": "Arthur \"Engispyro\" Pinna", "role_key": "credits.role.game_level_designer" },
 	{ "name": "Debora \"Miya\" Serpa", "role_key": "credits.role.artist_2d" },
@@ -83,23 +82,16 @@ func _ready() -> void:
 	_open_returned_cutscenes_gallery_if_requested()
 
 func _setup_audio() -> void:
-	var music_player = get_node_or_null("MenuMusic") as AudioStreamPlayer
-	if music_player == null:
-		music_player = AudioStreamPlayer.new()
-		music_player.name = "MenuMusic"
-		add_child(music_player)
-	music_player.stream = Global.make_looping_audio_stream(MENU_MUSIC_STREAM)
-	Global.register_audio_player(music_player, Global.GROUP_MUSIC, -5.0)
-	if not music_player.playing:
-		music_player.play()
+	AudioManager.tocar_musica_menu()
+	_setup_button_sfx()
+	Global.apply_audio_volumes()
 
+func _setup_button_sfx() -> void:
 	var button_sfx = get_node_or_null("SFX_Button") as AudioStreamPlayer
 	if button_sfx != null:
 		button_sfx.autoplay = false
 		button_sfx.stop()
 		Global.register_audio_player(button_sfx, Global.GROUP_SFX, 0.0)
-
-	Global.apply_audio_volumes()
 
 func _open_returned_cutscenes_gallery_if_requested() -> void:
 	if not Global.open_cutscenes_gallery_on_menu_ready:

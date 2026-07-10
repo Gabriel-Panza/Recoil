@@ -81,6 +81,7 @@ var fade_layer: CanvasLayer
 var fade_rect: ColorRect
 var starting_arm_layer: CanvasLayer
 var tutorial_layer: CanvasLayer
+var tutorial_continue_requested: bool = false
 var is_transitioning: bool = false
 var movement_tutorial_seen: bool = false
 var elite_tutorial_seen: bool = false
@@ -170,10 +171,6 @@ signal contract_offer_selected(accepted)
 
 const BOSS_CLEAR_HEAL_RATIO: float = 0.20
 const BOSS_SPAWN_DELAY_AFTER_ARENA_ARRIVAL: float = 0.5
-const GAME_MUSIC_STREAM: AudioStream = preload("res://Music&SFX/Music/Recoil Base theme Song.mp3")
-
-var game_music_player: AudioStreamPlayer
-
 func _ready() -> void:
 	_setup_game_music()
 	Global.apply_audio_volumes()
@@ -190,20 +187,12 @@ func _ready() -> void:
 	_update_camera_limits()
 	await _show_starting_arm_selection()
 	await _show_movement_tutorial()
+	await _wait_modal_close_frame()
 	Global.start_run_timer()
 	start_next_wave()
 
 func _setup_game_music() -> void:
-	game_music_player = get_node_or_null("GameMusic") as AudioStreamPlayer
-	if game_music_player == null:
-		game_music_player = AudioStreamPlayer.new()
-		game_music_player.name = "GameMusic"
-		add_child(game_music_player)
-
-	game_music_player.stream = Global.make_looping_audio_stream(GAME_MUSIC_STREAM)
-	Global.register_audio_player(game_music_player, Global.GROUP_MUSIC, -4.0)
-	if not game_music_player.playing:
-		game_music_player.play()
+	AudioManager.tocar_musica_jogo()
 
 func finish_run() -> bool:
 	if run_finished:
@@ -224,6 +213,7 @@ func _show_starting_arm_selection() -> void:
 		return
 
 	get_tree().paused = true
+	Global.keep_music_playing_during_pause()
 	starting_arm_layer = CanvasLayer.new()
 	starting_arm_layer.name = "StartingArmSelectionLayer"
 	starting_arm_layer.layer = 120
@@ -363,8 +353,10 @@ func _show_tutorial_popup(animation_mode: String, title_text: String, info_lines
 	if tutorial_layer != null:
 		return
 
+	tutorial_continue_requested = false
 	var was_paused = get_tree().paused
 	get_tree().paused = true
+	Global.keep_music_playing_during_pause()
 
 	tutorial_layer = CanvasLayer.new()
 	tutorial_layer.name = "TutorialPopupLayer"
@@ -442,14 +434,33 @@ func _show_tutorial_popup(animation_mode: String, title_text: String, info_lines
 	continue_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	continue_button.add_theme_font_size_override("font_size", 18)
 	PopupStyle.apply_button(continue_button)
+	continue_button.pressed.connect(Callable(self, "_on_tutorial_continue_pressed").bind(continue_button))
 	layout.add_child(continue_button)
 
-	await continue_button.pressed
-
+	while not tutorial_continue_requested and is_instance_valid(continue_button):
+		await _wait_modal_close_frame()
 	if tutorial_layer != null:
+		tutorial_layer.visible = false
+		await _wait_modal_close_frame()
 		tutorial_layer.queue_free()
 		tutorial_layer = null
+	await _wait_modal_close_frame()
 	get_tree().paused = was_paused
+
+func _on_tutorial_continue_pressed(button: Button) -> void:
+	if tutorial_continue_requested:
+		return
+
+	tutorial_continue_requested = true
+	if is_instance_valid(button):
+		button.disabled = true
+		button.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+func _wait_modal_close_frame() -> void:
+	var tree = get_tree()
+	if tree == null:
+		return
+	await tree.process_frame
 
 func _create_tutorial_animation_area(animation_mode: String) -> Control:
 	if animation_mode != TutorialAnimation.MODE_MOVEMENT:
@@ -1672,6 +1683,7 @@ func _show_contract_offer(contract: Dictionary) -> bool:
 	contract_choice_accepted = false
 	_create_contract_offer_layer(contract)
 	get_tree().paused = true
+	Global.keep_music_playing_during_pause()
 	await contract_offer_selected
 	_destroy_contract_offer_layer()
 	get_tree().paused = false

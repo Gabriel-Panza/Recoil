@@ -29,7 +29,8 @@ const AUDIO_SLIDER_MAX_VALUE: float = 100.0
 const AUDIO_MUTE_DB: float = -80.0
 const AUDIO_MAX_DB: float = 0.0
 const AUDIO_BASE_VOLUME_META: String = "base_audio_volume_db"
-const WEB_SFX_MAX_POLYPHONY: int = 2
+const WEB_SFX_MAX_POLYPHONY: int = 1
+const WEB_PARTICLE_AMOUNT_MULTIPLIER: float = 0.35
 const DEFAULT_TOOLTIP_WRAP_CHARS: int = 62
 const WEB_SFX_VOICE_LIMITS = {
 	"enemy_footstep": 0,
@@ -42,6 +43,8 @@ var open_cutscenes_gallery_on_menu_ready: bool = false
 var limited_sfx_voice_counts: Dictionary = {}
 var looping_audio_stream_cache: Dictionary = {}
 var enemy_sprite_frames_cache: Dictionary = {}
+var shader_cache: Dictionary = {}
+var paused_music_watchdog_elapsed: float = 0.0
 
 func wrap_tooltip_text(text: String, max_line_chars: int = DEFAULT_TOOLTIP_WRAP_CHARS) -> String:
 	if text == "" or max_line_chars <= 0:
@@ -318,9 +321,15 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_reset_ranking_if_executable_changed()
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if get_tree() != null and get_tree().paused:
+		paused_music_watchdog_elapsed += delta
+		if paused_music_watchdog_elapsed < 0.5:
+			return
+		paused_music_watchdog_elapsed = 0.0
 		_resume_music_players_during_pause()
+	else:
+		paused_music_watchdog_elapsed = 0.0
 
 func configure_music_slider(slider: Range) -> void:
 	_configure_volume_slider(slider, music_volume_slider_value)
@@ -376,6 +385,8 @@ func make_looping_audio_stream(stream: AudioStream) -> AudioStream:
 	var looping_stream = stream.duplicate() as AudioStream
 	if looping_stream is AudioStreamMP3:
 		(looping_stream as AudioStreamMP3).loop = true
+	elif looping_stream is AudioStreamOggVorbis:
+		(looping_stream as AudioStreamOggVorbis).loop = true
 	elif looping_stream is AudioStreamWAV:
 		(looping_stream as AudioStreamWAV).loop_mode = AudioStreamWAV.LOOP_FORWARD
 	looping_audio_stream_cache[cache_key] = looping_stream
@@ -412,6 +423,15 @@ func get_sfx_polyphony_limit(default_limit: int) -> int:
 		return default_limit
 
 	return min(default_limit, WEB_SFX_MAX_POLYPHONY)
+
+func get_web_particle_amount(default_amount: int) -> int:
+	if not is_web_build():
+		return default_amount
+
+	return max(1, int(round(float(default_amount) * WEB_PARTICLE_AMOUNT_MULTIPLIER)))
+
+func should_skip_web_hit_particles() -> bool:
+	return is_web_build()
 
 func is_web_build() -> bool:
 	return OS.has_feature("web")
@@ -470,13 +490,20 @@ func _configure_music_player_for_pause(audio_player: Node) -> void:
 	if not is_instance_valid(audio_player):
 		return
 
-	audio_player.process_mode = Node.PROCESS_MODE_ALWAYS
+	if audio_player.process_mode != Node.PROCESS_MODE_ALWAYS:
+		audio_player.process_mode = Node.PROCESS_MODE_ALWAYS
 	if audio_player is AudioStreamPlayer:
-		(audio_player as AudioStreamPlayer).stream_paused = false
+		var stream_player = audio_player as AudioStreamPlayer
+		if stream_player.stream_paused:
+			stream_player.stream_paused = false
 	elif audio_player is AudioStreamPlayer2D:
-		(audio_player as AudioStreamPlayer2D).stream_paused = false
+		var stream_player_2d = audio_player as AudioStreamPlayer2D
+		if stream_player_2d.stream_paused:
+			stream_player_2d.stream_paused = false
 	elif audio_player is AudioStreamPlayer3D:
-		(audio_player as AudioStreamPlayer3D).stream_paused = false
+		var stream_player_3d = audio_player as AudioStreamPlayer3D
+		if stream_player_3d.stream_paused:
+			stream_player_3d.stream_paused = false
 
 ## Starts a new ranked run timer and marks the run as unsaved.
 func start_run_timer() -> void:

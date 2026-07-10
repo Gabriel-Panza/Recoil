@@ -39,6 +39,7 @@ const ELITE_UNSTABLE_EXPLOSION_DAMAGE: float = 42.0
 const ELITE_VAMPIRIC_HEAL_DAMAGE_RATIO: float = 0.65
 const ELITE_VAMPIRIC_MAX_HEAL_RATIO: float = 0.18
 const ELITE_OUTLINE_WIDTH: float = 2.0
+const ELITE_OUTLINE_SHADER_KEY: String = "elite_outline"
 const FOOTSTEP_SFX_STREAM: AudioStream = preload("res://Music&SFX/SFX/FootStepsGravel_SFX.wav")
 const FOOTSTEP_SFX_VOICE_KEY: String = "enemy_footstep"
 const FOOTSTEP_SFX_MAX_VOICES: int = 5
@@ -751,12 +752,21 @@ func _apply_elite_visuals() -> void:
 		return
 
 	var material = ShaderMaterial.new()
-	var shader = Shader.new()
-	shader.code = "shader_type canvas_item;\nuniform vec4 outline_color : source_color = vec4(1.0);\nuniform float outline_size = 2.0;\nvoid fragment() {\n\tvec4 base_color = texture(TEXTURE, UV);\n\tvec2 pixel = TEXTURE_PIXEL_SIZE * outline_size;\n\tfloat outline_alpha = 0.0;\n\toutline_alpha = max(outline_alpha, texture(TEXTURE, UV + vec2(pixel.x, 0.0)).a);\n\toutline_alpha = max(outline_alpha, texture(TEXTURE, UV + vec2(-pixel.x, 0.0)).a);\n\toutline_alpha = max(outline_alpha, texture(TEXTURE, UV + vec2(0.0, pixel.y)).a);\n\toutline_alpha = max(outline_alpha, texture(TEXTURE, UV + vec2(0.0, -pixel.y)).a);\n\toutline_alpha = max(outline_alpha, texture(TEXTURE, UV + pixel).a);\n\toutline_alpha = max(outline_alpha, texture(TEXTURE, UV - pixel).a);\n\toutline_alpha = max(outline_alpha, texture(TEXTURE, UV + vec2(pixel.x, -pixel.y)).a);\n\toutline_alpha = max(outline_alpha, texture(TEXTURE, UV + vec2(-pixel.x, pixel.y)).a);\n\tvec4 final_color = mix(outline_color, base_color, base_color.a);\n\tfinal_color.a = max(base_color.a, outline_alpha * outline_color.a);\n\tCOLOR = final_color;\n}\n"
-	material.shader = shader
+	material.shader = _get_elite_outline_shader()
 	material.set_shader_parameter("outline_color", ELITE_OUTLINE_COLORS.get(elite_variant, Color.WHITE))
 	material.set_shader_parameter("outline_size", ELITE_OUTLINE_WIDTH)
 	(aparencia as CanvasItem).material = material
+
+func _get_elite_outline_shader() -> Shader:
+	if Global.shader_cache.has(ELITE_OUTLINE_SHADER_KEY):
+		var cached_shader = Global.shader_cache[ELITE_OUTLINE_SHADER_KEY]
+		if cached_shader is Shader:
+			return cached_shader
+
+	var shader = Shader.new()
+	shader.code = "shader_type canvas_item;\nuniform vec4 outline_color : source_color = vec4(1.0);\nuniform float outline_size = 2.0;\nvoid fragment() {\n\tvec4 base_color = texture(TEXTURE, UV);\n\tvec2 pixel = TEXTURE_PIXEL_SIZE * outline_size;\n\tfloat outline_alpha = 0.0;\n\toutline_alpha = max(outline_alpha, texture(TEXTURE, UV + vec2(pixel.x, 0.0)).a);\n\toutline_alpha = max(outline_alpha, texture(TEXTURE, UV + vec2(-pixel.x, 0.0)).a);\n\toutline_alpha = max(outline_alpha, texture(TEXTURE, UV + vec2(0.0, pixel.y)).a);\n\toutline_alpha = max(outline_alpha, texture(TEXTURE, UV + vec2(0.0, -pixel.y)).a);\n\toutline_alpha = max(outline_alpha, texture(TEXTURE, UV + pixel).a);\n\toutline_alpha = max(outline_alpha, texture(TEXTURE, UV - pixel).a);\n\toutline_alpha = max(outline_alpha, texture(TEXTURE, UV + vec2(pixel.x, -pixel.y)).a);\n\toutline_alpha = max(outline_alpha, texture(TEXTURE, UV + vec2(-pixel.x, pixel.y)).a);\n\tvec4 final_color = mix(outline_color, base_color, base_color.a);\n\tfinal_color.a = max(base_color.a, outline_alpha * outline_color.a);\n\tCOLOR = final_color;\n}\n"
+	Global.shader_cache[ELITE_OUTLINE_SHADER_KEY] = shader
+	return shader
 
 func _trigger_unstable_death_explosion() -> void:
 	var explosion_position = global_position
@@ -787,7 +797,7 @@ func _spawn_elite_explosion_vfx(explosion_position: Vector2) -> void:
 	ring.global_position = explosion_position
 
 	var particles = CPUParticles2D.new()
-	particles.amount = 48
+	particles.amount = Global.get_web_particle_amount(48)
 	particles.one_shot = true
 	particles.explosiveness = 1.0
 	particles.lifetime = 0.34

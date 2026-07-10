@@ -1,0 +1,19 @@
+[remap]
+
+importer="oggvorbisstr"
+type="AudioStreamOggVorbis"
+uid="uid://0vtu3o0hbuft"
+path="res://.godot/imported/Recoil Menu OST.ogg-f611bb0957dc87cd060ba3ad92dd1a6e.oggvorbisstr"
+
+[deps]
+
+source_file="res://Music&SFX/Music/Recoil Menu OST.ogg"
+dest_files=["res://.godot/imported/Recoil Menu OST.ogg-f611bb0957dc87cd060ba3ad92dd1a6e.oggvorbisstr"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

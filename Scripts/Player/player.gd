@@ -2616,7 +2616,7 @@ func _get_ground_area_vfx_parent() -> Node:
 func _spawn_burst_particles(spawn_position: Vector2, color: Color, amount: int = 24, lifetime: float = 0.35, velocity: float = 120.0) -> void:
 	var particles = CPUParticles2D.new()
 	particles.global_position = spawn_position
-	particles.amount = amount
+	particles.amount = Global.get_web_particle_amount(amount)
 	particles.one_shot = true
 	particles.explosiveness = 1.0
 	particles.lifetime = lifetime
@@ -2647,7 +2647,7 @@ func _spawn_field_vfx(center: Vector2, radius: float, color: Color, duration: fl
 	_register_active_ability_vfx(source_option_id, ring_vfx)
 
 	var particles = CPUParticles2D.new()
-	particles.amount = 80
+	particles.amount = Global.get_web_particle_amount(80)
 	particles.lifetime = 1.0
 	particles.direction = Vector2.UP
 	particles.spread = 180.0
@@ -2685,7 +2685,7 @@ func _spawn_attached_aura(radius: float, color: Color, duration: float, source_o
 
 	_add_ring_to_node(aura, radius, color, 2.0)
 	var particles = CPUParticles2D.new()
-	particles.amount = 64
+	particles.amount = Global.get_web_particle_amount(64)
 	particles.lifetime = 0.85
 	particles.direction = Vector2.UP
 	particles.spread = 180.0
@@ -3028,7 +3028,7 @@ func _ensure_sloth_slow_aura_vfx() -> void:
 	_add_ring_to_node(sloth_aura_vfx, SLOW_AURA_RADIUS, Color(0.25, 0.95, 1.0, 0.4), 2.0)
 
 	var particles = CPUParticles2D.new()
-	particles.amount = 64
+	particles.amount = Global.get_web_particle_amount(64)
 	particles.lifetime = 1.1
 	particles.direction = Vector2.UP
 	particles.spread = 180.0
@@ -3080,7 +3080,7 @@ func _spawn_clone_vfx(duration: float) -> void:
 
 	_add_ring_to_node(envy_clone_vfx, 36.0, Color(0.4, 0.95, 1.0, 0.44), 2.0)
 	var particles = CPUParticles2D.new()
-	particles.amount = 36
+	particles.amount = Global.get_web_particle_amount(36)
 	particles.lifetime = 0.7
 	particles.direction = Vector2.UP
 	particles.spread = 180.0

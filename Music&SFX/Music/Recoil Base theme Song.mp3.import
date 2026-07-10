@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/Recoil Base theme Song.mp3-ff7a2164b5e0fd8258
 
 [params]
 
-loop=false
+loop=true
 loop_offset=0
 bpm=0
 beat_count=0

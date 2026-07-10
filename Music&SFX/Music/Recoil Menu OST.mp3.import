@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/Recoil Menu OST.mp3-5e1dddccbe25d7a0075675558
 
 [params]
 
-loop=false
+loop=true
 loop_offset=0
 bpm=0
 beat_count=0

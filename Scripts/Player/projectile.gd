@@ -224,10 +224,12 @@ func _configure_projectile_vfx() -> void:
 		return
 
 	if self.is_in_group(Global.GROUP_ENEMY_PROJECTILE) and self.is_in_group(Global.GROUP_PROJECTILE):
-		particles.amount = 72
+		particles.amount = Global.get_web_particle_amount(72)
 		particles.lifetime = 0.42
 		particles.initial_velocity_min = 18.0
 		particles.initial_velocity_max = 70.0
+	elif Global.is_web_build():
+		particles.amount = Global.get_web_particle_amount(particles.amount)
 
 	if self.has_meta("vfx_color"):
 		particles.color = self.get_meta("vfx_color")
@@ -239,6 +241,9 @@ func _configure_projectile_vfx() -> void:
 	particles.emitting = true
 
 func _spawn_hit_particles(hit_position: Vector2) -> void:
+	if Global.should_skip_web_hit_particles():
+		return
+
 	var burst = CPUParticles2D.new()
 	burst.global_position = hit_position
 	burst.amount = 18
