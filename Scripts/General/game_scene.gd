@@ -169,8 +169,8 @@ var debug_status_label: Label
 signal starting_arm_selected
 signal contract_offer_selected(accepted)
 
-const BOSS_CLEAR_HEAL_RATIO: float = 0.20
-const BOSS_SPAWN_DELAY_AFTER_ARENA_ARRIVAL: float = 0.5
+const BOSS_CLEAR_HEAL_RATIO: float = 0.05
+const BOSS_SPAWN_DELAY_AFTER_ARENA_ARRIVAL: float = 0.3
 func _ready() -> void:
 	_setup_game_music()
 	Global.apply_audio_volumes()
@@ -1267,7 +1267,8 @@ func _build_serpent_anchor_points(size: Vector2) -> Array:
 	var anchors = []
 	var amplitude = size.x * 0.26
 	var half_height = size.y * 0.5
-	for t in [0.12, 0.28, 0.44, 0.6, 0.76, 0.9]:
+	for i in range(1, 24):
+		var t = float(i) / 24.0
 		anchors.append(_get_serpent_center_point(float(t), amplitude, half_height))
 	return anchors
 

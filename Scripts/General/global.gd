@@ -91,7 +91,7 @@ const STARTING_ARM_DATA = {
 		"attack_damage": 33.0,
 		"base_fire_rate": 0.5,
 		"min_fire_rate": 0.3,
-		"base_recoil_force": 380.0,
+		"base_recoil_force": 390.0,
 		"friction": 900.0,
 		"attack_speed_upgrade_multiplier": 0.3,
 		"unstable_projectiles": false
@@ -101,7 +101,7 @@ const STARTING_ARM_DATA = {
 		"description": "Slow shots with high damage and strong recoil for big repositioning plays.",
 		"attack_damage": 90.0,
 		"base_fire_rate": 2.15,
-		"min_fire_rate": 1.65,
+		"min_fire_rate": 1.75,
 		"base_recoil_force": 750.0,
 		"friction": 600.0,
 		"attack_speed_upgrade_multiplier": 0.7,
@@ -112,8 +112,8 @@ const STARTING_ARM_DATA = {
 		"description": "Projectiles pierce one target and ricochet once, but come back dangerous.",
 		"attack_damage": 45.0,
 		"base_fire_rate": 1.35,
-		"min_fire_rate": 0.85,
-		"base_recoil_force": 577.5,
+		"min_fire_rate": 1.05,
+		"base_recoil_force": 580.0,
 		"friction": 750.0,
 		"attack_speed_upgrade_multiplier": 0.5,
 		"unstable_projectiles": true

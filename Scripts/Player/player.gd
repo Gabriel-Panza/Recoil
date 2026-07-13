@@ -88,7 +88,7 @@ const ARM_MUTATION_DATA = {
 	"fast": {
 		1: {
 			"name": "Nervous Aim",
-			"description": "Shots mark enemies for a few seconds. Nearby projectiles curve slightly toward marked targets."
+			"description": "Shots mark enemies for a few seconds. Nearby projectiles curve toward marked targets or point-blank enemies."
 		},
 		2: {
 			"name": "Rhythm Pierce",
@@ -102,7 +102,7 @@ const ARM_MUTATION_DATA = {
 	"heavy": {
 		1: {
 			"name": "Impact Shard",
-			"description": "The first impact of each heavy shot releases cone fragments backward."
+			"description": "The first impact of each heavy shot releases cone fragments forward through the target."
 		},
 		2: {
 			"name": "Execution Kick",
@@ -131,7 +131,9 @@ const ARM_MUTATION_DATA = {
 const FAST_MARK_META: String = "fast_nervous_mark_until_msec"
 const FAST_MARK_DURATION_MSEC: int = 3000
 const FAST_HOMING_RANGE: float = 420.0
-const FAST_HOMING_TURN_RATE: float = 5.4
+const FAST_HOMING_TURN_RATE: float = 6.8
+const FAST_HOMING_CLOSE_PRIORITY_RANGE: float = 96.0
+const FAST_HOMING_POINT_BLANK_RANGE: float = 62.0
 const FAST_RHYTHM_SHOT_WINDOW_MSEC: int = 1000
 const FAST_RHYTHM_SHOTS_REQUIRED: int = 6
 const FAST_RHYTHM_PIERCE_BONUS: int = 1
@@ -141,15 +143,17 @@ const FAST_SPLIT_TRIGGER_DAMAGE_MULTIPLIER: float = 0.75
 const HEAVY_IMPACT_SHARD_COUNT: int = 3
 const HEAVY_IMPACT_SHARD_DAMAGE_MULTIPLIER: float = 0.3
 const HEAVY_IMPACT_SHARD_ANGLE_SPREAD: float = 45.0
-const HEAVY_EXECUTION_RADIUS: float = 128.0
-const HEAVY_EXECUTION_DAMAGE_MULTIPLIER: float = 0.22
-const HEAVY_EXECUTION_KNOCKBACK_FORCE: float = 340.0
-const HEAVY_PENITENCE_READY_WINDOW: float = 0.34
+const HEAVY_IMPACT_SHARD_FORWARD_OFFSET: float = 36.0
+const HEAVY_IMPACT_SHARD_SPREAD_OFFSET: float = 6.0
+const HEAVY_EXECUTION_RADIUS: float = 120.0
+const HEAVY_EXECUTION_DAMAGE_MULTIPLIER: float = 0.2
+const HEAVY_EXECUTION_KNOCKBACK_FORCE: float = 400.0
+const HEAVY_PENITENCE_READY_WINDOW: float = 0.35
 const HEAVY_PENITENCE_DAMAGE_MULTIPLIER: float = 1.1
 const HEAVY_PENITENCE_PIERCE_BONUS: int = 2
-const HEAVY_PENITENCE_DRAG_RADIUS: float = 145.0
-const HEAVY_PENITENCE_DRAG_DAMAGE_MULTIPLIER: float = 0.18
-const HEAVY_PENITENCE_DRAG_FORCE: float = 260.0
+const HEAVY_PENITENCE_DRAG_RADIUS: float = 150.0
+const HEAVY_PENITENCE_DRAG_DAMAGE_MULTIPLIER: float = 0.2
+const HEAVY_PENITENCE_DRAG_FORCE: float = 300.0
 const UNSTABLE_RESONANCE_META: String = "unstable_resonance_until_msec"
 const UNSTABLE_MEMORY_ECHO_DELAY: float = 0.12
 const UNSTABLE_MEMORY_ECHO_DAMAGE_MULTIPLIER: float = 0.35
@@ -1333,7 +1337,7 @@ func get_fast_mutation_homing_direction(projectile_position: Vector2, current_di
 	if target_direction == Vector2.ZERO:
 		return current_direction
 
-	var turn_amount = clampf(FAST_HOMING_TURN_RATE * delta, 0.0, 0.24)
+	var turn_amount = clampf(FAST_HOMING_TURN_RATE * delta, 0.0, 0.32)
 	return current_direction.lerp(target_direction, turn_amount).normalized()
 
 func get_unstable_ricochet_homing_direction(projectile_position: Vector2, current_direction: Vector2, delta: float) -> Vector2:
@@ -1356,6 +1360,9 @@ func _get_best_fast_marked_target(projectile_position: Vector2, current_directio
 	var best_target: Node2D = null
 	var best_score = INF
 	var max_distance_sq = FAST_HOMING_RANGE * FAST_HOMING_RANGE
+	var close_priority_distance_sq = FAST_HOMING_CLOSE_PRIORITY_RANGE * FAST_HOMING_CLOSE_PRIORITY_RANGE
+	var point_blank_distance_sq = FAST_HOMING_POINT_BLANK_RANGE * FAST_HOMING_POINT_BLANK_RANGE
+	var normalized_direction = current_direction.normalized()
 
 	for enemy in get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
 		if not is_instance_valid(enemy) or not (enemy is Node2D):
@@ -1363,26 +1370,34 @@ func _get_best_fast_marked_target(projectile_position: Vector2, current_directio
 		if enemy.get("is_dead") != null and bool(enemy.get("is_dead")):
 			continue
 
-		var mark_until = int(enemy.get_meta(FAST_MARK_META, 0))
-		if mark_until <= now_msec:
-			if enemy.has_meta(FAST_MARK_META):
-				enemy.remove_meta(FAST_MARK_META)
-			continue
-
 		var enemy_node = enemy as Node2D
-		var to_enemy = projectile_position.direction_to(enemy_node.global_position)
-		if to_enemy == Vector2.ZERO:
-			continue
-
 		var distance_sq = projectile_position.distance_squared_to(enemy_node.global_position)
 		if distance_sq > max_distance_sq:
 			continue
 
-		var alignment = current_direction.normalized().dot(to_enemy)
-		if alignment < -0.2:
+		var mark_until = int(enemy.get_meta(FAST_MARK_META, 0))
+		var is_marked = mark_until > now_msec
+		if not is_marked:
+			if enemy.has_meta(FAST_MARK_META):
+				enemy.remove_meta(FAST_MARK_META)
+			if distance_sq > point_blank_distance_sq:
+				continue
+
+		var to_enemy = projectile_position.direction_to(enemy_node.global_position)
+		if to_enemy == Vector2.ZERO:
 			continue
 
-		var score = distance_sq / max(alignment + 1.1, 0.1)
+		var alignment = normalized_direction.dot(to_enemy)
+		var is_close_priority = distance_sq <= close_priority_distance_sq
+		var minimum_alignment = -0.62 if is_close_priority else -0.18
+		if alignment < minimum_alignment:
+			continue
+
+		var score = distance_sq / max(alignment + 1.18, 0.16)
+		if is_close_priority:
+			score *= 0.18
+		if not is_marked:
+			score *= 1.25
 		if score < best_score:
 			best_score = score
 			best_target = enemy_node
@@ -1430,7 +1445,7 @@ func on_player_projectile_hit_enemy(enemy: Node, projectile: Node, dealt_damage:
 		_apply_fast_nervous_mark(enemy)
 
 	if bool(projectile.get_meta("heavy_impact_shards_enabled", false)):
-		_try_spawn_heavy_impact_shards(projectile, hit_position, dealt_damage)
+		_try_spawn_heavy_impact_shards(projectile, hit_position, dealt_damage, enemy)
 
 	if bool(projectile.get_meta("heavy_execution_blast_enabled", false)) and _is_enemy_dead(enemy):
 		_trigger_heavy_execution_blast(hit_position, dealt_damage)
@@ -1460,13 +1475,14 @@ func _apply_fast_nervous_mark(enemy: Node) -> void:
 	if enemy is Node2D:
 		_spawn_burst_particles((enemy as Node2D).global_position, Color(0.95, 1.0, 0.24, 0.78), 6, 0.14, 55.0)
 
-func _try_spawn_heavy_impact_shards(projectile: Node, hit_position: Vector2, dealt_damage: float) -> void:
+func _try_spawn_heavy_impact_shards(projectile: Node, hit_position: Vector2, dealt_damage: float, hit_enemy: Node = null) -> void:
 	if bool(projectile.get_meta("heavy_impact_shards_spent", false)):
 		return
 
 	projectile.set_meta("heavy_impact_shards_spent", true)
 	var projectile_direction = _get_projectile_direction(projectile)
-	var base_angle = (-projectile_direction.normalized()).angle()
+	var base_angle = projectile_direction.normalized().angle()
+	var shard_origin = hit_position + projectile_direction.normalized() * HEAVY_IMPACT_SHARD_FORWARD_OFFSET
 	var spread = deg_to_rad(HEAVY_IMPACT_SHARD_ANGLE_SPREAD)
 	var shard_damage = max(dealt_damage * HEAVY_IMPACT_SHARD_DAMAGE_MULTIPLIER, 1.0)
 
@@ -1474,8 +1490,8 @@ func _try_spawn_heavy_impact_shards(projectile: Node, hit_position: Vector2, dea
 		var t = 0.0 if HEAVY_IMPACT_SHARD_COUNT <= 1 else float(i) / float(HEAVY_IMPACT_SHARD_COUNT - 1) - 0.5
 		var shard_angle = base_angle + spread * t
 		var shard_direction = Vector2(cos(shard_angle), sin(shard_angle))
-		_spawn_projectile(
-			hit_position + shard_direction * 10.0,
+		var shard = _spawn_projectile(
+			shard_origin + shard_direction * HEAVY_IMPACT_SHARD_SPREAD_OFFSET,
 			shard_angle,
 			shard_damage,
 			false,
@@ -1486,6 +1502,8 @@ func _try_spawn_heavy_impact_shards(projectile: Node, hit_position: Vector2, dea
 				"scale_multiplier": 0.65
 			}
 		)
+		if shard != null and is_instance_valid(hit_enemy) and shard.get("pierced_targets") != null:
+			shard.pierced_targets.append(hit_enemy)
 	_spawn_burst_particles(hit_position, Color(1.0, 0.5, 0.2, 0.78), 12, 0.18, 90.0)
 
 func _trigger_heavy_execution_blast(center: Vector2, dealt_damage: float) -> void:

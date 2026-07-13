@@ -51,17 +51,22 @@ const LUST_WALL_EXISTING_CHANCE_PENALTY: float = 0.12
 const LUST_WALL_MIN_CHANCE: float = 0.04
 const LUST_WALL_STOCK_LIMIT_PHASE_1: int = 4
 const LUST_WALL_STOCK_LIMIT_PHASE_2: int = 5
+const LUST_NAVIGATION_MARGIN: float = 20.0
+const LUST_NAVIGATION_SAMPLE_STEP: float = 30.0
+const LUST_NAVIGATION_WAYPOINT_REACHED: float = 36.0
+const LUST_NAVIGATION_FALLBACK_DISTANCE: float = 150.0
+const LUST_NAVIGATION_REPATH_INTERVAL: float = 0.18
 const SLOTH_SLOW_ZONE_RADIUS: float = 100.0
-const SLOTH_SUMMON_SPAWN_INTERVAL: float = 3.0
+const SLOTH_SUMMON_SPAWN_INTERVAL: float = 2.5
 const SLOTH_ZONE_TELEGRAPH_DURATION: float = 0.75
-const SLOTH_ZONE_SPAWN_INTERVAL: float = 1.5
-const SLOTH_SLOW_ZONE_LIFETIME: float = 15.0
+const SLOTH_ZONE_SPAWN_INTERVAL: float = 1.25
+const SLOTH_SLOW_ZONE_LIFETIME: float = 12.0
 const SLOTH_BOSS_PLAYER_DASH_SPEED_MULTIPLIER: float = 0.75
 const SLOTH_BOSS_PLAYER_VELOCITY_MULTIPLIER: float = 0.75
 const SLOTH_BOSS_ZONE_DPS: float = 2.0
-const SLOTH_BOSS_ENEMY_SLOW_EFFECT_RATIO: float = 0.1
+const SLOTH_BOSS_ENEMY_SLOW_EFFECT_RATIO: float = 0.25
 const SLOTH_BOSS_ENEMY_SLOW_REFERENCE_DASH_MULTIPLIER: float = 0.45
-const GLUTTONY_FOOD_SPAWN_INTERVAL: float = 3.25
+const GLUTTONY_FOOD_SPAWN_INTERVAL: float = 3.0
 const GLUTTONY_FOOD_SPEED_PHASE_1: float = 137.5
 const GLUTTONY_FOOD_SPEED_PHASE_2: float = 157.5
 const GLUTTONY_FOOD_DASH_DURATION: float = 0.3
@@ -74,16 +79,20 @@ const ENVY_CLONE_MAX_HEALTH: float = 180.0
 const ENVY_CLONE_VISUAL_MODULATE: Color = Color(0.55, 0.95, 1.0, 0.56)
 const ENVY_PINCER_TELEGRAPH_DURATION: float = 0.75
 const ENVY_SWAP_TELEGRAPH_DURATION: float = 0.75
-const ENVY_ATTACK_DISTANCE_PHASE_1: float = 115.0
-const ENVY_ATTACK_DISTANCE_PHASE_2: float = 105.0
+const ENVY_ATTACK_DISTANCE_PHASE_1: float = 110.0
+const ENVY_ATTACK_DISTANCE_PHASE_2: float = 100.0
 const ENVY_ATTACK_READY_BUFFER: float = 70.0
-const GREED_TREASURE_RADIUS: float = 16.0
+const GREED_TREASURE_RADIUS: float = 20.0
 const GREED_TREASURE_LIMIT_PHASE_1: int = 5
-const GREED_TREASURE_LIMIT_PHASE_2: int = 7
-const GREED_TREASURE_TELEGRAPH_DURATION: float = 0.56
-const GREED_COIN_WARNING_DURATION: float = 0.54
-const GREED_PLAYER_TREASURE_HEAL_RATIO: float = 0.045
-const GREED_BOSS_TREASURE_HEAL_RATIO: float = 0.035
+const GREED_TREASURE_LIMIT_PHASE_2: int = 8
+const GREED_TREASURE_TELEGRAPH_DURATION: float = 1.0
+const GREED_COIN_WARNING_DURATION: float = 1.0
+const GREED_TREASURE_BOSS_COLLECT_RADIUS: float = 50.0
+const GREED_COIN_RAIN_CLUSTER_RADIUS_PHASE_1: float = 116.0
+const GREED_COIN_RAIN_CLUSTER_RADIUS_PHASE_2: float = 142.0
+const GREED_COIN_RAIN_WARNING_RADIUS: float = 18.0
+const GREED_PLAYER_TREASURE_HEAL_RATIO: float = 0.01
+const GREED_BOSS_TREASURE_HEAL_RATIO: float = 0.02
 const GREED_JACKPOT_STACK_INTERVAL: int = 3
 const GREED_JACKPOT_DAMAGE_MULTIPLIER: float = 0.55
 const MIN_TELEGRAPH_DURATION: float = 0.75
@@ -131,7 +140,7 @@ const HEAL_FEEDBACK_COLOR: Color = Color(0.18, 1.0, 0.32, 1.0)
 
 const BOSS_CONFIG = {
 	1: { "max_health": 500, "speed": 0.0, "damage": 40, "state": BossState.SLOTH, "animation": "pecado1", "sprite_sheet": SLOTH_BOSS_SHEET, "frame_size": Vector2i(44, 58), "frame_count": 8, "visual_scale": Vector2(1.35, 1.35) },
-	2: { "max_health": 1050, "speed": 90.0, "damage": 50, "state": BossState.GLUTTONY, "animation": "pecado2", "sprite_sheet": GLUTTONY_BOSS_SHEET, "frame_size": Vector2i(150, 140), "frame_count": 4, "visual_scale": Vector2(0.82, 0.82) },
+	2: { "max_health": 1000, "speed": 90.0, "damage": 50, "state": BossState.GLUTTONY, "animation": "pecado2", "sprite_sheet": GLUTTONY_BOSS_SHEET, "frame_size": Vector2i(150, 140), "frame_count": 4, "visual_scale": Vector2(0.82, 0.82), "hurtbox_scale": Vector2(1.2, 1.15) },
 	3: { "max_health": 1200, "speed": 90.0, "damage": 50, "state": BossState.ENVY, "animation": "pecado3", "sprite_sheet": ENVY_BOSS_SHEET, "frame_size": Vector2i(69, 98), "frame_count": 4, "visual_scale": Vector2(0.9, 0.9) },
 	4: { "max_health": 1500, "speed": 90.0, "damage": 90, "state": BossState.WRATH, "animation": "pecado4", "sprite_sheet": WRATH_BOSS_SHEET, "frame_size": Vector2i(78, 74), "frame_count": 8, "visual_scale": Vector2(1.08, 1.08) },
 	5: { "max_health": 2000, "speed": 90.0, "damage": 66, "state": BossState.LUST, "animation": "pecado5", "sprite_sheet": LUST_BOSS_SHEET, "frame_size": Vector2i(60, 80), "frame_count": 6, "visual_scale": Vector2(1.08, 1.08) },
@@ -170,6 +179,9 @@ var is_gluttony_food_dashing: bool = false
 var active_lust_walls: Array = []
 var lust_invulnerability_cooldown: float = 4.0
 var lust_invulnerability_active: bool = false
+var lust_navigation_waypoint: Vector2 = Vector2.ZERO
+var lust_navigation_repath_timer: float = 0.0
+var lust_navigation_anchor_cache: Array = []
 var envy_clone: Area2D
 var envy_clone_fire_cooldown: float = 0.8
 var envy_clone_shot_pending: bool = false
@@ -227,6 +239,7 @@ func _configure_boss_for_current_sin() -> void:
 		aparencia.scale = visual_scale
 		var frame_size = config.get("frame_size", Vector2i(24, 24)) as Vector2i
 		boss_health_bar_y_offset = -float(frame_size.y) * visual_scale.y * 0.5 - 12.0
+	_configure_boss_hurtbox(config)
 	_play_boss_animation(str(config["animation"]))
 
 func _configure_boss_sprite_frames(config: Dictionary) -> void:
@@ -254,6 +267,25 @@ func _configure_boss_sprite_frames(config: Dictionary) -> void:
 	aparencia.sprite_frames = sprite_frames
 	aparencia.animation = animation_name
 	aparencia.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+
+func _configure_boss_hurtbox(config: Dictionary) -> void:
+	var hurtbox_scale = config.get("hurtbox_scale", Vector2.ONE) as Vector2
+	if hurtbox_scale == Vector2.ONE:
+		return
+
+	var collision = get_node_or_null("Hurtbox/CollisionShape2D")
+	if collision == null or not (collision is CollisionShape2D) or collision.shape == null:
+		return
+
+	var shape = collision.shape.duplicate()
+	if shape is CapsuleShape2D:
+		shape.radius = max(shape.radius * hurtbox_scale.x, 4.0)
+		shape.height = max(shape.height * hurtbox_scale.y, shape.radius * 2.0)
+	elif shape is CircleShape2D:
+		shape.radius = max(shape.radius * max(hurtbox_scale.x, hurtbox_scale.y), 4.0)
+	elif shape is RectangleShape2D:
+		shape.size *= hurtbox_scale
+	collision.shape = shape
 
 func _begin_intro() -> void:
 	current_sub_state = BossSubState.INTRO
@@ -405,7 +437,7 @@ func handle_wrath(delta: float) -> void:
 			_start_wrath_fissure_combo(3)
 
 func handle_lust(delta: float) -> void:
-	_move_toward_player(delta, 0.7)
+	_move_lust_around_arena(delta, 0.7)
 	if not lust_invulnerability_active:
 		lust_invulnerability_cooldown = max(lust_invulnerability_cooldown - delta, 0.0)
 		if lust_invulnerability_cooldown <= 0.0:
@@ -517,6 +549,129 @@ func _move_toward_player(_delta: float, speed_multiplier: float = 1.0) -> void:
 	var direction = global_position.direction_to(player.global_position)
 	velocity = direction * _get_current_speed(speed_multiplier)
 	move_and_slide()
+
+func _move_lust_around_arena(delta: float, speed_multiplier: float = 1.0) -> void:
+	if player == null:
+		return
+
+	lust_navigation_repath_timer = max(lust_navigation_repath_timer - delta, 0.0)
+	if lust_navigation_waypoint == Vector2.ZERO \
+			or lust_navigation_repath_timer <= 0.0 \
+			or global_position.distance_to(lust_navigation_waypoint) <= LUST_NAVIGATION_WAYPOINT_REACHED:
+		lust_navigation_waypoint = _get_lust_navigation_target()
+		lust_navigation_repath_timer = LUST_NAVIGATION_REPATH_INTERVAL
+
+	var target_position = lust_navigation_waypoint
+	var direction = global_position.direction_to(target_position)
+	if direction == Vector2.ZERO:
+		velocity = Vector2.ZERO
+	else:
+		velocity = direction * _get_current_speed(speed_multiplier)
+	move_and_slide()
+
+func _get_lust_navigation_target() -> Vector2:
+	var player_position = _clamp_to_current_arena(player.global_position, LUST_NAVIGATION_MARGIN)
+	var anchor_target = _get_lust_serpent_anchor_target(player_position)
+	if anchor_target != Vector2.ZERO:
+		return anchor_target
+
+	if _is_segment_safe_in_current_arena(global_position, player_position, LUST_NAVIGATION_MARGIN):
+		return player_position
+
+	return _get_lust_fallback_navigation_target(player_position)
+
+func _get_lust_serpent_anchor_target(player_position: Vector2) -> Vector2:
+	var anchors = _get_current_arena_anchor_positions()
+	if anchors.is_empty():
+		return Vector2.ZERO
+
+	anchors.sort_custom(func(a, b): return (a as Vector2).y < (b as Vector2).y)
+	var boss_index = _get_closest_anchor_y_index(anchors, global_position)
+	var player_index = _get_closest_anchor_y_index(anchors, player_position)
+	if boss_index < 0 or player_index < 0:
+		return Vector2.ZERO
+
+	var step_direction = signi(player_index - boss_index)
+	if step_direction == 0:
+		if _is_segment_safe_in_current_arena(anchors[boss_index], player_position, LUST_NAVIGATION_MARGIN):
+			return player_position
+		step_direction = 1 if player_position.y > global_position.y else -1
+
+	var candidate_index = clampi(boss_index + step_direction, 0, anchors.size() - 1)
+	while candidate_index != player_index:
+		var candidate = anchors[candidate_index] as Vector2
+		if candidate.distance_squared_to(global_position) > LUST_NAVIGATION_WAYPOINT_REACHED * LUST_NAVIGATION_WAYPOINT_REACHED:
+			break
+		candidate_index = clampi(candidate_index + step_direction, 0, anchors.size() - 1)
+
+	var candidate = anchors[candidate_index] as Vector2
+	if candidate_index == player_index and _is_segment_safe_in_current_arena(candidate, player_position, LUST_NAVIGATION_MARGIN):
+		return player_position
+	return candidate
+
+func _get_closest_anchor_y_index(anchors: Array, position: Vector2) -> int:
+	var closest_index = -1
+	var closest_distance = INF
+	for i in range(anchors.size()):
+		var distance = absf(position.y - (anchors[i] as Vector2).y)
+		if distance < closest_distance:
+			closest_distance = distance
+			closest_index = i
+	return closest_index
+
+func _get_lust_fallback_navigation_target(target_position: Vector2) -> Vector2:
+	var direction = global_position.direction_to(target_position)
+	if direction == Vector2.ZERO:
+		direction = Vector2.DOWN
+
+	var best_position = global_position
+	var best_score = INF
+	for angle_degrees in [45.0, -45.0, 90.0, -90.0, 135.0, -135.0, 180.0]:
+		var candidate = _clamp_to_current_arena(global_position + direction.rotated(deg_to_rad(angle_degrees)) * LUST_NAVIGATION_FALLBACK_DISTANCE, LUST_NAVIGATION_MARGIN)
+		if not _is_segment_safe_in_current_arena(global_position, candidate, LUST_NAVIGATION_MARGIN):
+			continue
+		var score = candidate.distance_squared_to(target_position)
+		if score < best_score:
+			best_score = score
+			best_position = candidate
+
+	return best_position
+
+func _get_current_arena_anchor_positions() -> Array:
+	if not lust_navigation_anchor_cache.is_empty():
+		return lust_navigation_anchor_cache
+
+	var tree = get_tree()
+	var scene = tree.current_scene if tree != null else null
+	if scene == null:
+		return []
+
+	var current_arena_node = scene.get("current_arena")
+	if not (current_arena_node is Node2D):
+		return []
+
+	var anchors: Array = []
+	if scene.has_method("_get_current_arena_local_anchor_points"):
+		for local_anchor in scene.call("_get_current_arena_local_anchor_points"):
+			var anchor_position = (current_arena_node as Node2D).to_global(local_anchor)
+			anchor_position = _clamp_to_current_arena(anchor_position, LUST_NAVIGATION_MARGIN)
+			if _is_inside_current_arena(anchor_position, LUST_NAVIGATION_MARGIN):
+				anchors.append(anchor_position)
+
+	var center = _get_arena_center()
+	if anchors.is_empty() and _is_inside_current_arena(center, LUST_NAVIGATION_MARGIN):
+		anchors.append(center)
+	lust_navigation_anchor_cache = anchors
+	return anchors
+
+func _is_segment_safe_in_current_arena(from_position: Vector2, to_position: Vector2, margin: float) -> bool:
+	var distance = from_position.distance_to(to_position)
+	var steps = max(1, int(ceil(distance / LUST_NAVIGATION_SAMPLE_STEP)))
+	for i in range(1, steps + 1):
+		var t = float(i) / float(steps)
+		if not _is_inside_current_arena(from_position.lerp(to_position, t), margin):
+			return false
+	return true
 
 func _move_pride_for_current_attack(delta: float) -> void:
 	match pride_movement_mode:
@@ -1479,12 +1634,12 @@ func _create_greed_treasure(treasure_position: Vector2) -> void:
 	var treasure = Area2D.new()
 	treasure.name = "GreedTreasure"
 	treasure.collision_layer = 0
-	treasure.collision_mask = Global.PLAYER_LAYER_MASK
+	treasure.collision_mask = Global.PLAYER_LAYER_MASK | Global.ENEMY_LAYER_MASK
 	treasure.set_meta("lifetime", 5.6 if phase == 1 else 4.8)
 
 	_add_circle_collision(treasure, GREED_TREASURE_RADIUS)
 	_add_circle_visual(treasure, GREED_TREASURE_RADIUS, _with_alpha(GREED_COLOR, 0.88), 14)
-	_add_ring_visual(treasure, GREED_TREASURE_RADIUS + 4.0, _with_alpha(GREED_COLOR, 0.72), 1.6, 15)
+	_add_ring_visual(treasure, GREED_TREASURE_RADIUS + 5.0, _with_alpha(GREED_COLOR, 0.82), 2.0, 15)
 	_add_loop_particles(treasure, "GreedTreasureSparkles", _with_alpha(GREED_COLOR, 0.55), 20, 0.7, 8.0, 38.0, 16)
 	treasure.body_entered.connect(Callable(self, "_on_greed_treasure_body_entered").bind(treasure))
 	_add_child_at_global(_get_vfx_parent(), treasure, treasure_position)
@@ -1499,7 +1654,7 @@ func _update_greed_treasures(delta: float) -> void:
 		var lifetime = float(treasure.get_meta("lifetime", 0.0)) - delta
 		treasure.set_meta("lifetime", lifetime)
 		treasure.rotation += delta * 2.8
-		if global_position.distance_to(treasure.global_position) <= GREED_TREASURE_RADIUS + 26.0:
+		if global_position.distance_to(treasure.global_position) <= GREED_TREASURE_BOSS_COLLECT_RADIUS:
 			_collect_greed_treasure_for_boss(treasure)
 		elif lifetime <= 0.0:
 			active_treasures.erase(treasure)
@@ -1508,6 +1663,8 @@ func _update_greed_treasures(delta: float) -> void:
 func _on_greed_treasure_body_entered(body: Node, treasure) -> void:
 	if body.is_in_group(Global.GROUP_PLAYER):
 		_collect_greed_treasure_for_player(treasure)
+	elif body == self or body.is_in_group(Global.GROUP_BOSS):
+		_collect_greed_treasure_for_boss(treasure)
 
 func _collect_greed_treasure_for_player(treasure) -> void:
 	if not is_instance_valid(treasure):
@@ -1557,17 +1714,51 @@ func _update_greed_shield(delta: float) -> void:
 func _start_greed_coin_rain() -> void:
 	is_performing_action = true
 	current_sub_state = BossSubState.TELEGRAPH
-	var projectile_count = 8 + greed_money_stacks * 2
+	var projectile_count = 9 + greed_money_stacks * 2
 	projectile_count = min(projectile_count, 26)
 	var warning_duration = GREED_COIN_WARNING_DURATION
-	for i in range(projectile_count):
-		var target_position = _get_random_arena_position_anywhere(32.0)
-		var spawn_position = target_position + Vector2(0.0, -340.0 - randf_range(0.0, 120.0))
-		_spawn_falling_warning(target_position, GREED_COLOR, warning_duration)
+	var burst_size = 3 if phase == 1 else 4
+	var spawned_count = 0
+	while spawned_count < projectile_count:
+		var focus_position = _get_greed_coin_rain_focus_position()
+		var current_burst_size = mini(burst_size, projectile_count - spawned_count)
+		var burst_targets := []
+		for i in range(current_burst_size):
+			var target_position = _get_greed_coin_rain_target_position(focus_position, i, current_burst_size)
+			var spawn_position = target_position + Vector2(randf_range(-26.0, 26.0), -340.0 - randf_range(0.0, 80.0))
+			burst_targets.append({
+				"target": target_position,
+				"spawn": spawn_position
+			})
+			_spawn_falling_warning(target_position, GREED_COLOR, warning_duration, GREED_COIN_RAIN_WARNING_RADIUS, spawn_position)
 		await get_tree().create_timer(warning_duration, false).timeout
-		_spawn_enemy_projectile(spawn_position, Vector2.DOWN, float(damage) * 0.72, _with_alpha(GREED_COLOR, 0.95), 585.0 if phase == 1 else 650.0)
-		await get_tree().create_timer(0.35 if phase == 1 else 0.28, false).timeout
+		for shot in burst_targets:
+			_spawn_enemy_projectile(shot["spawn"], Vector2.DOWN, float(damage) * 0.72, _with_alpha(GREED_COLOR, 0.95), 585.0 if phase == 1 else 650.0)
+		spawned_count += current_burst_size
+		await get_tree().create_timer(0.24 if phase == 1 else 0.18, false).timeout
 	_finish_action(0.9 if phase == 1 else 0.6)
+
+func _get_greed_coin_rain_focus_position() -> Vector2:
+	if player == null:
+		return _get_random_arena_position_anywhere(32.0)
+
+	var boss_to_player = global_position.direction_to(player.global_position)
+	if boss_to_player == Vector2.ZERO:
+		return player.global_position
+
+	var focus = player.global_position - boss_to_player * randf_range(10.0, 72.0)
+	return _clamp_to_current_arena(focus, 32.0)
+
+func _get_greed_coin_rain_target_position(focus_position: Vector2, index: int, burst_size: int) -> Vector2:
+	var cluster_radius = GREED_COIN_RAIN_CLUSTER_RADIUS_PHASE_2 if phase == 2 else GREED_COIN_RAIN_CLUSTER_RADIUS_PHASE_1
+	var lane_offset = (float(index) - (float(burst_size) - 1.0) * 0.5) * 42.0
+	var sweep_direction = Vector2.RIGHT.rotated(randf_range(-0.35, 0.35))
+	var side_direction = sweep_direction.orthogonal()
+	var target = focus_position
+	target += sweep_direction * lane_offset
+	target += side_direction * randf_range(-cluster_radius * 0.38, cluster_radius * 0.38)
+	target += Vector2.RIGHT.rotated(randf_range(-PI, PI)) * randf_range(0.0, cluster_radius * 0.22)
+	return _clamp_to_current_arena(target, 32.0)
 
 func _start_greed_tax_mark() -> void:
 	is_performing_action = true
@@ -2609,15 +2800,35 @@ func _spawn_line_telegraph(from_position: Vector2, to_position: Vector2, color: 
 	timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(telegraph))
 	return telegraph
 
-func _spawn_falling_warning(spawn_position: Vector2, color: Color, duration: float) -> Node2D:
+func _get_top_screen_warning_position(fall_start_position: Vector2) -> Vector2:
+	var viewport = get_viewport()
+	var camera = viewport.get_camera_2d() if viewport != null else null
+	if camera == null:
+		var arena_rect = _get_arena_rect()
+		return Vector2(
+			clamp(fall_start_position.x, arena_rect.position.x + 28.0, arena_rect.end.x - 28.0),
+			arena_rect.position.y + 28.0
+		)
+
+	var visible_size = viewport.get_visible_rect().size / camera.zoom
+	var visible_rect = Rect2(camera.global_position - visible_size * 0.5, visible_size)
+	var margin = GREED_COIN_RAIN_WARNING_RADIUS + 10.0
+	return Vector2(
+		clamp(fall_start_position.x, visible_rect.position.x + margin, visible_rect.end.x - margin),
+		visible_rect.position.y + margin
+	)
+
+func _spawn_falling_warning(landing_position: Vector2, color: Color, duration: float, radius: float = 11.0, fall_start_position = null) -> Node2D:
 	var warning = Node2D.new()
 	var line = Line2D.new()
-	line.width = 2.5
-	line.default_color = _with_alpha(color, 0.55)
-	line.points = PackedVector2Array([Vector2.ZERO, Vector2(0.0, MAX_BOSS_CIRCLE_VFX_RADIUS)])
+	var warning_position = _get_top_screen_warning_position(fall_start_position) if fall_start_position is Vector2 else landing_position
+	line.width = 3.5
+	line.default_color = _with_alpha(color, 0.72)
+	line.points = PackedVector2Array([Vector2.ZERO, landing_position - warning_position])
 	warning.add_child(line)
-	_add_ring_visual(warning, 11.0, _with_alpha(color, 0.72), 2.0, 0)
-	if not _add_child_at_global(_get_ground_area_vfx_parent(), warning, spawn_position):
+	_add_circle_visual(warning, radius, _with_alpha(color, 0.18), 0)
+	_add_ring_visual(warning, radius, _with_alpha(color, 0.9), 2.6, 1)
+	if not _add_child_at_global(_get_ground_area_vfx_parent(), warning, warning_position):
 		return warning
 
 	var tree = get_tree()

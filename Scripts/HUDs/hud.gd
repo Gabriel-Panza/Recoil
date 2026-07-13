@@ -14,6 +14,8 @@ var active_skill_title_label: Label
 var active_skill_e_label: Label
 var active_skill_r_label: Label
 var passive_status_label: Label
+var arm_mutation_tooltip_area: Control
+var special_passive_tooltip_area: Control
 var skill_status_top_background: TextureRect
 var skill_status_list_background: NinePatchRect
 var arm_mutation_toast_layer: CanvasLayer
@@ -29,6 +31,8 @@ const SKILL_STATUS_LIST_WIDTH = 69.0 * SKILL_STATUS_SCALE
 const SKILL_STATUS_LIST_MIN_HEIGHT = 10.0 * SKILL_STATUS_SCALE
 const SKILL_STATUS_LIST_VERTICAL_PADDING = 10.0
 const SKILL_STATUS_PASSIVE_LINE_HEIGHT = 17.0
+const SKILL_STATUS_ARM_MUTATION_LINE_COUNT = 4
+const SKILL_STATUS_SPECIAL_PASSIVE_LINE_COUNT = 6
 const SKILL_STATUS_LIST_PATCH_LEFT = 3
 const SKILL_STATUS_LIST_PATCH_RIGHT = 6
 const SKILL_STATUS_LIST_PATCH_BOTTOM = 6
@@ -175,6 +179,7 @@ func _setup_passive_status_label() -> void:
 	if passive_status_label != null:
 		passive_status_label.mouse_filter = Control.MOUSE_FILTER_PASS
 		_apply_skill_status_label_alpha(passive_status_label)
+		_setup_passive_tooltip_areas()
 		return
 
 	passive_status_label = Label.new()
@@ -188,9 +193,31 @@ func _setup_passive_status_label() -> void:
 	passive_status_label.add_theme_font_size_override("font_size", 12)
 	passive_status_label.add_theme_constant_override("line_spacing", 0)
 	passive_status_label.text = "- %s" % I18n.t("common.none")
-	passive_status_label.tooltip_text = Global.wrap_tooltip_text(I18n.t("hud.no_passives"))
+	passive_status_label.tooltip_text = ""
 	_apply_skill_status_label_alpha(passive_status_label)
 	add_child(passive_status_label)
+	_setup_passive_tooltip_areas()
+
+func _setup_passive_tooltip_areas() -> void:
+	arm_mutation_tooltip_area = _get_or_create_passive_tooltip_area("ArmMutationTooltipArea")
+	special_passive_tooltip_area = _get_or_create_passive_tooltip_area("SpecialPassiveTooltipArea")
+	_update_passive_tooltip_area_layout()
+
+func _get_or_create_passive_tooltip_area(node_name: String) -> Control:
+	var existing_node = get_node_or_null(node_name)
+	if existing_node is Control:
+		return existing_node as Control
+
+	if existing_node != null:
+		remove_child(existing_node)
+		existing_node.queue_free()
+
+	var area = Control.new()
+	area.name = node_name
+	area.z_index = 4
+	area.mouse_filter = Control.MOUSE_FILTER_PASS
+	add_child(area)
+	return area
 
 func _create_active_skill_hud_label(label_name: String) -> Label:
 	var label = Label.new()
@@ -272,15 +299,11 @@ func _update_passive_status_label() -> void:
 		_get_special_passive_slot_text(rare_summaries, 0),
 		_get_special_passive_slot_text(rare_summaries, 1)
 	])
-	var tooltip_lines := PackedStringArray()
-	_append_passive_tooltip_lines(tooltip_lines, I18n.t("hud.arm_mutations_tooltip"), mutation_summaries)
-	_append_passive_tooltip_lines(tooltip_lines, I18n.t("hud.boss_passives_tooltip"), boss_summaries)
-	_append_passive_tooltip_lines(tooltip_lines, I18n.t("hud.rare_passives_tooltip"), rare_summaries)
-
 	passive_status_label.text = "\n".join(passive_lines)
-	var passive_tooltip = "\n".join(tooltip_lines) if not tooltip_lines.is_empty() else I18n.t("hud.no_special_passives")
-	passive_status_label.tooltip_text = Global.wrap_tooltip_text(passive_tooltip)
+	passive_status_label.tooltip_text = ""
+	_update_passive_tooltips(mutation_summaries, boss_summaries, rare_summaries)
 	_update_skill_status_background(passive_lines.size())
+	_update_passive_tooltip_area_layout()
 
 func _get_special_passive_slot_text(summaries: Array, slot_index: int) -> String:
 	if slot_index >= summaries.size():
@@ -289,17 +312,50 @@ func _get_special_passive_slot_text(summaries: Array, slot_index: int) -> String
 	var summary = summaries[slot_index]
 	return "- %s" % str(summary.get("name", I18n.t("hud.passive_fallback")))
 
-func _append_passive_tooltip_lines(tooltip_lines: PackedStringArray, section_name: String, summaries: Array) -> void:
+func _update_passive_tooltips(mutation_summaries: Array, boss_summaries: Array, rare_summaries: Array) -> void:
+	if arm_mutation_tooltip_area == null or special_passive_tooltip_area == null:
+		_setup_passive_tooltip_areas()
+
+	var mutation_tooltip = _build_arm_mutation_tooltip(mutation_summaries)
+	var special_tooltip = _build_special_passive_tooltip(boss_summaries, rare_summaries)
+	if arm_mutation_tooltip_area != null:
+		arm_mutation_tooltip_area.tooltip_text = Global.wrap_tooltip_text(mutation_tooltip)
+	if special_passive_tooltip_area != null:
+		special_passive_tooltip_area.tooltip_text = Global.wrap_tooltip_text(special_tooltip)
+
+func _build_arm_mutation_tooltip(mutation_summaries: Array) -> String:
+	var tooltip_lines := PackedStringArray([I18n.t("hud.arm_mutations_tooltip")])
+	if mutation_summaries.is_empty():
+		tooltip_lines.append("- %s" % I18n.t("common.none"))
+		return "\n".join(tooltip_lines)
+
+	for summary in mutation_summaries:
+		_append_named_tooltip_entry(tooltip_lines, summary)
+	return "\n".join(tooltip_lines)
+
+func _build_special_passive_tooltip(boss_summaries: Array, rare_summaries: Array) -> String:
+	var tooltip_lines := PackedStringArray()
+	_append_tooltip_section(tooltip_lines, I18n.t("hud.boss_passives_tooltip"), boss_summaries)
+	tooltip_lines.append("")
+	_append_tooltip_section(tooltip_lines, I18n.t("hud.rare_passives_tooltip"), rare_summaries)
+	return "\n".join(tooltip_lines)
+
+func _append_tooltip_section(tooltip_lines: PackedStringArray, section_name: String, summaries: Array) -> void:
+	tooltip_lines.append(section_name)
 	if summaries.is_empty():
-		tooltip_lines.append("%s: %s" % [section_name, I18n.t("common.none")])
+		tooltip_lines.append("- %s" % I18n.t("common.none"))
 		return
 
 	for summary in summaries:
-		var passive_name = str(summary.get("name", I18n.t("hud.passive_fallback")))
-		tooltip_lines.append("%s: %s" % [
-			passive_name,
-			str(summary.get("description", ""))
-		])
+		_append_named_tooltip_entry(tooltip_lines, summary)
+
+func _append_named_tooltip_entry(tooltip_lines: PackedStringArray, summary: Dictionary) -> void:
+	var passive_name = str(summary.get("name", I18n.t("hud.passive_fallback")))
+	var passive_description = str(summary.get("description", ""))
+	if passive_description == "":
+		tooltip_lines.append("- %s" % passive_name)
+	else:
+		tooltip_lines.append("- %s: %s" % [passive_name, passive_description])
 
 func _update_skill_status_background(line_count: int) -> void:
 	if skill_status_list_background == null or passive_status_label == null:
@@ -309,6 +365,22 @@ func _update_skill_status_background(line_count: int) -> void:
 	var list_height = max(SKILL_STATUS_LIST_MIN_HEIGHT, SKILL_STATUS_LIST_VERTICAL_PADDING + float(safe_line_count) * SKILL_STATUS_PASSIVE_LINE_HEIGHT)
 	skill_status_list_background.size = Vector2(SKILL_STATUS_LIST_WIDTH, list_height)
 	passive_status_label.size = Vector2(SKILL_STATUS_LIST_WIDTH - 20.0, max(20.0, list_height - 10.0))
+
+func _update_passive_tooltip_area_layout() -> void:
+	if passive_status_label == null:
+		return
+
+	var tooltip_position = passive_status_label.position
+	var tooltip_width = passive_status_label.size.x
+	var arm_height = float(SKILL_STATUS_ARM_MUTATION_LINE_COUNT) * SKILL_STATUS_PASSIVE_LINE_HEIGHT
+	var special_height = float(SKILL_STATUS_SPECIAL_PASSIVE_LINE_COUNT) * SKILL_STATUS_PASSIVE_LINE_HEIGHT
+
+	if arm_mutation_tooltip_area != null:
+		arm_mutation_tooltip_area.position = tooltip_position
+		arm_mutation_tooltip_area.size = Vector2(tooltip_width, arm_height)
+	if special_passive_tooltip_area != null:
+		special_passive_tooltip_area.position = tooltip_position + Vector2(0.0, arm_height)
+		special_passive_tooltip_area.size = Vector2(tooltip_width, special_height)
 
 func _update_active_skill_hud_label(label: Label, slot: String) -> void:
 	if label == null:
