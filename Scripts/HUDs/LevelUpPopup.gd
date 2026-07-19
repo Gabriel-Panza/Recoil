@@ -385,6 +385,7 @@ func _select_pre_boss_options(rare_pool: Array, passive_pool: Array) -> Array:
 func _get_available_rare_options() -> Array:
 	var available_options = []
 	var current_rare_options: Array = []
+	var current_arm_id = str(player.get("current_arm_id")) if player and player.get("current_arm_id") != null else ""
 	if player:
 		if player.has_method("get_rare_passive_options"):
 			current_rare_options = player.get_rare_passive_options()
@@ -394,34 +395,50 @@ func _get_available_rare_options() -> Array:
 	for option in Global.RARE_PASSIVE_OPTIONS:
 		if option["id"] in current_rare_options:
 			continue
+		if current_arm_id == "fast" and option["id"] == "Kinetic_Reload":
+			continue
+		if current_arm_id == "heavy" and option["id"] == "Recoil_Explosion":
+			continue
 		available_options.append(option.duplicate())
 
 	return available_options
 
 func _get_available_passive_options() -> Array:
 	var available_options = []
+	var reached_any_limit = false
 	for option in Global.PASSIVE_UPGRADE_OPTIONS:
 		if option["id"] == "option_1" and player and player.has_method("can_roll_recoil_force_upgrade") and not player.can_roll_recoil_force_upgrade():
+			reached_any_limit = true
 			continue
 		if option["id"] == "option_1" and player and player.has_method("can_upgrade_recoil_force") and not player.can_upgrade_recoil_force():
+			reached_any_limit = true
 			continue
 		if option["id"] == "option_4" and player and player.has_method("can_roll_attack_speed_upgrade") and not player.can_roll_attack_speed_upgrade():
+			reached_any_limit = true
 			continue
 		if option["id"] == "option_4" and player and player.has_method("can_upgrade_attack_speed") and not player.can_upgrade_attack_speed():
+			reached_any_limit = true
 			continue
 		if option["id"] == "option_5" and player and player.has_method("can_upgrade_projectile_size") and not player.can_upgrade_projectile_size():
+			reached_any_limit = true
 			continue
 		if option["id"] == "option_6":
 			if player and player.has_method("can_upgrade_heal_after_wave") and not player.can_upgrade_heal_after_wave():
+				reached_any_limit = true
 				continue
 			if _rng_randf() > HEAL_AFTER_WAVE_COMMON_ROLL_CHANCE:
 				continue
 		if option["id"] == "option_7":
 			if player and player.has_method("can_upgrade_dash_cooldown_reduction") and not player.can_upgrade_dash_cooldown_reduction():
+				reached_any_limit = true
 				continue
 			if _rng_randf() > DASH_COOLDOWN_COMMON_ROLL_CHANCE:
 				continue
 		available_options.append(option.duplicate())
+	if Global.is_endless_mode() and (reached_any_limit or available_options.size() < OPTION_BUTTON_COUNT):
+		available_options.append({"id": "endless_heal_potion", "text": "Health Potion", "description": "Restore 25% max health.", "rarity": "passive_common"})
+		available_options.append({"id": "endless_greater_heal_potion", "text": "Greater Health Potion", "description": "Restore 50% max health.", "rarity": "passive_common"})
+		available_options.append({"id": "endless_reroll_token", "text": "Infernal Die", "description": "Gain 1 reroll.", "rarity": "passive_common"})
 
 	return available_options
 
@@ -507,6 +524,8 @@ func _can_roll_special_level_up(option: Dictionary) -> bool:
 
 func _render_options(options: Array, show_skip: bool) -> void:
 	current_options = options.duplicate(true)
+	for option in current_options:
+		Global.discover_passive_option(str(option.get("id", "")))
 	visible = true
 	if skip_button:
 		skip_button.visible = show_skip
@@ -533,6 +552,17 @@ func _render_options(options: Array, show_skip: bool) -> void:
 			_clear_special_level_up_button_effect(button)
 
 	_center_popup()
+	if not is_rolling_options:
+		_focus_first_available_option.call_deferred()
+
+func _focus_first_available_option() -> void:
+	var container = get_node_or_null("VBoxContainer")
+	if container == null:
+		return
+	for child in container.get_children():
+		if child is Button and child.visible and not child.disabled:
+			(child as Button).grab_focus()
+			return
 
 ## Plays the slot-machine reveal without changing the rewards already selected.
 func _play_level_up_slot_roll(final_options: Array, pools: Array) -> void:
@@ -641,7 +671,7 @@ func _get_or_create_reroll_button(button: Button, option_index: int) -> Button:
 	reroll_button = Button.new()
 	reroll_button.name = reroll_button_name
 	reroll_button.text = I18n.t("levelup.reroll")
-	reroll_button.focus_mode = Control.FOCUS_NONE
+	reroll_button.focus_mode = Control.FOCUS_ALL
 	reroll_button.mouse_filter = Control.MOUSE_FILTER_STOP
 	reroll_button.custom_minimum_size = REROLL_BUTTON_SIZE
 	reroll_button.size = REROLL_BUTTON_SIZE
@@ -767,6 +797,7 @@ func _get_design_viewport_size() -> Vector2:
 func _get_option_button_text(option: Dictionary) -> String:
 	var option_id = str(option.get("id", ""))
 	var text = I18n.option_text(option_id, str(option.get("text", option.get("name", option_id))))
+	text = _get_common_flat_option_text(option_id, _get_option_stat_multiplier(option), text)
 	var display_prefix_key = str(option.get("display_prefix_key", ""))
 	if display_prefix_key != "":
 		text = I18n.t(display_prefix_key, [text])
@@ -789,12 +820,35 @@ func _get_option_tooltip(option: Dictionary) -> String:
 func _get_special_level_up_tooltip(option: Dictionary) -> String:
 	var tier = _get_special_level_up_tier(option)
 	var option_id = str(option.get("id", ""))
-	var base_text = I18n.option_text(option_id, str(option.get("text", option.get("name", option_id))))
-	var final_values = _get_special_level_up_text(base_text, _get_option_stat_multiplier(option))
+	var localized_text = I18n.option_text(option_id, str(option.get("text", option.get("name", option_id))))
+	var base_text = _get_common_flat_option_text(option_id, 1.0, localized_text)
+	var final_values = _get_common_flat_option_text(
+		option_id,
+		_get_option_stat_multiplier(option),
+		_get_special_level_up_text(localized_text, _get_option_stat_multiplier(option))
+	)
 	var final_values_line = "\n" + I18n.t("levelup.final_values", [final_values]) if final_values != base_text else ""
 	if tier == SPECIAL_LEVEL_UP_LEGENDARY_TIER:
 		return I18n.t("levelup.lucky_legendary_tooltip") + final_values_line
 	return I18n.t("levelup.lucky_epic_tooltip") + final_values_line
+
+func _get_common_flat_option_text(option_id: String, stat_multiplier: float, fallback_text: String) -> String:
+	if player == null:
+		return fallback_text
+	if option_id == "option_2" and player.has_method("get_common_health_upgrade_amount"):
+		var health_gain = float(player.get_common_health_upgrade_amount(stat_multiplier))
+		return I18n.t("levelup.health_flat", [_format_common_flat_value(health_gain)])
+	if option_id == "option_3" and player.has_method("get_common_attack_upgrade_amount"):
+		var attack_gain = float(player.get_common_attack_upgrade_amount(stat_multiplier))
+		return I18n.t("levelup.attack_flat", [_format_common_flat_value(attack_gain)])
+	return fallback_text
+
+func _format_common_flat_value(value: float) -> String:
+	if abs(value - round(value)) < 0.001:
+		return str(int(round(value)))
+	if abs(value * 10.0 - round(value * 10.0)) < 0.001:
+		return "%.1f" % value
+	return "%.2f" % value
 
 func _get_special_level_up_text(text: String, multiplier: float) -> String:
 	var multiplier_text = _apply_special_level_up_multiplier_text(text, multiplier)

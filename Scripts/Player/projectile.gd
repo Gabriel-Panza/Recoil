@@ -87,6 +87,10 @@ func _process_hit_queue() -> void:
 			if enemy_damage <= 0.0:
 				queue_free()
 				return
+			target.set_meta("achievement_hit_after_ricochet", bool(get_meta("unstable_has_ricocheted", false)))
+			target.set_meta("achievement_hit_by_heavy_shard", bool(get_meta("heavy_impact_shard", false)))
+			target.set_meta("achievement_hit_by_split_trigger", bool(get_meta("split_trigger", false)))
+			target.set_meta("achievement_split_shot_id", str(get_meta("split_shot_id", "")))
 			target.take_damage(enemy_damage)
 			_notify_player_projectile_enemy_hit(target, enemy_damage)
 			pierced_targets.append(target)

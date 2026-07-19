@@ -19,10 +19,13 @@ config/icon="res://Sprites/icon.svg"
 
 I18n="*res://Scripts/General/i18n.gd"
 Global="*uid://dkq71raesmyqv"
+AchievementManager="*res://Scripts/General/achievement_manager.gd"
 AudioManager="*uid://552s1f15pxal"
 
 [display]
 
+window/size/window_width_override=1280
+window/size/window_height_override=720
 window/stretch/mode="viewport"
 
 [file_customization]

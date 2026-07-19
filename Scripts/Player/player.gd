@@ -5,11 +5,15 @@ extends CharacterBody2D
 @export var current_health: int = 1000
 @export var attack_damage: float = 40.0
 @export var fire_rate: float = 1.1
+const COMMON_HEALTH_UPGRADE_BASE_RATIO: float = 0.05
+const COMMON_ATTACK_UPGRADE_BASE_RATIO: float = 0.15
 const STARTING_FIRE_RATE: float = 1.1
-const DEFAULT_MIN_FIRE_RATE: float = 0.25
+const DEFAULT_MIN_FIRE_RATE: float = 0.35
 const SHOT_SFX_STREAM: AudioStream = preload("res://Music&SFX/SFX/Shot_SFX.wav")
 var min_fire_rate: float = DEFAULT_MIN_FIRE_RATE
 var base_fire_rate: float = 1.1
+var original_max_health: float = 0.0
+var original_attack_damage: float = 0.0
 var attack_speed_bonus: float = 0.0
 @export var recoil_force: float = 460.0
 const MAX_RECOIL_FORCE: float = 650.0
@@ -65,7 +69,7 @@ const DASH_COOLDOWN_REDUCTION_STEP: float = 0.05
 const MAX_DASH_COOLDOWN_REDUCTION: float = 0.4
 const KINETIC_RELOAD_REMAINING_COOLDOWN_REDUCTION: float = 0.35
 const KINETIC_RELOAD_INTERNAL_COOLDOWN: float = 0.35
-const SPLINTERED_CHAMBER_SHOT_INTERVAL: int = 8
+const SPLINTERED_CHAMBER_SHOT_INTERVAL: int = 7
 const SPLINTERED_CHAMBER_DAMAGE_MULTIPLIER: float = 0.35
 const SPLINTERED_CHAMBER_FRAGMENT_ANGLE: float = 18.0
 const DAMAGE_FEEDBACK_COLOR: Color = Color(1.0, 0.1, 0.1, 1.0)
@@ -96,7 +100,7 @@ const ARM_MUTATION_DATA = {
 		},
 		3: {
 			"name": "Split Trigger",
-			"description": "Shots have a 40% chance to split into two angled projectiles at 75% damage each."
+			"description": "Shots have a 35% chance to split into two angled projectiles at 75% damage each."
 		}
 	},
 	"heavy": {
@@ -137,7 +141,7 @@ const FAST_HOMING_POINT_BLANK_RANGE: float = 62.0
 const FAST_RHYTHM_SHOT_WINDOW_MSEC: int = 1000
 const FAST_RHYTHM_SHOTS_REQUIRED: int = 6
 const FAST_RHYTHM_PIERCE_BONUS: int = 1
-const FAST_SPLIT_TRIGGER_CHANCE: float = 0.40
+const FAST_SPLIT_TRIGGER_CHANCE: float = 0.35
 const FAST_SPLIT_TRIGGER_ANGLE: float = 15.0
 const FAST_SPLIT_TRIGGER_DAMAGE_MULTIPLIER: float = 0.75
 const HEAVY_IMPACT_SHARD_COUNT: int = 3
@@ -211,6 +215,7 @@ var splintered_chamber_shot_count: int = 0
 var max_dash_charges: int = 1
 var double_dash_charges: int = 1
 var reroll_tokens: int = 2
+var last_controller_aim_direction: Vector2 = Vector2.RIGHT
 var sloth_slow_aura_enabled: bool = false
 var gluttony_heal_kill_enabled: bool = false
 var envy_mirror_shot_enabled: bool = false
@@ -294,6 +299,8 @@ var type_animation = "walk_down"
 func _ready() -> void:
 	z_index = Global.CHARACTER_RENDER_Z_INDEX
 	z_as_relative = false
+	original_max_health = float(max_health)
+	original_attack_damage = attack_damage
 	base_fire_rate = STARTING_FIRE_RATE
 	fire_rate = STARTING_FIRE_RATE
 	_recalculate_fire_rate()
@@ -335,6 +342,7 @@ func apply_starting_arm(arm_id: String) -> void:
 	var arm_data: Dictionary = Global.STARTING_ARM_DATA[arm_id]
 	current_arm_id = arm_id
 	attack_damage = float(arm_data["attack_damage"])
+	original_attack_damage = attack_damage
 	base_fire_rate = float(arm_data["base_fire_rate"])
 	min_fire_rate = float(arm_data["min_fire_rate"])
 	attack_speed_bonus = 0.0
@@ -347,6 +355,22 @@ func apply_starting_arm(arm_id: String) -> void:
 	_reset_arm_mutation_runtime_state()
 	_recalculate_fire_rate()
 	_recalculate_recoil_force()
+	emit_signal("stats_updated")
+
+func get_common_health_upgrade_amount(stat_multiplier: float = 1.0) -> float:
+	return original_max_health * COMMON_HEALTH_UPGRADE_BASE_RATIO * max(stat_multiplier, 0.0)
+
+func get_common_attack_upgrade_amount(stat_multiplier: float = 1.0) -> float:
+	return original_attack_damage * COMMON_ATTACK_UPGRADE_BASE_RATIO * max(stat_multiplier, 0.0)
+
+func apply_common_health_upgrade(stat_multiplier: float = 1.0) -> void:
+	var health_gain = get_common_health_upgrade_amount(stat_multiplier)
+	max_health = maxi(1, int(round(float(max_health) + health_gain)))
+	heal(health_gain)
+	emit_signal("stats_updated")
+
+func apply_common_attack_upgrade(stat_multiplier: float = 1.0) -> void:
+	attack_damage += get_common_attack_upgrade_amount(stat_multiplier)
 	emit_signal("stats_updated")
 
 ## Returns the display name of the arm selected at the start of the run.
@@ -927,8 +951,7 @@ func _physics_process(delta: float) -> void:
 		heavy_perfect_window_remaining = max(heavy_perfect_window_remaining - delta, 0.0)
 	_update_shot_cooldown_bar()
 
-	var mouse_pos = get_global_mouse_position()
-	var look_direction = global_position.direction_to(mouse_pos)
+	var look_direction = _get_current_aim_direction()
 	_update_direction_animation(look_direction)
 	
 	if pause_control.can_move:
@@ -976,8 +999,9 @@ func shoot(direction: Vector2) -> void:
 	_update_shot_cooldown_bar()
 	_play_shot_sfx()
 	
-	var mouse_pos = get_global_mouse_position()
-	var base_direction = (mouse_pos - global_position).normalized()
+	var base_direction = direction.normalized()
+	if base_direction == Vector2.ZERO:
+		base_direction = Vector2.RIGHT
 	type_animation = _get_animation_for_direction(base_direction)
 	var base_angle = base_direction.angle()
 	var shot_damage = _get_current_shot_damage()
@@ -1013,6 +1037,16 @@ func shoot(direction: Vector2) -> void:
 	_apply_recoil_impulse(direction)
 	if recoil_explosion_enabled:
 		_trigger_recoil_explosion()
+
+func _get_current_aim_direction() -> Vector2:
+	var controller_aim = Global.get_controller_aim_vector()
+	if controller_aim.length() >= Global.CONTROLLER_AIM_DEADZONE:
+		last_controller_aim_direction = controller_aim.normalized()
+		return last_controller_aim_direction
+	if Global.last_input_is_gamepad:
+		return last_controller_aim_direction
+	var mouse_direction = global_position.direction_to(get_global_mouse_position())
+	return mouse_direction if mouse_direction != Vector2.ZERO else last_controller_aim_direction
 
 func _setup_shot_sfx() -> void:
 	shot_sfx_player = get_node_or_null("ShotSFX") as AudioStreamPlayer
@@ -1073,9 +1107,11 @@ func _prepare_fast_mutation_shot(result: Dictionary, base_angle: float) -> void:
 
 	result["skip_base_projectiles"] = true
 	var split_angle = deg_to_rad(FAST_SPLIT_TRIGGER_ANGLE)
+	var split_shot_id = "%d_%d" % [get_instance_id(), Time.get_ticks_usec()]
 	for angle_offset in [-split_angle, split_angle]:
 		var split_flags = projectile_flags.duplicate()
 		split_flags["split_trigger"] = true
+		split_flags["split_shot_id"] = split_shot_id
 		split_flags["projectile_speed_multiplier"] = float(split_flags.get("projectile_speed_multiplier", 1.0)) * 1.06
 		result["extra_projectiles"].append({
 			"angle": base_angle + angle_offset,
@@ -1498,6 +1534,7 @@ func _try_spawn_heavy_impact_shards(projectile: Node, hit_position: Vector2, dea
 			Color(1.0, 0.55, 0.24, 0.92),
 			{
 				"skip_arm_mutations": true,
+				"heavy_impact_shard": true,
 				"projectile_speed_multiplier": 0.78,
 				"scale_multiplier": 0.65
 			}
@@ -1634,6 +1671,7 @@ func _can_perform_dash() -> bool:
 func perform_dash(direction: Vector2) -> void:
 	if not _consume_dash_charge():
 		return
+	AchievementManager.record_dash_used()
 
 	is_dashing = true
 	if offensive_dash_enabled:
@@ -1685,7 +1723,7 @@ func _consume_dash_charge() -> bool:
 	emit_signal("stats_updated")
 	return true
 
-func take_damage(amount: float, attacker_position: Vector2 = Vector2.ZERO, knockback_multiplier: float = 1.0, contact_source: Node = null) -> void:
+func take_damage(amount: float, attacker_position: Vector2 = Vector2.ZERO, knockback_multiplier: float = 1.0, contact_source: Node = null, achievement_damage_type: String = "") -> void:
 	if debug_invincible_enabled or is_invulnerable:
 		return
 
@@ -1702,6 +1740,7 @@ func take_damage(amount: float, attacker_position: Vector2 = Vector2.ZERO, knock
 
 	var damage_taken = int(round(amount * damage_taken_multiplier))
 	current_health -= damage_taken
+	AchievementManager.record_player_damage(achievement_damage_type)
 	_record_damage_taken(damage_taken, contact_source)
 	emit_signal("hp_updated", current_health, max_health)
 	if is_instance_valid(contact_source) and contact_source.has_method("on_player_damage_dealt"):
@@ -1721,6 +1760,7 @@ func take_damage(amount: float, attacker_position: Vector2 = Vector2.ZERO, knock
 func die() -> void:
 	capture_run_end("Defeat")
 	_finish_current_run()
+	AchievementManager.finish_run("Defeat", self, Global.endless_run_summary)
 	# aparencia.play("death")
 	get_tree().paused = true
 	Global.keep_music_playing_during_pause()
@@ -1731,12 +1771,27 @@ func die() -> void:
 
 func win() -> void:
 	capture_run_end("Victory")
+	if Global.is_story_mode():
+		Global.mark_story_completed()
 	_finish_current_run()
+	AchievementManager.finish_run("Victory", self, Global.endless_run_summary)
 	get_tree().paused = true
 	Global.keep_music_playing_during_pause()
 	# $Win.play()
 	if game_win:
 		game_win.visible = true
+
+func retire_endless() -> void:
+	if not Global.is_endless_mode():
+		return
+	capture_run_end("Retired")
+	_finish_current_run()
+	AchievementManager.finish_run("Retired", self, Global.endless_run_summary)
+	get_tree().paused = true
+	Global.keep_music_playing_during_pause()
+	await get_tree().create_timer(0.2, true).timeout
+	if game_over:
+		game_over.visible = true
 
 func _finish_current_run() -> void:
 	var tree = get_tree()
@@ -2138,6 +2193,7 @@ func _clear_health_feedback_tween(tween) -> void:
 
 func on_enemy_killed(_enemy: Node) -> void:
 	run_kills_total += 1
+	AchievementManager.record_enemy_killed(_enemy)
 	if is_instance_valid(_enemy) and _enemy.has_meta("elite_variant") and str(_enemy.get_meta("elite_variant")) != "":
 		run_elite_kills_total += 1
 	if gluttony_heal_kill_enabled and is_instance_valid(_enemy):
@@ -2191,7 +2247,11 @@ func get_death_recap_text() -> String:
 	lines.append(I18n.t("recap.title"))
 	lines.append(I18n.t("recap.result", [_format_run_result(run_end_reason)]))
 	lines.append(I18n.t("recap.time", [Global.format_run_time(run_end_elapsed_seconds)]))
-	lines.append(I18n.t("recap.sins", [Global.format_pecados_derrotados(clampi(Global.pecado - 1, 0, 7))]))
+	if Global.is_endless_mode():
+		var summary = Global.endless_run_summary
+		lines.append(I18n.t("recap.endless_progress", [int(summary.get("circle", 1)), int(summary.get("bosses_defeated", 0)), int(summary.get("score", 0))]))
+	else:
+		lines.append(I18n.t("recap.sins", [Global.format_pecados_derrotados(clampi(Global.pecado - 1, 0, 7))]))
 	lines.append(I18n.t("recap.kills", [run_kills_total, run_elite_kills_total]))
 	lines.append(I18n.t("recap.damage_taken", [run_damage_taken_total]))
 	var final_blow_name = I18n.t("common.none") if last_damage_source_name == "None" else last_damage_source_name
@@ -2244,6 +2304,8 @@ func _format_run_result(reason: String) -> String:
 			return I18n.t("recap.victory")
 		"Defeat", "recap.defeat", "":
 			return I18n.t("recap.defeat")
+		"Retired", "recap.retired":
+			return I18n.t("recap.retired")
 	return reason
 
 func _get_recap_upgrade_name(upgrade: Dictionary) -> String:

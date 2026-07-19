@@ -1,9 +1,24 @@
 extends Node
 
 signal pecado_changed(new_pecado)
+signal settings_changed
+signal input_device_changed(using_gamepad)
+signal codex_updated(category, entry_id)
+signal story_completion_changed(completed)
 
 const RANKING_FILE_NAME: String = "ranking_runs.json"
 const RANKING_PATH: String = "user://ranking_runs.json"
+const SETTINGS_PATH: String = "user://settings.cfg"
+const PROGRESS_PATH: String = "user://progress.cfg"
+const SETTINGS_VIDEO_SECTION: String = "video"
+const SETTINGS_AUDIO_SECTION: String = "audio"
+const SETTINGS_CONTROLS_SECTION: String = "controls"
+const SETTINGS_CODEX_SECTION: String = "codex"
+const SETTINGS_PROGRESS_SECTION: String = "progress"
+const SETTINGS_ACHIEVEMENTS_SECTION: String = "achievements"
+const GAME_MODE_STORY: String = "story"
+const GAME_MODE_ENDLESS: String = "endless"
+const CONTROLS_SCHEMA_VERSION: int = 2
 const GROUP_MUSIC: String = "Music"
 const GROUP_SFX: String = "SFX"
 const GROUP_PLAYER: String = "Player"
@@ -32,6 +47,22 @@ const AUDIO_BASE_VOLUME_META: String = "base_audio_volume_db"
 const WEB_SFX_MAX_POLYPHONY: int = 1
 const WEB_PARTICLE_AMOUNT_MULTIPLIER: float = 0.35
 const DEFAULT_TOOLTIP_WRAP_CHARS: int = 62
+const GRAPHICS_LOW: int = 0
+const GRAPHICS_MEDIUM: int = 1
+const GRAPHICS_HIGH: int = 2
+const WINDOW_MODE_WINDOWED: int = 0
+const WINDOW_MODE_FULLSCREEN: int = 1
+const WINDOW_MODE_BORDERLESS: int = 2
+const SUPPORTED_RESOLUTIONS: Array[Vector2i] = [
+	Vector2i(1152, 648),
+	Vector2i(1280, 720),
+	Vector2i(1280, 800),
+	Vector2i(1600, 900),
+	Vector2i(1920, 1080),
+	Vector2i(2560, 1440),
+]
+const REMAPPABLE_ACTIONS: Array[StringName] = [&"shoot", &"dash", &"active_e", &"active_r"]
+const CONTROLLER_AIM_DEADZONE: float = 0.28
 const WEB_SFX_VOICE_LIMITS = {
 	"enemy_footstep": 0,
 	"boss_footstep": 0,
@@ -40,11 +71,28 @@ const WEB_SFX_VOICE_LIMITS = {
 
 var intro_cutscene_return_target: String = INTRO_CUTSCENE_RETURN_GAME
 var open_cutscenes_gallery_on_menu_ready: bool = false
+var selected_game_mode: String = GAME_MODE_STORY
+var story_completed: bool = false
+var endless_difficulty_index: int = 1
+var endless_run_summary: Dictionary = {}
 var limited_sfx_voice_counts: Dictionary = {}
 var looping_audio_stream_cache: Dictionary = {}
 var enemy_sprite_frames_cache: Dictionary = {}
 var shader_cache: Dictionary = {}
 var paused_music_watchdog_elapsed: float = 0.0
+var window_mode: int = WINDOW_MODE_WINDOWED
+var window_resolution: Vector2i = Vector2i(1280, 720)
+var vsync_enabled: bool = true
+var graphics_quality: int = GRAPHICS_HIGH
+var last_input_is_gamepad: bool = false
+var codex_discovered: Dictionary = {
+	"enemies": [],
+	"elites": [],
+	"sins": [],
+	"passives": [],
+}
+var unlocked_achievements: Array = []
+var achievement_progress: Dictionary = {}
 
 func wrap_tooltip_text(text: String, max_line_chars: int = DEFAULT_TOOLTIP_WRAP_CHARS) -> String:
 	if text == "" or max_line_chars <= 0:
@@ -143,8 +191,8 @@ const STARTING_ARM_OPTIONS = [
 
 const PASSIVE_UPGRADE_OPTIONS = [
 	{ "id": "option_1", "text": "Recoil Force (+5%)", "description": "+5% recoil force is additive from your base recoil, not your current recoil. Does not appear for the heavy arm and stops appearing at 8.0 recoil force.", "rarity": "passive_common" },
-	{ "id": "option_2", "text": "Health (+5%)", "description": "Increases your maximum health and heals you slightly based on your current health.", "rarity": "passive_common" },
-	{ "id": "option_3", "text": "Attack (+12%)", "description": "Increases the damage dealt by your bullets and damage-based effects.", "rarity": "passive_common" },
+	{ "id": "option_2", "text": "Health (+5% base)", "description": "Adds 5% of your original maximum health as a fixed amount and restores health based on that amount. Healing Received modifiers apply.", "rarity": "passive_common" },
+	{ "id": "option_3", "text": "Attack (+15% base)", "description": "Adds 15% of the chosen arm's original damage as a fixed amount.", "rarity": "passive_common" },
 	{ "id": "option_4", "text": "Atk-Speed (+5%)", "description": "+5% attack speed before the chosen arm's tuning. Does not appear for the fast arm; heavy and unstable arms each have their own safe cooldown floor.", "rarity": "passive_common" },
 	{ "id": "option_5", "text": "Bullet Size (+5%)", "description": "+5% bullet size for friendly projectiles. Bonus is additive and stops at 200% bullet size.", "rarity": "passive_common" },
 	{ "id": "option_6", "text": "Heal After Wave (+3%)", "description": "Heal 3% max health after each enemy wave. This upgrade stops appearing at 15%.", "rarity": "passive_common" },
@@ -167,7 +215,7 @@ const RARE_PASSIVE_OPTIONS = [
 	{ "id": "Double_Dash", "text": "Double Dash", "description": "Gives you two dash charges. Each spent charge recharges one at a time. You can equip up to two rare passives.", "rarity": "passive_rare" },
 	{ "id": "Offensive_Dash", "text": "Offensive Dash", "description": "Dashing blocks damage and releases a 180px shockwave at the end of the dash, dealing 75% of your attack damage. You can equip up to two rare passives.", "rarity": "passive_rare" },
 	{ "id": "Kinetic_Reload", "text": "Kinetic Reload", "description": "Recoil bounces against arena limits reduce 35% of your remaining shot cooldown. This can trigger once every 0.35 seconds. You can equip up to two rare passives.", "rarity": "passive_rare" },
-	{ "id": "Splintered_Chamber", "text": "Splintered Chamber", "description": "Every 8th shot fires 2 side fragments, each dealing 35% of that shot's damage. Overheat damage applies to these fragments. You can equip up to two rare passives.", "rarity": "passive_rare" }
+	{ "id": "Splintered_Chamber", "text": "Splintered Chamber", "description": "Every 7th shot fires 2 side fragments, each dealing 35% of that shot's damage. Overheat damage applies to these fragments. You can equip up to two rare passives.", "rarity": "passive_rare" }
 ]
 
 const BOSS_REWARD_OPTIONS = [
@@ -256,7 +304,7 @@ const PASSIVE_STATUS_DATA = {
 	},
 	"Splintered_Chamber": {
 		"name": "Splintered Chamber",
-		"description": "Every 8th shot fires 2 side fragments for 35% of that shot's damage."
+		"description": "Every 7th shot fires 2 side fragments for 35% of that shot's damage."
 	},
 	"sloth_slow_aura": {
 		"name": "Slow Aura",
@@ -319,7 +367,367 @@ var music_volume_slider_value: float = AUDIO_SLIDER_MAX_VALUE
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	_request_web_persistent_storage()
+	_ensure_input_actions()
+	_load_persistent_settings()
+	_apply_video_settings()
 	_reset_ranking_if_executable_changed()
+
+func is_endless_mode() -> bool:
+	return selected_game_mode == GAME_MODE_ENDLESS
+
+func is_story_mode() -> bool:
+	return not is_endless_mode()
+
+func get_difficulty_index() -> int:
+	return max(endless_difficulty_index, 1) if is_endless_mode() else clampi(pecado, 1, 7)
+
+func set_endless_difficulty_index(value: int) -> void:
+	endless_difficulty_index = max(value, 1)
+
+func set_endless_run_summary(summary: Dictionary) -> void:
+	endless_run_summary = summary.duplicate(true)
+
+func mark_story_completed() -> void:
+	if story_completed:
+		return
+	story_completed = true
+	_save_persistent_progress()
+	story_completion_changed.emit(true)
+
+func _input(event: InputEvent) -> void:
+	var using_gamepad = event is InputEventJoypadButton or event is InputEventJoypadMotion
+	var using_pointer_or_keyboard = event is InputEventKey or event is InputEventMouseButton or event is InputEventMouseMotion
+	if not using_gamepad and not using_pointer_or_keyboard:
+		return
+	if using_gamepad == last_input_is_gamepad:
+		return
+	last_input_is_gamepad = using_gamepad
+	input_device_changed.emit(last_input_is_gamepad)
+
+func _ensure_input_actions() -> void:
+	_ensure_action(&"ui_accept", 0.5)
+	_ensure_action(&"ui_cancel", 0.5)
+	_ensure_action(&"pause", 0.5)
+	_ensure_action(&"codex", 0.5)
+	_ensure_action(&"shoot", 0.2)
+	_ensure_action(&"dash", 0.2)
+	_ensure_action(&"active_e", 0.2)
+	_ensure_action(&"active_r", 0.2)
+	_ensure_action(&"aim_left", CONTROLLER_AIM_DEADZONE)
+	_ensure_action(&"aim_right", CONTROLLER_AIM_DEADZONE)
+	_ensure_action(&"aim_up", CONTROLLER_AIM_DEADZONE)
+	_ensure_action(&"aim_down", CONTROLLER_AIM_DEADZONE)
+	_add_default_event_if_missing(&"ui_accept", _make_joy_button_event(JOY_BUTTON_A))
+	_add_default_event_if_missing(&"ui_cancel", _make_joy_button_event(JOY_BUTTON_B))
+	_add_default_event_if_missing(&"pause", _make_key_event(KEY_ESCAPE))
+	_add_default_event_if_missing(&"pause", _make_joy_button_event(JOY_BUTTON_START))
+	_add_default_event_if_missing(&"codex", _make_key_event(KEY_C))
+	_add_default_event_if_missing(&"codex", _make_joy_button_event(JOY_BUTTON_BACK))
+
+	_add_default_event_if_missing(&"shoot", _make_mouse_button_event(MOUSE_BUTTON_LEFT))
+	_add_default_event_if_missing(&"shoot", _make_joy_motion_event(JOY_AXIS_TRIGGER_RIGHT, 1.0))
+	_add_default_event_if_missing(&"shoot", _make_joy_button_event(JOY_BUTTON_A))
+	_add_default_event_if_missing(&"dash", _make_key_event(KEY_SPACE))
+	_add_default_event_if_missing(&"dash", _make_joy_button_event(JOY_BUTTON_B))
+	_add_default_event_if_missing(&"active_e", _make_key_event(KEY_E))
+	_add_default_event_if_missing(&"active_e", _make_joy_button_event(JOY_BUTTON_X))
+	_add_default_event_if_missing(&"active_r", _make_key_event(KEY_R))
+	_add_default_event_if_missing(&"active_r", _make_joy_button_event(JOY_BUTTON_Y))
+	_add_default_event_if_missing(&"aim_left", _make_joy_motion_event(JOY_AXIS_RIGHT_X, -1.0))
+	_add_default_event_if_missing(&"aim_right", _make_joy_motion_event(JOY_AXIS_RIGHT_X, 1.0))
+	_add_default_event_if_missing(&"aim_up", _make_joy_motion_event(JOY_AXIS_RIGHT_Y, -1.0))
+	_add_default_event_if_missing(&"aim_down", _make_joy_motion_event(JOY_AXIS_RIGHT_Y, 1.0))
+
+func _ensure_action(action: StringName, deadzone: float) -> void:
+	if not InputMap.has_action(action):
+		InputMap.add_action(action, deadzone)
+	else:
+		InputMap.action_set_deadzone(action, deadzone)
+
+func _add_default_event_if_missing(action: StringName, event: InputEvent) -> void:
+	for existing_event in InputMap.action_get_events(action):
+		if existing_event.is_match(event):
+			return
+	InputMap.action_add_event(action, event)
+
+func _make_key_event(keycode: Key) -> InputEventKey:
+	var event = InputEventKey.new()
+	event.physical_keycode = keycode
+	return event
+
+func _make_mouse_button_event(button_index: MouseButton) -> InputEventMouseButton:
+	var event = InputEventMouseButton.new()
+	event.button_index = button_index
+	return event
+
+func _make_joy_button_event(button_index: JoyButton) -> InputEventJoypadButton:
+	var event = InputEventJoypadButton.new()
+	event.device = -1
+	event.button_index = button_index
+	return event
+
+func _make_joy_motion_event(axis: JoyAxis, axis_value: float) -> InputEventJoypadMotion:
+	var event = InputEventJoypadMotion.new()
+	event.device = -1
+	event.axis = axis
+	event.axis_value = axis_value
+	return event
+
+func get_controller_aim_vector() -> Vector2:
+	return Input.get_vector("aim_left", "aim_right", "aim_up", "aim_down", CONTROLLER_AIM_DEADZONE)
+
+func get_action_binding_text(action: StringName, gamepad: bool) -> String:
+	var labels: PackedStringArray = []
+	for event in InputMap.action_get_events(action):
+		if _is_gamepad_event(event) == gamepad:
+			var label = _format_input_event(event)
+			if label not in labels:
+				labels.append(label)
+	return " / ".join(labels) if not labels.is_empty() else "-"
+
+func set_action_binding(action: StringName, event: InputEvent, gamepad: bool) -> void:
+	if action not in REMAPPABLE_ACTIONS or _is_gamepad_event(event) != gamepad:
+		return
+	for existing_event in InputMap.action_get_events(action):
+		if _is_gamepad_event(existing_event) == gamepad:
+			InputMap.action_erase_event(action, existing_event)
+	var binding = event.duplicate()
+	if binding is InputEventJoypadButton or binding is InputEventJoypadMotion:
+		binding.device = -1
+	InputMap.action_add_event(action, binding)
+	_save_control_bindings()
+	settings_changed.emit()
+
+func reset_control_bindings() -> void:
+	for action in REMAPPABLE_ACTIONS:
+		InputMap.action_erase_events(action)
+	InputMap.action_erase_events(&"aim_left")
+	InputMap.action_erase_events(&"aim_right")
+	InputMap.action_erase_events(&"aim_up")
+	InputMap.action_erase_events(&"aim_down")
+	_ensure_input_actions()
+	_save_control_bindings()
+	settings_changed.emit()
+
+func _is_gamepad_event(event: InputEvent) -> bool:
+	return event is InputEventJoypadButton or event is InputEventJoypadMotion
+
+func _format_input_event(event: InputEvent) -> String:
+	if event is InputEventMouseButton:
+		return "Mouse %d" % int(event.button_index)
+	if event is InputEventJoypadMotion:
+		return "RT" if event.axis == JOY_AXIS_TRIGGER_RIGHT else "Axis %d" % int(event.axis)
+	if event is InputEventJoypadButton:
+		var button_labels = {
+			JOY_BUTTON_A: "A",
+			JOY_BUTTON_B: "B",
+			JOY_BUTTON_X: "X",
+			JOY_BUTTON_Y: "Y",
+			JOY_BUTTON_BACK: "View",
+			JOY_BUTTON_START: "Start",
+			JOY_BUTTON_LEFT_SHOULDER: "LB",
+			JOY_BUTTON_RIGHT_SHOULDER: "RB",
+		}
+		return str(button_labels.get(event.button_index, "Button %d" % int(event.button_index)))
+	return event.as_text().replace(" (Physical)", "")
+
+func set_window_mode(value: int) -> void:
+	window_mode = clampi(value, WINDOW_MODE_WINDOWED, WINDOW_MODE_BORDERLESS)
+	_apply_video_settings()
+	_save_display_settings()
+
+func set_window_resolution(value: Vector2i) -> void:
+	if value not in SUPPORTED_RESOLUTIONS:
+		return
+	window_resolution = value
+	_apply_video_settings()
+	_save_display_settings()
+
+func set_vsync_enabled(value: bool) -> void:
+	vsync_enabled = value
+	_apply_video_settings()
+	_save_display_settings()
+
+func set_graphics_quality(value: int) -> void:
+	graphics_quality = clampi(value, GRAPHICS_LOW, GRAPHICS_HIGH)
+	_save_display_settings()
+	settings_changed.emit()
+
+func get_scaled_particle_amount(default_amount: int) -> int:
+	var multiplier = [0.45, 0.72, 1.0][graphics_quality]
+	if is_web_build():
+		multiplier = min(multiplier, WEB_PARTICLE_AMOUNT_MULTIPLIER)
+	return max(1, int(round(float(default_amount) * multiplier)))
+
+func discover_codex(category: String, entry_id: String) -> void:
+	if entry_id == "" or not codex_discovered.has(category):
+		return
+	var entries: Array = codex_discovered[category]
+	if entry_id in entries:
+		return
+	entries.append(entry_id)
+	codex_discovered[category] = entries
+	_save_codex_progress()
+	codex_updated.emit(category, entry_id)
+
+func is_codex_discovered(category: String, entry_id: String) -> bool:
+	return entry_id in codex_discovered.get(category, [])
+
+func discover_passive_option(option_id: String) -> void:
+	discover_codex("passives", option_id)
+
+func _load_persistent_settings() -> void:
+	var config = ConfigFile.new()
+	var settings_loaded = config.load(SETTINGS_PATH) == OK
+	if settings_loaded:
+		window_mode = int(config.get_value(SETTINGS_VIDEO_SECTION, "window_mode", window_mode))
+		var stored_resolution = config.get_value(SETTINGS_VIDEO_SECTION, "resolution", window_resolution)
+		if stored_resolution is Vector2i and stored_resolution in SUPPORTED_RESOLUTIONS:
+			window_resolution = stored_resolution
+		vsync_enabled = bool(config.get_value(SETTINGS_VIDEO_SECTION, "vsync", vsync_enabled))
+		graphics_quality = clampi(int(config.get_value(SETTINGS_VIDEO_SECTION, "quality", graphics_quality)), GRAPHICS_LOW, GRAPHICS_HIGH)
+		music_volume_slider_value = float(config.get_value(SETTINGS_AUDIO_SECTION, "music", music_volume_slider_value))
+		sfx_volume_slider_value = float(config.get_value(SETTINGS_AUDIO_SECTION, "sfx", sfx_volume_slider_value))
+		_load_control_bindings(config)
+	music_volume_db = audio_slider_value_to_db(music_volume_slider_value)
+	sfx_volume_db = audio_slider_value_to_db(sfx_volume_slider_value)
+	_load_persistent_progress(config if settings_loaded else null)
+
+func _load_persistent_progress(legacy_settings: ConfigFile = null) -> void:
+	var progress = ConfigFile.new()
+	var progress_loaded = progress.load(PROGRESS_PATH) == OK
+	var source = progress if progress_loaded else legacy_settings
+	if source == null:
+		return
+	story_completed = bool(source.get_value(SETTINGS_PROGRESS_SECTION, "story_completed", false))
+	for category in codex_discovered.keys():
+		var stored_entries = source.get_value(SETTINGS_CODEX_SECTION, category, [])
+		if stored_entries is Array:
+			codex_discovered[category] = stored_entries.duplicate()
+	var stored_achievements = source.get_value(SETTINGS_ACHIEVEMENTS_SECTION, "unlocked", [])
+	if stored_achievements is Array:
+		unlocked_achievements = stored_achievements.duplicate()
+	var stored_progress = source.get_value(SETTINGS_ACHIEVEMENTS_SECTION, "progress", {})
+	if stored_progress is Dictionary:
+		achievement_progress = stored_progress.duplicate(true)
+	if not progress_loaded and legacy_settings != null:
+		_save_persistent_progress()
+
+func _apply_video_settings() -> void:
+	if OS.has_feature("web"):
+		return
+	DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS, window_mode == WINDOW_MODE_BORDERLESS)
+	if window_mode == WINDOW_MODE_FULLSCREEN:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	else:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+		DisplayServer.window_set_size(window_resolution)
+		var screen_size = DisplayServer.screen_get_size()
+		DisplayServer.window_set_position((screen_size - window_resolution) / 2)
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if vsync_enabled else DisplayServer.VSYNC_DISABLED)
+	settings_changed.emit()
+
+func _save_display_settings() -> void:
+	var config = _load_settings_file()
+	config.set_value(SETTINGS_VIDEO_SECTION, "window_mode", window_mode)
+	config.set_value(SETTINGS_VIDEO_SECTION, "resolution", window_resolution)
+	config.set_value(SETTINGS_VIDEO_SECTION, "vsync", vsync_enabled)
+	config.set_value(SETTINGS_VIDEO_SECTION, "quality", graphics_quality)
+	_save_config_file(config, SETTINGS_PATH, "display settings")
+
+func _save_audio_settings() -> void:
+	var config = _load_settings_file()
+	config.set_value(SETTINGS_AUDIO_SECTION, "music", music_volume_slider_value)
+	config.set_value(SETTINGS_AUDIO_SECTION, "sfx", sfx_volume_slider_value)
+	_save_config_file(config, SETTINGS_PATH, "audio settings")
+
+func _save_control_bindings() -> void:
+	var config = _load_settings_file()
+	config.set_value(SETTINGS_CONTROLS_SECTION, "schema_version", CONTROLS_SCHEMA_VERSION)
+	for action in REMAPPABLE_ACTIONS:
+		var serialized: Array = []
+		for event in InputMap.action_get_events(action):
+			serialized.append(_serialize_input_event(event))
+		config.set_value(SETTINGS_CONTROLS_SECTION, str(action), serialized)
+	_save_config_file(config, SETTINGS_PATH, "control bindings")
+
+func _load_control_bindings(config: ConfigFile) -> void:
+	var schema_version = int(config.get_value(SETTINGS_CONTROLS_SECTION, "schema_version", 0))
+	for action in REMAPPABLE_ACTIONS:
+		if schema_version < CONTROLS_SCHEMA_VERSION and action in [&"shoot", &"dash"]:
+			continue
+		if not config.has_section_key(SETTINGS_CONTROLS_SECTION, str(action)):
+			continue
+		var serialized = config.get_value(SETTINGS_CONTROLS_SECTION, str(action), [])
+		if not (serialized is Array) or serialized.is_empty():
+			continue
+		InputMap.action_erase_events(action)
+		for event_data in serialized:
+			var event = _deserialize_input_event(event_data)
+			if event != null:
+				InputMap.action_add_event(action, event)
+	if schema_version < CONTROLS_SCHEMA_VERSION:
+		_save_control_bindings()
+
+func _serialize_input_event(event: InputEvent) -> Dictionary:
+	if event is InputEventKey:
+		return {"type": "key", "physical": int(event.physical_keycode), "keycode": int(event.keycode)}
+	if event is InputEventMouseButton:
+		return {"type": "mouse", "button": int(event.button_index)}
+	if event is InputEventJoypadButton:
+		return {"type": "joy_button", "button": int(event.button_index)}
+	if event is InputEventJoypadMotion:
+		return {"type": "joy_motion", "axis": int(event.axis), "value": float(event.axis_value)}
+	return {}
+
+func _deserialize_input_event(data) -> InputEvent:
+	if not (data is Dictionary):
+		return null
+	match str(data.get("type", "")):
+		"key":
+			var event = InputEventKey.new()
+			event.physical_keycode = int(data.get("physical", 0)) as Key
+			event.keycode = int(data.get("keycode", 0)) as Key
+			return event
+		"mouse":
+			return _make_mouse_button_event(int(data.get("button", MOUSE_BUTTON_LEFT)) as MouseButton)
+		"joy_button":
+			return _make_joy_button_event(int(data.get("button", JOY_BUTTON_A)) as JoyButton)
+		"joy_motion":
+			return _make_joy_motion_event(int(data.get("axis", JOY_AXIS_TRIGGER_RIGHT)) as JoyAxis, float(data.get("value", 1.0)))
+	return null
+
+func _save_codex_progress() -> void:
+	_save_persistent_progress()
+
+func _save_persistent_progress() -> bool:
+	var config = ConfigFile.new()
+	config.load(PROGRESS_PATH)
+	config.set_value(SETTINGS_PROGRESS_SECTION, "story_completed", story_completed)
+	for category in codex_discovered.keys():
+		config.set_value(SETTINGS_CODEX_SECTION, category, codex_discovered[category])
+	config.set_value(SETTINGS_ACHIEVEMENTS_SECTION, "unlocked", unlocked_achievements)
+	config.set_value(SETTINGS_ACHIEVEMENTS_SECTION, "progress", achievement_progress)
+	return _save_config_file(config, PROGRESS_PATH, "persistent progress")
+
+func save_persistent_progress() -> bool:
+	return _save_persistent_progress()
+
+func _load_settings_file() -> ConfigFile:
+	var config = ConfigFile.new()
+	config.load(SETTINGS_PATH)
+	return config
+
+func _save_config_file(config: ConfigFile, path: String, context: String) -> bool:
+	_ensure_user_data_dir_exists()
+	var save_error = config.save(path)
+	if save_error != OK:
+		push_error("Failed to save %s at %s: %s" % [context, ProjectSettings.globalize_path(path), error_string(save_error)])
+		return false
+	if is_web_build() and not OS.is_userfs_persistent():
+		push_warning("Saved %s for this session, but the browser reports that user:// is not persistent. Private browsing or blocked site storage may erase it." % context)
+	return true
 
 func _process(delta: float) -> void:
 	if get_tree() != null and get_tree().paused:
@@ -341,11 +749,13 @@ func set_music_volume_from_slider(value: float) -> void:
 	music_volume_slider_value = _clamp_audio_slider_value(value)
 	music_volume_db = audio_slider_value_to_db(music_volume_slider_value)
 	_apply_group_volume(GROUP_MUSIC, music_volume_db)
+	_save_audio_settings()
 
 func set_sfx_volume_from_slider(value: float) -> void:
 	sfx_volume_slider_value = _clamp_audio_slider_value(value)
 	sfx_volume_db = audio_slider_value_to_db(sfx_volume_slider_value)
 	_apply_group_volume(GROUP_SFX, sfx_volume_db)
+	_save_audio_settings()
 
 func audio_slider_value_to_db(value: float) -> float:
 	var normalized = _clamp_audio_slider_value(value) / AUDIO_SLIDER_MAX_VALUE
@@ -425,16 +835,21 @@ func get_sfx_polyphony_limit(default_limit: int) -> int:
 	return min(default_limit, WEB_SFX_MAX_POLYPHONY)
 
 func get_web_particle_amount(default_amount: int) -> int:
-	if not is_web_build():
-		return default_amount
-
-	return max(1, int(round(float(default_amount) * WEB_PARTICLE_AMOUNT_MULTIPLIER)))
+	return get_scaled_particle_amount(default_amount)
 
 func should_skip_web_hit_particles() -> bool:
 	return is_web_build()
 
 func is_web_build() -> bool:
 	return OS.has_feature("web")
+
+func _request_web_persistent_storage() -> void:
+	if not is_web_build():
+		return
+	JavaScriptBridge.eval(
+		"if (navigator.storage && navigator.storage.persist) { navigator.storage.persist(); }",
+		true
+	)
 
 func _configure_sfx_player_for_web(audio_player: Node) -> void:
 	if not is_web_build() or not is_instance_valid(audio_player):
@@ -509,9 +924,10 @@ func _configure_music_player_for_pause(audio_player: Node) -> void:
 func start_run_timer() -> void:
 	run_start_msec = Time.get_ticks_msec()
 	current_run_saved = false
+	endless_run_summary = {}
 
 ## Saves the active run once, using the current pecado progress and elapsed time.
-func finish_current_run() -> bool:
+func finish_current_run(outcome: String = "") -> bool:
 	if current_run_saved:
 		return true
 
@@ -521,7 +937,7 @@ func finish_current_run() -> bool:
 	else:
 		push_warning("Ranking run finished without an active timer. Saving with 00:00 elapsed time.")
 
-	if not save_run(clampi(pecado - 1, 0, 7), elapsed_seconds):
+	if not save_run(clampi(pecado - 1, 0, 7), elapsed_seconds, outcome):
 		return false
 
 	current_run_saved = true
@@ -529,17 +945,24 @@ func finish_current_run() -> bool:
 	return true
 
 ## Stores one completed run in the local ranking file.
-func save_run(pecados_derrotados: int, tempo_segundos: float) -> bool:
+func save_run(pecados_derrotados: int, tempo_segundos: float, outcome: String = "") -> bool:
 	var ranking_data = _load_ranking_data()
 	var runs: Array = ranking_data.get("runs", [])
+	if is_endless_mode() and endless_run_summary.has("elapsed_seconds"):
+		tempo_segundos = float(endless_run_summary["elapsed_seconds"])
 
 	var run_data = {
+		"mode": selected_game_mode,
 		"pecados_derrotados": clampi(pecados_derrotados, 0, 7),
 		"pecados_texto": format_pecados_derrotados(pecados_derrotados),
 		"tempo_segundos": max(tempo_segundos, 0.0),
 		"tempo_formatado": format_run_time(tempo_segundos),
-		"data": Time.get_datetime_string_from_system(false, true)
+		"data": Time.get_datetime_string_from_system(false, true),
+		"outcome": outcome,
 	}
+	if is_endless_mode():
+		for key in endless_run_summary.keys():
+			run_data[key] = endless_run_summary[key]
 
 	runs.append(run_data)
 	ranking_data["runs"] = runs
@@ -547,10 +970,17 @@ func save_run(pecados_derrotados: int, tempo_segundos: float) -> bool:
 	return _save_ranking_data(ranking_data)
 
 ## Returns ranking entries sorted by defeated sins, then by fastest time.
-func get_ranked_runs() -> Array:
+func get_ranked_runs(mode: String = GAME_MODE_STORY) -> Array:
 	var runs: Array = _load_ranking_data().get("runs", [])
-	var ranked_runs = runs.duplicate(true)
-	ranked_runs.sort_custom(func(a, b): return _is_run_better(a, b))
+	var ranked_runs: Array = []
+	for run in runs:
+		var run_mode = str(run.get("mode", GAME_MODE_STORY))
+		if run_mode == mode:
+			ranked_runs.append(run.duplicate(true))
+	if mode == GAME_MODE_ENDLESS:
+		ranked_runs.sort_custom(func(a, b): return _is_endless_run_better(a, b))
+	else:
+		ranked_runs.sort_custom(func(a, b): return _is_run_better(a, b))
 	return ranked_runs
 
 ## Formats the defeated sin count for ranking UI.
@@ -571,6 +1001,17 @@ func _is_run_better(a: Dictionary, b: Dictionary) -> bool:
 		return a_pecados > b_pecados
 
 	return float(a.get("tempo_segundos", 0.0)) < float(b.get("tempo_segundos", 0.0))
+
+func _is_endless_run_better(a: Dictionary, b: Dictionary) -> bool:
+	var a_score = float(a.get("score", 0.0))
+	var b_score = float(b.get("score", 0.0))
+	if not is_equal_approx(a_score, b_score):
+		return a_score > b_score
+	var a_bosses = int(a.get("bosses_defeated", 0))
+	var b_bosses = int(b.get("bosses_defeated", 0))
+	if a_bosses != b_bosses:
+		return a_bosses > b_bosses
+	return float(a.get("tempo_segundos", 0.0)) > float(b.get("tempo_segundos", 0.0))
 
 func _load_ranking_data() -> Dictionary:
 	var ranking_data = {

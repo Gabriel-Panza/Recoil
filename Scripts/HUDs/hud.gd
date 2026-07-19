@@ -591,16 +591,24 @@ func _apply_effect(option) -> void:
 		return
 
 	match option_id:
+		"endless_heal_potion":
+			player.heal(float(player.max_health) * 0.25 * stat_multiplier)
+			_on_hp_updated(player.current_health, player.max_health)
+		"endless_greater_heal_potion":
+			player.heal(float(player.max_health) * 0.50 * stat_multiplier)
+			_on_hp_updated(player.current_health, player.max_health)
+		"endless_reroll_token":
+			if player.has_method("add_reroll_tokens"):
+				player.add_reroll_tokens(maxi(1, int(round(stat_multiplier))))
 		"option_1":
 			player.add_recoil_force_bonus(0.05 * stat_multiplier)
 		"option_2":
-			var health_bonus = 0.05 * stat_multiplier
-			var health_gain = player.current_health * health_bonus
-			player.max_health += player.max_health * health_bonus
-			player.heal(health_gain)
+			if player.has_method("apply_common_health_upgrade"):
+				player.apply_common_health_upgrade(stat_multiplier)
 			_on_hp_updated(player.current_health, player.max_health)
 		"option_3":
-			player.attack_damage += player.attack_damage * 0.12 * stat_multiplier
+			if player.has_method("apply_common_attack_upgrade"):
+				player.apply_common_attack_upgrade(stat_multiplier)
 		"option_4":
 			player.add_attack_speed_bonus(0.05 * stat_multiplier)
 		"option_5":

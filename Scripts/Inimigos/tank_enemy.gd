@@ -18,7 +18,7 @@ const TANK_ROW_BY_PECADO = {
 func _ready() -> void:
 	super()
 
-	max_health = 200 + ((Global.pecado - 1) * 100)
+	max_health = 200 + ((Global.get_difficulty_index() - 1) * 100)
 	current_health = max_health
 	speed *= 0.8
 	damage = 35

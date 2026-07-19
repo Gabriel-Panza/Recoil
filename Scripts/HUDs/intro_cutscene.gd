@@ -129,7 +129,7 @@ func _make_dialogue_style() -> StyleBoxFlat:
 
 func _load_steps_for_current_language() -> void:
 	current_steps = _get_pt_steps() if I18n.get_language() == I18n.LANG_PT_BR else _get_en_steps()
-	advance_label.text = "ESPACO / CLIQUE\nESC: PULAR" if I18n.get_language() == I18n.LANG_PT_BR else "SPACE / CLICK\nESC: SKIP"
+	advance_label.text = I18n.t("cutscene.advance_hint")
 
 func _show_next_step() -> void:
 	if is_transitioning:

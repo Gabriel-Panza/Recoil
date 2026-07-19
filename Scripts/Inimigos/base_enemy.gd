@@ -71,6 +71,7 @@ var footstep_sfx_player: AudioStreamPlayer
 var has_footstep_sfx_voice: bool = false
 var body_collision_radius: float = BODY_RADIUS_FALLBACK
 var avoidance_enemy_candidates: Array = []
+var visual_sin_id: int = 0
 @onready var aparencia = get_node_or_null("AnimatedAppearence")
 
 func _ready() -> void:
@@ -533,7 +534,7 @@ func _play_pecado_animation(state_name: String = "") -> void:
 	if aparencia == null or aparencia.sprite_frames == null:
 		return
 
-	var pecado_id = clampi(Global.pecado, 1, 7)
+	var pecado_id = clampi(visual_sin_id if visual_sin_id > 0 else Global.pecado, 1, 7)
 	var animation_name = _get_pecado_animation_name(pecado_id, state_name)
 	if not aparencia.sprite_frames.has_animation(animation_name):
 		animation_name = _get_pecado_animation_name(2, state_name)

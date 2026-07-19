@@ -85,6 +85,7 @@ var tutorial_continue_requested: bool = false
 var is_transitioning: bool = false
 var movement_tutorial_seen: bool = false
 var elite_tutorial_seen: bool = false
+var endless_tutorial_seen: bool = false
 
 var arena_tile_sets: Dictionary = {}
 
@@ -95,6 +96,7 @@ const SPREAD_ENEMY = preload("res://Cenas/Inimigos/spread_enemy.tscn")
 const TANK_ENEMY = preload("res://Cenas/Inimigos/tank_enemy.tscn")
 const AGILE_ENEMY = preload("res://Cenas/Inimigos/agile_enemy.tscn")
 const BOSS_ENEMY = preload("res://Cenas/Inimigos/boss.tscn")
+const ENEMY_PROJECTILE = preload("res://Cenas/Inimigos/enemyProjectile.tscn")
 const ELITE_SPAWN_CHANCE_BASE: float = 0.08
 const ELITE_SPAWN_CHANCE_PER_PECADO: float = 0.01
 const ELITE_SPAWN_CHANCE_MAX: float = 0.15
@@ -105,6 +107,31 @@ const CONTRACT_BUFF_HEALTH: String = "health"
 const CONTRACT_BUFF_DAMAGE: String = "damage"
 const CONTRACT_BUFF_SPEED: String = "speed"
 const CONTRACT_REWARD_REROLL_AMOUNT: int = 5
+const ENDLESS_WAVES_PER_BOSS: int = 4
+const ENDLESS_ENEMY_LIMIT_BASE: int = 13
+const ENDLESS_ENEMY_LIMIT_MAX: int = 24
+const ENDLESS_ELITE_CHANCE_PER_CIRCLE: float = 0.018
+const ENDLESS_ELITE_CHANCE_MAX: float = 0.24
+const ENDLESS_INFLUENCE_INTERVAL: float = 7.0
+const ENDLESS_ALLOWED_BOSS_PAIRS = [
+	[1, 3], [1, 4], [1, 5], [1, 6],
+	[2, 3], [2, 4], [2, 6],
+	[3, 4], [3, 5], [3, 7], [4, 6], [4, 7]
+]
+const ENDLESS_ARENA_TINTS = [
+	Color(0.78, 0.92, 1.0, 1.0),
+	Color(1.0, 0.76, 0.74, 1.0),
+	Color(0.78, 1.0, 0.78, 1.0),
+	Color(0.92, 0.78, 1.0, 1.0),
+	Color(1.0, 0.92, 0.68, 1.0),
+]
+const ENDLESS_ENEMY_COSTS = {
+	"melee": 1.0,
+	"ranged": 2.0,
+	"agile": 2.4,
+	"tank": 3.2,
+	"spread": 3.0,
+}
 
 const WAVE_SETS = {
 	1: [  # Sloth
@@ -162,6 +189,25 @@ var active_contract: Dictionary = {}
 var contract_offer_layer: CanvasLayer
 var contract_choice_made: bool = false
 var contract_choice_accepted: bool = false
+var contract_choice_retired: bool = false
+var endless_circle: int = 1
+var endless_encounter_index: int = 1
+var endless_bosses_defeated: int = 0
+var endless_target_sin_id: int = 1
+var endless_wave_visual_sin_id: int = 1
+var endless_support_sin_id: int = 0
+var endless_influence_sin_id: int = 0
+var endless_sin_deck: Array[int] = []
+var endless_expected_boss_deaths: int = 0
+var endless_score: float = 0.0
+var endless_contract_streak: int = 0
+var endless_score_multiplier: float = 1.0
+var endless_elapsed_seconds: float = 0.0
+var endless_budget_overflow: float = 0.0
+var endless_timer_label: Label
+var endless_influence_generation: int = 0
+var endless_run_outcome: String = "died"
+var endless_wave_contract: Dictionary = {}
 var debug_layer: CanvasLayer
 var debug_panel: PanelContainer
 var debug_status_label: Label
@@ -172,6 +218,7 @@ signal contract_offer_selected(accepted)
 const BOSS_CLEAR_HEAL_RATIO: float = 0.05
 const BOSS_SPAWN_DELAY_AFTER_ARENA_ARRIVAL: float = 0.3
 func _ready() -> void:
+	AchievementManager.start_run(Global.selected_game_mode)
 	_setup_game_music()
 	Global.apply_audio_volumes()
 
@@ -183,26 +230,141 @@ func _ready() -> void:
 	_setup_fade_overlay()
 	_setup_debug_panel()
 	I18n.language_changed.connect(_on_language_changed)
-	set_waves_based_on_pecado()
+	if Global.is_endless_mode():
+		_initialize_endless_mode()
+	else:
+		Global.set_endless_difficulty_index(1)
+		set_waves_based_on_pecado()
 	_update_camera_limits()
 	await _show_starting_arm_selection()
 	await _show_movement_tutorial()
+	await _show_endless_tutorial()
 	await _wait_modal_close_frame()
 	Global.start_run_timer()
 	start_next_wave()
 
+func _process(delta: float) -> void:
+	if not Global.is_endless_mode() or run_finished:
+		return
+	endless_elapsed_seconds += delta
+	_update_endless_timer_label()
+
 func _setup_game_music() -> void:
 	AudioManager.tocar_musica_jogo()
 
-func finish_run() -> bool:
+func finish_run(outcome: String = "") -> bool:
 	if run_finished:
 		return true
 
-	if not Global.finish_current_run():
+	if Global.is_endless_mode():
+		if outcome != "":
+			endless_run_outcome = outcome
+		Global.set_endless_run_summary(_build_endless_run_summary())
+	if not Global.finish_current_run(endless_run_outcome if Global.is_endless_mode() else outcome):
 		return false
 
 	run_finished = true
 	return true
+
+func _initialize_endless_mode() -> void:
+	endless_circle = 1
+	endless_encounter_index = 1
+	endless_bosses_defeated = 0
+	endless_score = 0.0
+	endless_contract_streak = 0
+	endless_score_multiplier = 1.0
+	endless_elapsed_seconds = 0.0
+	endless_budget_overflow = 0.0
+	endless_run_outcome = "died"
+	endless_sin_deck.clear()
+	_draw_next_endless_sin()
+	_setup_endless_timer_label()
+	set_waves_based_on_pecado()
+
+func _draw_next_endless_sin() -> void:
+	if endless_sin_deck.is_empty():
+		for sin_id in range(1, 8):
+			endless_sin_deck.append(sin_id)
+		endless_sin_deck.shuffle()
+	endless_target_sin_id = endless_sin_deck.pop_back()
+	endless_wave_visual_sin_id = randi_range(1, 7)
+	while endless_wave_visual_sin_id == endless_target_sin_id:
+		endless_wave_visual_sin_id = randi_range(1, 7)
+	Global.set_endless_difficulty_index(endless_encounter_index)
+	Global.pecado = endless_target_sin_id
+
+func _generate_endless_wave_set() -> Array:
+	var generated_waves: Array = []
+	endless_budget_overflow = 0.0
+	for wave_index in range(ENDLESS_WAVES_PER_BOSS):
+		var budget = 5.0 + float(endless_encounter_index - 1) * 1.1 + float(endless_circle - 1) * 2.2 + float(wave_index) * 2.25
+		var enemy_limit = mini(ENDLESS_ENEMY_LIMIT_BASE + endless_circle - 1, ENDLESS_ENEMY_LIMIT_MAX)
+		var wave = {"melee": 0, "ranged": 0, "agile": 0, "tank": 0, "spread": 0}
+		var available_types: Array[String] = ["melee"]
+		if endless_encounter_index >= 2:
+			available_types.append("ranged")
+		if endless_encounter_index >= 3:
+			available_types.append("agile")
+		if endless_encounter_index >= 4:
+			available_types.append("tank")
+		if endless_encounter_index >= 5:
+			available_types.append("spread")
+
+		var spent = 0.0
+		while _get_wave_enemy_count(wave) < enemy_limit:
+			var affordable = available_types.filter(func(type_id): return spent + float(ENDLESS_ENEMY_COSTS[type_id]) <= budget)
+			if affordable.is_empty():
+				break
+			var type_id = str(affordable.pick_random())
+			wave[type_id] = int(wave[type_id]) + 1
+			spent += float(ENDLESS_ENEMY_COSTS[type_id])
+		if _get_wave_enemy_count(wave) == 0:
+			wave["melee"] = 1
+			spent = 1.0
+		endless_budget_overflow += max(budget - spent, 0.0)
+		generated_waves.append(wave)
+	return generated_waves
+
+func _get_wave_enemy_count(wave: Dictionary) -> int:
+	return int(wave.get("melee", 0)) + int(wave.get("ranged", 0)) + int(wave.get("agile", 0)) + int(wave.get("tank", 0)) + int(wave.get("spread", 0))
+
+func _setup_endless_timer_label() -> void:
+	var layer = CanvasLayer.new()
+	layer.name = "EndlessHUDLayer"
+	layer.layer = 80
+	add_child(layer)
+	endless_timer_label = Label.new()
+	endless_timer_label.name = "EndlessTimer"
+	endless_timer_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	endless_timer_label.position = Vector2(-320.0, 92.0)
+	endless_timer_label.size = Vector2(300.0, 110.0)
+	endless_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	endless_timer_label.add_theme_font_size_override("font_size", 20)
+	endless_timer_label.add_theme_constant_override("outline_size", 5)
+	endless_timer_label.add_theme_color_override("font_color", Color(1.0, 0.72, 0.34))
+	layer.add_child(endless_timer_label)
+	_update_endless_timer_label()
+
+func _update_endless_timer_label() -> void:
+	if endless_timer_label == null:
+		return
+	endless_timer_label.text = I18n.t("endless.hud", [
+		Global.format_run_time(endless_elapsed_seconds),
+		endless_circle,
+		int(round(endless_score)),
+		endless_contract_streak,
+		endless_score_multiplier,
+	])
+
+func _build_endless_run_summary() -> Dictionary:
+	return {
+		"circle": endless_circle,
+		"bosses_defeated": endless_bosses_defeated,
+		"score": int(round(endless_score)),
+		"contract_streak": endless_contract_streak,
+		"retired": endless_run_outcome == "retired",
+		"elapsed_seconds": endless_elapsed_seconds,
+	}
 
 func _on_language_changed(_language: String) -> void:
 	_refresh_debug_panel_texts()
@@ -291,6 +453,8 @@ func _show_starting_arm_selection() -> void:
 		button.add_theme_stylebox_override("pressed", _make_starting_arm_style(Color(0.34, 0.13, 0.08, 0.98), Color(1.0, 0.76, 0.28, 1.0), 3))
 		button.pressed.connect(Callable(self, "_on_starting_arm_button_pressed").bind(arm_id))
 		choices.add_child(button)
+		if choices.get_child_count() == 1:
+			button.call_deferred("grab_focus")
 
 	await starting_arm_selected
 
@@ -318,20 +482,21 @@ func _make_starting_arm_style(bg_color: Color, border_color: Color, border_width
 	return style
 
 func _show_movement_tutorial() -> void:
-	if movement_tutorial_seen:
+	if Global.is_endless_mode() or movement_tutorial_seen:
 		return
 
 	movement_tutorial_seen = true
+	var tutorial_lines = [
+		"------------------------------------------------------------",
+		I18n.t("tutorial.controller_1" if Global.last_input_is_gamepad else "tutorial.movement_1"),
+		I18n.t("tutorial.controller_2" if Global.last_input_is_gamepad else "tutorial.movement_2"),
+		I18n.t("tutorial.controller_3" if Global.last_input_is_gamepad else "tutorial.movement_3"),
+		"------------------------------------------------------------"
+	]
 	await _show_tutorial_popup(
 		TutorialAnimation.MODE_MOVEMENT,
 		I18n.t("tutorial.movement_title"),
-		[
-			"------------------------------------------------------------",
-			I18n.t("tutorial.movement_1"),
-			I18n.t("tutorial.movement_2"),
-			I18n.t("tutorial.movement_3"),
-			"------------------------------------------------------------"
-		],
+		tutorial_lines,
 		I18n.t("tutorial.ok")
 	)
 
@@ -346,6 +511,18 @@ func _show_elite_tutorial() -> void:
 			I18n.t("tutorial.elite_vampiric"),
 			"------------------------------------------------------------"
 		],
+		I18n.t("tutorial.ok")
+	)
+
+func _show_endless_tutorial() -> void:
+	if not Global.is_endless_mode() or endless_tutorial_seen:
+		return
+
+	endless_tutorial_seen = true
+	await _show_tutorial_popup(
+		TutorialAnimation.MODE_ENDLESS,
+		I18n.t("tutorial.endless_title"),
+		[I18n.t("tutorial.endless_body")],
 		I18n.t("tutorial.ok")
 	)
 
@@ -436,6 +613,7 @@ func _show_tutorial_popup(animation_mode: String, title_text: String, info_lines
 	PopupStyle.apply_button(continue_button)
 	continue_button.pressed.connect(Callable(self, "_on_tutorial_continue_pressed").bind(continue_button))
 	layout.add_child(continue_button)
+	continue_button.call_deferred("grab_focus")
 
 	while not tutorial_continue_requested and is_instance_valid(continue_button):
 		await _wait_modal_close_frame()
@@ -556,6 +734,18 @@ func _setup_arena_tile_visuals() -> void:
 		_add_arena_inner_details(arena, profile)
 		_add_arena_mirror_panel_details(arena, profile)
 		_resize_arena_collision(arena, profile)
+
+func _apply_endless_default_arena_tint() -> void:
+	if not Global.is_endless_mode() or arena_nodes.is_empty():
+		return
+	var arena = arena_nodes[0]
+	var tint: Color = ENDLESS_ARENA_TINTS.pick_random()
+	var floor_layer = arena.get_node_or_null("ArenaTileLayer") as CanvasItem
+	var underlay = arena.get_node_or_null("ArenaFloorUnderlay") as CanvasItem
+	if floor_layer != null:
+		floor_layer.modulate = tint
+	if underlay != null:
+		underlay.modulate = tint.darkened(0.18)
 
 func _create_arena_tile_set(texture: Texture2D, atlas_tiles: Array) -> TileSet:
 	var tile_set = TileSet.new()
@@ -1362,6 +1552,10 @@ func _get_current_arena_bounds() -> Rect2:
 	return arena_rect
 
 func set_waves_based_on_pecado() -> void:
+	if Global.is_endless_mode():
+		waves = _generate_endless_wave_set()
+		_apply_endless_default_arena_tint()
+		return
 	waves = WAVE_SETS.get(Global.pecado, WAVE_SETS[1])
 
 func start_next_wave() -> void:
@@ -1369,6 +1563,8 @@ func start_next_wave() -> void:
 		if current_arena == arena_nodes[0]:
 			print("4 waves completed in the main arena! Moving to sin arena {0}.".format([Global.pecado]))
 			await _offer_contract_before_boss()
+			if run_finished or contract_choice_retired:
+				return
 			current_arena = arena_nodes[Global.pecado] if Global.pecado <= arena_nodes.size() - 1 else arena_nodes[1]
 			_update_camera_limits()
 			boss_phase = true
@@ -1432,22 +1628,39 @@ func spawn_wave(data: Dictionary) -> void:
 	await _try_finish_wave()
 		
 func spawn_boss() -> void:
+	Global.discover_codex("sins", _get_codex_sin_id(Global.pecado))
 	var centro_node = current_arena.get_node("Centro")
 	_set_player_xp_goal(1, "boss", Global.pecado)
 	await _transition_player_to(centro_node.global_position)
 	await get_tree().create_timer(BOSS_SPAWN_DELAY_AFTER_ARENA_ARRIVAL, false).timeout
 	await get_tree().process_frame
 
-	var boss = BOSS_ENEMY.instantiate()
-	var spawn_margin = _get_body_spawn_margin(boss)
-	boss.global_position = get_camera_top_center_position(spawn_margin)
-	boss.add_to_group(Global.GROUP_BOSS)
-	boss.connect("boss_defeated", Callable(self, "_on_boss_died"))
-	add_child(boss)
-	_apply_enemy_spawn_modifiers(boss)
+	var boss_ids = _get_endless_boss_ids() if Global.is_endless_mode() else [Global.pecado]
+	AchievementManager.start_boss_encounter(boss_ids)
+	endless_expected_boss_deaths = boss_ids.size()
+	for boss_index in range(boss_ids.size()):
+		var boss = BOSS_ENEMY.instantiate()
+		if Global.is_endless_mode():
+			_configure_endless_boss_instance(boss, int(boss_ids[boss_index]))
+		var spawn_margin = _get_body_spawn_margin(boss)
+		var spawn_position = get_camera_top_center_position(spawn_margin)
+		if boss_ids.size() > 1:
+			spawn_position.x += (-90.0 if boss_index == 0 else 90.0)
+		boss.add_to_group(Global.GROUP_BOSS)
+		boss.connect("boss_defeated", Callable(self, "_on_boss_died").bind(int(boss_ids[boss_index])))
+		add_child(boss)
+		boss.global_position = spawn_position
+		_apply_enemy_spawn_modifiers(boss)
+
+	if Global.is_endless_mode():
+		_spawn_endless_boss_support_minions(boss_ids)
+		_start_endless_influence(boss_ids)
 
 func spawn_enemy(enemy_scene: PackedScene) -> void:
+	Global.discover_codex("enemies", _get_codex_enemy_id(enemy_scene))
 	var enemy = enemy_scene.instantiate()
+	if Global.is_endless_mode() and enemy.get("visual_sin_id") != null:
+		enemy.set("visual_sin_id", endless_wave_visual_sin_id)
 	add_child(enemy)
 	_apply_enemy_spawn_modifiers(enemy)
 
@@ -1457,9 +1670,161 @@ func spawn_enemy(enemy_scene: PackedScene) -> void:
 	# Monitora a morte do inimigo
 	enemy.tree_exited.connect(_on_enemy_died)
 
+func _get_endless_boss_ids() -> Array:
+	if not Global.is_endless_mode() or endless_circle < 5:
+		return [Global.pecado]
+	var matching_pairs: Array = []
+	for pair in ENDLESS_ALLOWED_BOSS_PAIRS:
+		if Global.pecado in pair:
+			matching_pairs.append(pair)
+	if matching_pairs.is_empty():
+		return [Global.pecado]
+	var selected_pair = matching_pairs.pick_random().duplicate()
+	if int(selected_pair[0]) != Global.pecado:
+		selected_pair.reverse()
+	return selected_pair
+
+func _configure_endless_boss_instance(boss: Node, sin_id: int) -> void:
+	var circle_health = pow(1.15, float(endless_circle - 1))
+	var circle_damage = pow(1.10, float(endless_circle - 1))
+	var boss_circle_bonus = pow(1.30, float(endless_circle - 1))
+	var continuous_health = 1.0 + float(endless_encounter_index - 1) * 0.08
+	var continuous_damage = 1.0 + float(endless_encounter_index - 1) * 0.045
+	var overflow_bonus = 1.0 + min(endless_budget_overflow * 0.01, 0.25)
+	boss.set("forced_sin_id", sin_id)
+	boss.set("advances_story_progress", false)
+	boss.set("grants_progression_reward", false)
+	boss.set("endless_health_multiplier", circle_health * boss_circle_bonus * continuous_health * overflow_bonus)
+	boss.set("endless_damage_multiplier", circle_damage * boss_circle_bonus * continuous_damage * overflow_bonus)
+	boss.set("endless_speed_multiplier", 1.0 + min(float(endless_circle - 1) * 0.025, 0.24))
+	boss.set("endless_action_cooldown_multiplier", max(0.62, 1.0 - float(endless_circle - 1) * 0.025))
+	Global.discover_codex("sins", _get_codex_sin_id(sin_id))
+
+func _spawn_endless_boss_support_minions(boss_ids: Array) -> void:
+	if endless_circle == 1 or endless_circle in [5, 6]:
+		endless_support_sin_id = 0
+		return
+	endless_support_sin_id = _roll_other_sin_id(boss_ids)
+	var minion_count = mini(2 + endless_circle, 8)
+	var scenes = [MELEE_ENEMY, RANGED_ENEMY, AGILE_ENEMY, TANK_ENEMY, SPREAD_ENEMY]
+	for i in range(minion_count):
+		var enemy = (scenes.pick_random() as PackedScene).instantiate()
+		if enemy.get("visual_sin_id") != null:
+			enemy.set("visual_sin_id", endless_support_sin_id)
+		enemy.set_meta("boss_summon", true)
+		add_child(enemy)
+		_apply_enemy_spawn_modifiers(enemy)
+		enemy.global_position = get_random_arena_position(_get_body_spawn_margin(enemy))
+
+func _roll_other_sin_id(excluded_ids: Array) -> int:
+	var candidates = [1, 2, 3, 4, 5, 6, 7]
+	for excluded_id in excluded_ids:
+		candidates.erase(int(excluded_id))
+	return int(candidates.pick_random()) if not candidates.is_empty() else 1
+
+func _start_endless_influence(boss_ids: Array) -> void:
+	endless_influence_generation += 1
+	endless_influence_sin_id = 0
+	if endless_circle < 3 or endless_circle > 4:
+		return
+	var candidates = [3, 4, 6, 7]
+	for boss_id in boss_ids:
+		candidates.erase(int(boss_id))
+	if candidates.is_empty():
+		return
+	endless_influence_sin_id = int(candidates.pick_random())
+	var generation = endless_influence_generation
+	_run_endless_influence_loop(generation)
+
+func _run_endless_influence_loop(generation: int) -> void:
+	while is_inside_tree() and boss_phase and generation == endless_influence_generation:
+		await get_tree().create_timer(ENDLESS_INFLUENCE_INTERVAL, false).timeout
+		if not is_inside_tree() or not boss_phase or generation != endless_influence_generation:
+			return
+		await _trigger_endless_influence(endless_influence_sin_id)
+
+func _trigger_endless_influence(sin_id: int) -> void:
+	var player = get_tree().get_first_node_in_group(Global.GROUP_PLAYER) as Node2D
+	if player == null:
+		return
+	var scaled_damage = 22.0 * pow(1.10, float(endless_circle - 1)) * (1.0 + float(endless_encounter_index - 1) * 0.035)
+	match sin_id:
+		6:
+			var targets: Array[Vector2] = []
+			for i in range(3):
+				targets.append(clamp_position_to_current_arena(player.global_position + Vector2((i - 1) * 54.0, randf_range(-34.0, 34.0)), 26.0))
+				_spawn_endless_influence_warning(targets[-1], Color(1.0, 0.78, 0.0, 0.72), 22.0, 0.8)
+			await get_tree().create_timer(0.8, false).timeout
+			for target in targets:
+				_spawn_endless_influence_projectile(target + Vector2(0.0, -360.0), Vector2.DOWN, scaled_damage, 610.0, Color(1.0, 0.78, 0.0))
+		4:
+			var center = _get_current_arena_center()
+			_spawn_endless_influence_warning(center, Color(1.0, 0.22, 0.05, 0.7), 72.0, 0.7)
+			await get_tree().create_timer(0.7, false).timeout
+			for i in range(10):
+				_spawn_endless_influence_projectile(center, Vector2.RIGHT.rotated(TAU * float(i) / 10.0), scaled_damage, 390.0, Color(1.0, 0.25, 0.06))
+		3:
+			var side = -1.0 if randf() < 0.5 else 1.0
+			var origin = clamp_position_to_current_arena(player.global_position + Vector2(360.0 * side, -80.0), 28.0)
+			_spawn_endless_influence_warning(player.global_position, Color(0.35, 0.92, 1.0, 0.68), 34.0, 0.65)
+			await get_tree().create_timer(0.65, false).timeout
+			var aim = origin.direction_to(player.global_position)
+			_spawn_endless_influence_projectile(origin, aim.rotated(-0.12), scaled_damage, 470.0, Color(0.35, 0.92, 1.0))
+			_spawn_endless_influence_projectile(origin, aim.rotated(0.12), scaled_damage, 470.0, Color(0.35, 0.92, 1.0))
+		7:
+			_spawn_endless_influence_warning(player.global_position, Color(0.95, 0.82, 0.35, 0.72), 42.0, 0.75)
+			await get_tree().create_timer(0.75, false).timeout
+			var origin = _get_current_arena_center()
+			var aim = origin.direction_to(player.global_position)
+			for angle in [-0.18, 0.0, 0.18]:
+				_spawn_endless_influence_projectile(origin, aim.rotated(float(angle)), scaled_damage, 520.0, Color(0.95, 0.82, 0.35))
+
+func _spawn_endless_influence_projectile(origin: Vector2, direction: Vector2, projectile_damage: float, projectile_speed: float, color: Color) -> void:
+	var projectile = ENEMY_PROJECTILE.instantiate()
+	projectile.direction = direction.normalized()
+	projectile.damage = projectile_damage
+	projectile.speed = projectile_speed
+	projectile.set_meta("damage_source_name", I18n.t("endless.influence"))
+	projectile.set_meta("vfx_color", color)
+	add_child(projectile)
+	projectile.global_position = origin
+
+func _spawn_endless_influence_warning(position: Vector2, color: Color, radius: float, duration: float) -> void:
+	var warning = Polygon2D.new()
+	warning.z_index = Global.GROUND_AREA_VFX_Z_INDEX
+	warning.color = color
+	var points = PackedVector2Array()
+	for i in range(24):
+		points.append(Vector2.RIGHT.rotated(TAU * float(i) / 24.0) * radius)
+	warning.polygon = points
+	add_child(warning)
+	warning.global_position = position
+	var tween = create_tween().bind_node(warning)
+	tween.tween_property(warning, "modulate:a", 0.2, duration)
+	tween.tween_callback(warning.queue_free)
+
+func _get_codex_enemy_id(enemy_scene: PackedScene) -> String:
+	if enemy_scene == MELEE_ENEMY:
+		return "melee"
+	if enemy_scene == RANGED_ENEMY:
+		return "ranged"
+	if enemy_scene == SPREAD_ENEMY:
+		return "spread"
+	if enemy_scene == TANK_ENEMY:
+		return "tank"
+	if enemy_scene == AGILE_ENEMY:
+		return "agile"
+	return ""
+
+func _get_codex_sin_id(pecado_id: int) -> String:
+	var ids = ["", "sloth", "gluttony", "envy", "wrath", "lust", "greed", "pride"]
+	return ids[pecado_id] if pecado_id >= 1 and pecado_id < ids.size() else ""
+
 func _apply_enemy_spawn_modifiers(enemy: Node) -> void:
 	if enemy == null:
 		return
+	if Global.is_endless_mode() and not enemy.is_in_group(Global.GROUP_BOSS):
+		_apply_endless_enemy_modifiers(enemy)
 
 	if enemy.is_in_group(Global.GROUP_BOSS):
 		_apply_contract_modifiers_to_enemy(enemy, "boss")
@@ -1468,6 +1833,9 @@ func _apply_enemy_spawn_modifiers(enemy: Node) -> void:
 	if bool(enemy.get_meta("boss_summon", false)):
 		_apply_contract_modifiers_to_enemy(enemy, "minion")
 		return
+
+	if Global.is_endless_mode() and not endless_wave_contract.is_empty():
+		_apply_contract_dictionary_to_enemy(enemy, "minion", endless_wave_contract)
 
 	_try_apply_elite_variant(enemy)
 
@@ -1484,25 +1852,47 @@ func _try_apply_elite_variant(enemy: Node) -> void:
 		return
 
 	var elite_chance = min(ELITE_SPAWN_CHANCE_BASE + float(max(Global.pecado - 1, 0)) * ELITE_SPAWN_CHANCE_PER_PECADO, ELITE_SPAWN_CHANCE_MAX)
+	if Global.is_endless_mode():
+		elite_chance = min(ELITE_SPAWN_CHANCE_BASE + float(endless_circle - 1) * ENDLESS_ELITE_CHANCE_PER_CIRCLE, ENDLESS_ELITE_CHANCE_MAX)
 	if randf() > elite_chance:
 		return
 
 	var variants = ["armored", "unstable", "vampiric"]
 	variants.shuffle()
 	enemy.call("apply_elite_variant", variants[0])
-	if not elite_tutorial_seen:
+	Global.discover_codex("elites", variants[0])
+	if not Global.is_endless_mode() and not elite_tutorial_seen:
 		elite_tutorial_seen = true
 		call_deferred("_show_elite_tutorial")
+
+func _apply_endless_enemy_modifiers(enemy: Node) -> void:
+	var health_multiplier = pow(1.15, float(endless_circle - 1))
+	var continuous_damage = 1.0 + float(endless_encounter_index - 1) * 0.035
+	var damage_multiplier = pow(1.10, float(endless_circle - 1)) * continuous_damage
+	var speed_multiplier = 1.0 + min(float(endless_circle - 1) * 0.018, 0.18)
+	var cadence_multiplier = max(0.68, 1.0 - float(endless_circle - 1) * 0.025)
+	_multiply_enemy_health(enemy, health_multiplier)
+	_multiply_enemy_damage(enemy, damage_multiplier)
+	_multiply_enemy_speed(enemy, speed_multiplier)
+	if enemy.get("fire_rate") != null:
+		enemy.set("fire_rate", float(enemy.get("fire_rate")) * cadence_multiplier)
+	if enemy.get("time_to_dash") != null:
+		enemy.set("time_to_dash", float(enemy.get("time_to_dash")) * cadence_multiplier)
 
 func _apply_contract_modifiers_to_enemy(enemy: Node, target_key: String) -> void:
 	if active_contract.is_empty() or enemy == null:
 		return
+	_apply_contract_dictionary_to_enemy(enemy, target_key, active_contract)
 
-	var contract_id = str(active_contract.get("id", ""))
+func _apply_contract_dictionary_to_enemy(enemy: Node, target_key: String, contract: Dictionary) -> void:
+	if contract.is_empty() or enemy == null:
+		return
+
+	var contract_id = str(contract.get("id", ""))
 	if contract_id == "" or str(enemy.get_meta("contract_id", "")) == contract_id:
 		return
 
-	var modifiers: Dictionary = active_contract.get("modifiers", {})
+	var modifiers: Dictionary = contract.get("modifiers", {})
 	var health_multiplier = float(modifiers.get("%s_%s" % [target_key, CONTRACT_BUFF_HEALTH], 1.0))
 	var damage_multiplier = float(modifiers.get("%s_%s" % [target_key, CONTRACT_BUFF_DAMAGE], 1.0))
 	var speed_multiplier = float(modifiers.get("%s_%s" % [target_key, CONTRACT_BUFF_SPEED], 1.0))
@@ -1515,7 +1905,7 @@ func _apply_contract_modifiers_to_enemy(enemy: Node, target_key: String) -> void
 		_multiply_enemy_speed(enemy, speed_multiplier)
 
 	enemy.set_meta("contract_id", contract_id)
-	enemy.set_meta("contract_name", str(active_contract.get("name", I18n.t("contract.fallback_name"))))
+	enemy.set_meta("contract_name", str(contract.get("name", I18n.t("contract.fallback_name"))))
 
 func _multiply_enemy_health(enemy: Node, multiplier: float) -> void:
 	if enemy.get("max_health") == null:
@@ -1545,19 +1935,36 @@ func _multiply_enemy_speed(enemy: Node, multiplier: float) -> void:
 
 func _offer_contract_before_boss() -> void:
 	active_contract = {}
-	if Global.pecado > 7:
+	contract_choice_retired = false
+	if Global.pecado > 7 and not Global.is_endless_mode():
 		return
 
 	var contract = _generate_contract_offer(Global.pecado)
 	var accepted = await _show_contract_offer(contract)
-	if $Player != null and $Player.has_method("record_contract_decision"):
+	if not contract_choice_retired:
+		AchievementManager.record_contract_decision(accepted)
+	if not contract_choice_retired and $Player != null and $Player.has_method("record_contract_decision"):
 		$Player.record_contract_decision(contract, accepted)
+	if contract_choice_retired:
+		_retire_from_endless()
+		return
 
 	if not accepted:
 		active_contract = {}
+		if Global.is_endless_mode():
+			endless_contract_streak = 0
+			endless_score_multiplier = 1.0
+			endless_wave_contract = {}
+			_update_endless_timer_label()
 		return
 
 	active_contract = contract
+	if Global.is_endless_mode():
+		endless_contract_streak += 1
+		endless_score_multiplier = 1.0 + float(endless_contract_streak) * 0.15
+		if endless_circle >= 3:
+			endless_wave_contract = contract.duplicate(true)
+		_update_endless_timer_label()
 	await _grant_contract_reward(contract)
 
 func _generate_contract_offer(pecado_id: int) -> Dictionary:
@@ -1682,6 +2089,7 @@ func _grant_contract_stat_reward(contract: Dictionary) -> void:
 func _show_contract_offer(contract: Dictionary) -> bool:
 	contract_choice_made = false
 	contract_choice_accepted = false
+	contract_choice_retired = false
 	_create_contract_offer_layer(contract)
 	get_tree().paused = true
 	Global.keep_music_playing_during_pause()
@@ -1753,6 +2161,11 @@ func _create_contract_offer_layer(contract: Dictionary) -> void:
 	var decline_button = _make_contract_button(I18n.t("common.decline"))
 	decline_button.pressed.connect(Callable(self, "_on_contract_button_pressed").bind(false))
 	buttons.add_child(decline_button)
+	if Global.is_endless_mode() and endless_bosses_defeated > 0:
+		var retire_button = _make_contract_button(I18n.t("endless.retire"))
+		retire_button.pressed.connect(_on_contract_retire_pressed)
+		buttons.add_child(retire_button)
+	accept_button.call_deferred("grab_focus")
 
 func _make_contract_button(text: String) -> Button:
 	var button = Button.new()
@@ -1770,6 +2183,22 @@ func _on_contract_button_pressed(accepted: bool) -> void:
 	contract_choice_made = true
 	contract_choice_accepted = accepted
 	contract_offer_selected.emit(accepted)
+
+func _on_contract_retire_pressed() -> void:
+	if contract_choice_made or not Global.is_endless_mode():
+		return
+	contract_choice_made = true
+	contract_choice_accepted = false
+	contract_choice_retired = true
+	contract_offer_selected.emit(false)
+
+func _retire_from_endless() -> void:
+	if not Global.is_endless_mode() or run_finished:
+		return
+	endless_run_outcome = "retired"
+	var player = get_tree().get_first_node_in_group(Global.GROUP_PLAYER)
+	if player != null and player.has_method("retire_endless"):
+		player.retire_endless()
 
 func _destroy_contract_offer_layer() -> void:
 	if is_instance_valid(contract_offer_layer):
@@ -2113,6 +2542,10 @@ func _try_finish_wave() -> void:
 
 	wave_finish_pending = true
 	is_wave_active = false
+	AchievementManager.record_wave_completed(int($Player.current_health))
+	if Global.is_endless_mode():
+		endless_score += (100.0 + float(endless_encounter_index) * 18.0 + float(current_wave_index) * 22.0) * endless_score_multiplier
+		_update_endless_timer_label()
 	if $Player.has_method("apply_heal_after_wave"):
 		$Player.apply_heal_after_wave()
 	await get_tree().create_timer(0.5, false).timeout
@@ -2124,8 +2557,15 @@ func _try_finish_wave() -> void:
 	wave_finish_pending = false
 	start_next_wave()
 
-func _on_boss_died() -> void:
+func _on_boss_died(defeated_sin_id: int = 0) -> void:
 	if not boss_phase:
+		return
+	AchievementManager.record_boss_defeated(defeated_sin_id, $Player)
+	if Global.is_endless_mode():
+		endless_expected_boss_deaths = maxi(endless_expected_boss_deaths - 1, 0)
+		if endless_expected_boss_deaths > 0:
+			return
+		await _complete_endless_boss_encounter()
 		return
 
 	boss_phase = false
@@ -2146,8 +2586,38 @@ func _on_boss_died() -> void:
 	await _transition_player_to(ENEMY_ARENA_PLAYER_POSITION)
 	start_next_wave()
 
+func _complete_endless_boss_encounter() -> void:
+	boss_phase = false
+	is_wave_active = false
+	active_contract = {}
+	endless_influence_generation += 1
+	for enemy in get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
+		if is_instance_valid(enemy) and bool(enemy.get_meta("boss_summon", false)):
+			enemy.queue_free()
+	endless_bosses_defeated += 1
+	endless_score += (950.0 + float(endless_encounter_index) * 125.0) * endless_score_multiplier
+	_reset_player_periodic_shot_counters()
+	_heal_player_after_boss()
+	if $Player != null and $Player.has_method("grant_bonus_level_up"):
+		$Player.grant_bonus_level_up("boss", endless_target_sin_id)
+	await _wait_for_level_up_selection()
+	_try_apply_arm_mutation_after_boss()
+
+	endless_encounter_index = endless_bosses_defeated + 1
+	var next_circle = int(endless_bosses_defeated / 7) + 1
+	if next_circle > endless_circle:
+		endless_circle = next_circle
+	_draw_next_endless_sin()
+	current_wave_index = 0
+	current_arena = arena_nodes[0]
+	set_waves_based_on_pecado()
+	_update_camera_limits()
+	await _transition_player_to(ENEMY_ARENA_PLAYER_POSITION)
+	_update_endless_timer_label()
+	start_next_wave()
+
 func _try_apply_arm_mutation_after_boss() -> void:
-	var defeated_sins = clampi(Global.pecado - 1, 0, 7)
+	var defeated_sins = mini(endless_bosses_defeated, 7) if Global.is_endless_mode() else clampi(Global.pecado - 1, 0, 7)
 	if defeated_sins != 2 and defeated_sins != 4 and defeated_sins != 6:
 		return
 
@@ -2171,6 +2641,8 @@ func _heal_player_after_boss() -> void:
 	player.heal(max_player_health * BOSS_CLEAR_HEAL_RATIO)
 
 func _on_pecado_changed(new_pecado: int) -> void:
+	if Global.is_endless_mode():
+		return
 	if new_pecado > 7:
 		await _wait_for_level_up_selection()
 		var player = get_tree().get_first_node_in_group(Global.GROUP_PLAYER)
@@ -2200,7 +2672,10 @@ func _debug_skip_current_encounter() -> void:
 		killed_boss = true
 
 	if killed_boss or boss_phase:
-		Global.pecado += 1
+		if Global.is_endless_mode():
+			endless_expected_boss_deaths = 1
+		else:
+			Global.pecado += 1
 		_on_boss_died()
 	else:
 		call_deferred("_try_finish_wave")
@@ -2213,6 +2688,8 @@ func _debug_trigger_level_up_for_skip(skipped_boss: bool) -> void:
 		return
 
 	if skipped_boss:
+		if Global.is_endless_mode():
+			return
 		if Global.pecado >= 7:
 			return
 		player.grant_bonus_level_up("boss", Global.pecado)

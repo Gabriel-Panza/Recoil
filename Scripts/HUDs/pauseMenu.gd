@@ -1,5 +1,7 @@
 extends Control
 
+const SETTINGS_OVERLAY_SCRIPT = preload("res://Scripts/HUDs/settings_overlay.gd")
+
 const GAME_SCENE_PATH: NodePath = "/root/GameScene"
 const PLAYER_PATH: NodePath = "/root/GameScene/Player"
 const PAUSE_MENU_PATH: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/PauseControl/PauseMenu"
@@ -51,6 +53,9 @@ var language_button: Button
 var music_slider: HSlider
 var sfx_slider: HSlider
 var level_up_stats_preview_visible: bool = false
+var settings_overlay: SettingsOverlay
+var advanced_settings_button: Button
+var continue_endless_button: Button
 
 var can_move: bool = true
 
@@ -75,6 +80,8 @@ func _ready() -> void:
 	stats_panel = get_node_or_null("../HBoxContainer") as Control
 	_setup_audio_sliders()
 	_setup_language_button()
+	_setup_advanced_settings()
+	_setup_continue_endless_button()
 	I18n.language_changed.connect(_on_language_changed)
 	_refresh_localized_text()
 
@@ -172,8 +179,10 @@ func _process(_delta: float) -> void:
 		_sync_death_recap_visibility()
 	if _is_end_screen_visible():
 		return
+	if settings_overlay != null and settings_overlay.is_open():
+		return
 
-	if Input.is_action_just_pressed("ui_cancel"):
+	if Input.is_action_just_pressed("pause"):
 		if pause_menu != null and pause_menu.is_visible():
 			_unpause_game()
 		elif not _is_popup_pause_active():
@@ -187,6 +196,9 @@ func _pause_game() -> void:
 	_sync_stats_panel_visibility()
 	get_tree().paused = true
 	Global.keep_music_playing_during_pause()
+	var resume_button = pause_menu.get_node_or_null("HBoxContainer/VBoxContainer/ResumeButton") as BaseButton
+	if resume_button != null:
+		resume_button.call_deferred("grab_focus")
 
 func _unpause_game() -> void:
 	if _is_end_screen_visible():
@@ -195,6 +207,8 @@ func _unpause_game() -> void:
 	options_menu.hide()
 	if language_button != null:
 		language_button.hide()
+	if advanced_settings_button != null:
+		advanced_settings_button.hide()
 	pause_menu.hide()
 	_sync_stats_panel_visibility()
 	get_tree().paused = false
@@ -369,11 +383,40 @@ func _on_options_button_pressed() -> void:
 	options_menu.show()
 	if language_button != null:
 		language_button.show()
+	if advanced_settings_button != null:
+		advanced_settings_button.show()
+		advanced_settings_button.grab_focus()
 
 func _on_back_button_pressed() -> void:
 	options_menu.hide()
 	if language_button != null:
 		language_button.hide()
+	if advanced_settings_button != null:
+		advanced_settings_button.hide()
+
+func _setup_advanced_settings() -> void:
+	settings_overlay = SETTINGS_OVERLAY_SCRIPT.new()
+	add_child(settings_overlay)
+	advanced_settings_button = Button.new()
+	advanced_settings_button.name = "AdvancedSettingsButton"
+	advanced_settings_button.process_mode = Node.PROCESS_MODE_ALWAYS
+	advanced_settings_button.text = I18n.t("settings.advanced_button")
+	advanced_settings_button.position = Vector2(590.0, 510.0)
+	advanced_settings_button.size = Vector2(250.0, 42.0)
+	advanced_settings_button.visible = false
+	advanced_settings_button.add_theme_font_size_override("font_size", 18)
+	advanced_settings_button.add_theme_color_override("font_color", Color(0.96, 0.9, 0.76))
+	advanced_settings_button.add_theme_color_override("font_focus_color", Color(1.0, 0.72, 0.32))
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.12, 0.035, 0.045, 0.98)
+	style.border_color = Color(0.88, 0.18, 0.08, 1.0)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(5)
+	advanced_settings_button.add_theme_stylebox_override("normal", style)
+	advanced_settings_button.add_theme_stylebox_override("hover", style)
+	advanced_settings_button.add_theme_stylebox_override("focus", style)
+	advanced_settings_button.pressed.connect(settings_overlay.open_overlay)
+	add_child(advanced_settings_button)
 
 func _setup_language_button() -> void:
 	if options_menu == null:
@@ -455,6 +498,8 @@ func _refresh_localized_text() -> void:
 	if language_button != null:
 		language_button.text = I18n.t("settings.language_button")
 		_set_control_tooltip(language_button, I18n.t("settings.language_tooltip"))
+	if advanced_settings_button != null:
+		advanced_settings_button.text = I18n.t("settings.advanced_button")
 
 	var retry_label = get_node_or_null("GameOver/MarginContainer/TextureButton/Label")
 	if retry_label is Label:
@@ -465,6 +510,8 @@ func _refresh_localized_text() -> void:
 	var game_win_menu_label = get_node_or_null("GameWin/MarginContainer2/TextureButton/Label")
 	if game_win_menu_label is Label:
 		(game_win_menu_label as Label).text = I18n.t("common.menu")
+	if continue_endless_button != null:
+		continue_endless_button.text = I18n.t("endless.continue")
 	_update_death_recap_button_text()
 
 func _update_game_over_texture() -> void:
@@ -496,6 +543,31 @@ func _on_menu_button_pressed() -> void:
 	_finish_current_run_if_end_screen_visible()
 	get_tree().paused = false
 	get_tree().change_scene_to_file("res://Cenas/HUDs/MainMenu.tscn")
+
+func _setup_continue_endless_button() -> void:
+	if game_win == null:
+		return
+	continue_endless_button = game_win.get_node_or_null("ContinueEndlessButton") as Button
+	if continue_endless_button == null:
+		continue_endless_button = Button.new()
+		continue_endless_button.name = "ContinueEndlessButton"
+		continue_endless_button.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+		continue_endless_button.position = Vector2(408.0, 538.0)
+		continue_endless_button.size = Vector2(336.0, 54.0)
+		continue_endless_button.add_theme_font_size_override("font_size", 20)
+		PopupStyle.apply_button(continue_endless_button)
+		game_win.add_child(continue_endless_button)
+	continue_endless_button.text = I18n.t("endless.continue")
+	continue_endless_button.visible = Global.is_story_mode()
+	if not continue_endless_button.pressed.is_connected(_on_continue_endless_pressed):
+		continue_endless_button.pressed.connect(_on_continue_endless_pressed)
+
+func _on_continue_endless_pressed() -> void:
+	_finish_current_run_if_end_screen_visible()
+	Global.mark_story_completed()
+	Global.selected_game_mode = Global.GAME_MODE_ENDLESS
+	get_tree().paused = false
+	get_tree().change_scene_to_file("res://Cenas/General/gameScene.tscn")
 
 func _finish_current_run_if_end_screen_visible() -> void:
 	if not _is_end_screen_visible():
@@ -560,15 +632,17 @@ func _update_active_skill_slot_label(label: Label, slot: String) -> void:
 	if not label:
 		return
 
+	var action: StringName = &"active_e" if slot == "E" else &"active_r"
+	var display_slot = Global.get_action_binding_text(action, Global.last_input_is_gamepad)
 	if not player.has_method("get_active_ability_slots"):
-		label.text = "%s: -" % slot
+		label.text = "%s: -" % display_slot
 		_set_control_tooltip(label, I18n.t("hud.no_active"))
 		return
 
 	var active_slots = player.get_active_ability_slots()
 	var ability_id = active_slots.get(slot, "")
 	if ability_id == "":
-		label.text = "%s: -" % slot
+		label.text = "%s: -" % display_slot
 		_set_control_tooltip(label, I18n.t("hud.no_active"))
 		return
 
@@ -584,9 +658,9 @@ func _update_active_skill_slot_label(label: Label, slot: String) -> void:
 		cooldown = player.get_active_slot_cooldown(slot)
 
 	if cooldown > 0.0:
-		label.text = "%s: %s (%.1fs)" % [slot, skill_name, cooldown]
+		label.text = "%s: %s (%.1fs)" % [display_slot, skill_name, cooldown]
 	else:
-		label.text = "%s: %s" % [slot, skill_name]
+		label.text = "%s: %s" % [display_slot, skill_name]
 
 	_set_control_tooltip(label, "%s\n%s: %.1fs" % [skill_description, I18n.t("common.cooldown"), cooldown])
 

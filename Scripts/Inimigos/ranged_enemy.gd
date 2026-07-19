@@ -19,7 +19,7 @@ var is_shooting_animation: bool = false
 func _ready() -> void:
 	super()
 
-	max_health = 50 + ((Global.pecado - 1) * 35)
+	max_health = 50 + ((Global.get_difficulty_index() - 1) * 35)
 	current_health = max_health
 	_configure_enemy_sprite_sheet(RANGED_SPRITESHEET, RANGED_FRAME_SIZE, RANGED_FRAMES_PER_ROW, RANGED_STATES, {}, 8.0, Vector2(1.25, 1.25))
 	_play_pecado_animation("walk")

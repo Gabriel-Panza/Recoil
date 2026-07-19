@@ -10,6 +10,13 @@ signal boss_defeated
 @export var speed: float = 85.0
 @export var damage: int = 50
 @export var xp_drop: int = 1
+@export var forced_sin_id: int = 0
+@export var advances_story_progress: bool = true
+@export var grants_progression_reward: bool = true
+@export var endless_health_multiplier: float = 1.0
+@export var endless_damage_multiplier: float = 1.0
+@export var endless_speed_multiplier: float = 1.0
+@export var endless_action_cooldown_multiplier: float = 1.0
 
 const ENRAGE_HEALTH_RATIO: float = 0.5
 const ENRAGE_STAT_MULTIPLIER: float = 1.25
@@ -63,9 +70,9 @@ const SLOTH_ZONE_SPAWN_INTERVAL: float = 1.25
 const SLOTH_SLOW_ZONE_LIFETIME: float = 12.0
 const SLOTH_BOSS_PLAYER_DASH_SPEED_MULTIPLIER: float = 0.75
 const SLOTH_BOSS_PLAYER_VELOCITY_MULTIPLIER: float = 0.75
-const SLOTH_BOSS_ZONE_DPS: float = 2.0
-const SLOTH_BOSS_ENEMY_SLOW_EFFECT_RATIO: float = 0.25
-const SLOTH_BOSS_ENEMY_SLOW_REFERENCE_DASH_MULTIPLIER: float = 0.45
+const SLOTH_BOSS_ZONE_DPS: float = 5.0
+const SLOTH_BOSS_ENEMY_SLOW_EFFECT_RATIO: float = 0.45
+const SLOTH_BOSS_ENEMY_SLOW_REFERENCE_DASH_MULTIPLIER: float = 0.65
 const GLUTTONY_FOOD_SPAWN_INTERVAL: float = 3.0
 const GLUTTONY_FOOD_SPEED_PHASE_1: float = 137.5
 const GLUTTONY_FOOD_SPEED_PHASE_2: float = 157.5
@@ -139,16 +146,17 @@ const DAMAGE_FEEDBACK_COLOR: Color = Color(1.0, 0.08, 0.08, 1.0)
 const HEAL_FEEDBACK_COLOR: Color = Color(0.18, 1.0, 0.32, 1.0)
 
 const BOSS_CONFIG = {
-	1: { "max_health": 500, "speed": 0.0, "damage": 40, "state": BossState.SLOTH, "animation": "pecado1", "sprite_sheet": SLOTH_BOSS_SHEET, "frame_size": Vector2i(44, 58), "frame_count": 8, "visual_scale": Vector2(1.35, 1.35) },
-	2: { "max_health": 1000, "speed": 90.0, "damage": 50, "state": BossState.GLUTTONY, "animation": "pecado2", "sprite_sheet": GLUTTONY_BOSS_SHEET, "frame_size": Vector2i(150, 140), "frame_count": 4, "visual_scale": Vector2(0.82, 0.82), "hurtbox_scale": Vector2(1.2, 1.15) },
-	3: { "max_health": 1200, "speed": 90.0, "damage": 50, "state": BossState.ENVY, "animation": "pecado3", "sprite_sheet": ENVY_BOSS_SHEET, "frame_size": Vector2i(69, 98), "frame_count": 4, "visual_scale": Vector2(0.9, 0.9) },
-	4: { "max_health": 1500, "speed": 90.0, "damage": 90, "state": BossState.WRATH, "animation": "pecado4", "sprite_sheet": WRATH_BOSS_SHEET, "frame_size": Vector2i(78, 74), "frame_count": 8, "visual_scale": Vector2(1.08, 1.08) },
-	5: { "max_health": 2000, "speed": 90.0, "damage": 66, "state": BossState.LUST, "animation": "pecado5", "sprite_sheet": LUST_BOSS_SHEET, "frame_size": Vector2i(60, 80), "frame_count": 6, "visual_scale": Vector2(1.08, 1.08) },
-	6: { "max_health": 3000, "speed": 90.0, "damage": 75, "state": BossState.GREED, "animation": "pecado6", "sprite_sheet": GREED_BOSS_SHEET, "frame_size": Vector2i(60, 88), "frame_count": 4, "visual_scale": Vector2(1.05, 1.05) },
-	7: { "max_health": 4000, "speed": 90.0, "damage": 90, "state": BossState.PRIDE, "animation": "pecado7", "sprite_sheet": PRIDE_BOSS_SHEET, "frame_size": Vector2i(109, 67), "frame_count": 6, "visual_scale": Vector2(0.98, 0.98) },
+	1: { "max_health": 550, "speed": 0.0, "damage": 40, "state": BossState.SLOTH, "animation": "pecado1", "sprite_sheet": SLOTH_BOSS_SHEET, "frame_size": Vector2i(44, 58), "frame_count": 8, "visual_scale": Vector2(1.35, 1.35) },
+	2: { "max_health": 1100, "speed": 90.0, "damage": 50, "state": BossState.GLUTTONY, "animation": "pecado2", "sprite_sheet": GLUTTONY_BOSS_SHEET, "frame_size": Vector2i(150, 140), "frame_count": 4, "visual_scale": Vector2(0.82, 0.82), "hurtbox_scale": Vector2(1.2, 1.15) },
+	3: { "max_health": 1500, "speed": 90.0, "damage": 50, "state": BossState.ENVY, "animation": "pecado3", "sprite_sheet": ENVY_BOSS_SHEET, "frame_size": Vector2i(69, 98), "frame_count": 4, "visual_scale": Vector2(0.9, 0.9) },
+	4: { "max_health": 2000, "speed": 90.0, "damage": 90, "state": BossState.WRATH, "animation": "pecado4", "sprite_sheet": WRATH_BOSS_SHEET, "frame_size": Vector2i(78, 74), "frame_count": 8, "visual_scale": Vector2(1.08, 1.08) },
+	5: { "max_health": 3000, "speed": 90.0, "damage": 66, "state": BossState.LUST, "animation": "pecado5", "sprite_sheet": LUST_BOSS_SHEET, "frame_size": Vector2i(60, 80), "frame_count": 6, "visual_scale": Vector2(1.08, 1.08) },
+	6: { "max_health": 4000, "speed": 90.0, "damage": 75, "state": BossState.GREED, "animation": "pecado6", "sprite_sheet": GREED_BOSS_SHEET, "frame_size": Vector2i(60, 88), "frame_count": 4, "visual_scale": Vector2(1.05, 1.05) },
+	7: { "max_health": 5000, "speed": 90.0, "damage": 90, "state": BossState.PRIDE, "animation": "pecado7", "sprite_sheet": PRIDE_BOSS_SHEET, "frame_size": Vector2i(109, 67), "frame_count": 6, "visual_scale": Vector2(0.98, 0.98) },
 }
 
 var current_health: int
+var sin_id: int = 1
 var player: Node2D
 var aparencia
 var health_bar: ProgressBar
@@ -228,10 +236,11 @@ func _exit_tree() -> void:
 	_stop_footstep_sfx()
 
 func _configure_boss_for_current_sin() -> void:
-	var config = BOSS_CONFIG.get(Global.pecado, BOSS_CONFIG[7])
-	max_health = int(config["max_health"])
-	speed = float(config["speed"])
-	damage = int(config["damage"])
+	sin_id = clampi(forced_sin_id if forced_sin_id > 0 else Global.pecado, 1, 7)
+	var config = BOSS_CONFIG.get(sin_id, BOSS_CONFIG[7])
+	max_health = maxi(1, int(round(float(config["max_health"]) * endless_health_multiplier)))
+	speed = float(config["speed"]) * endless_speed_multiplier
+	damage = maxi(1, int(round(float(config["damage"]) * endless_damage_multiplier)))
 	current_state = config["state"]
 	if aparencia:
 		_configure_boss_sprite_frames(config)
@@ -1669,6 +1678,7 @@ func _on_greed_treasure_body_entered(body: Node, treasure) -> void:
 func _collect_greed_treasure_for_player(treasure) -> void:
 	if not is_instance_valid(treasure):
 		return
+	AchievementManager.record_greed_treasure_collected()
 	active_treasures.erase(treasure)
 	treasure.queue_free()
 	_spawn_burst_particles(player.global_position, _with_alpha(GREED_COLOR, 0.9), 18, 0.28, 110.0)
@@ -1935,7 +1945,7 @@ func _create_pride_edge_beam_after_delay(beam_center: Vector2, beam_size: Vector
 		return
 	var beam_damage = _get_pride_damage(PRIDE_EDGE_BEAM_DAMAGE_MULTIPLIER)
 	var beam_color = _with_alpha(PRIDE_LIGHT_COLOR, 0.4)
-	_create_damaging_area(beam_center, beam_size, beam_rotation, beam_damage, beam_color, PRIDE_EDGE_BEAM_DURATION)
+	_create_damaging_area(beam_center, beam_size, beam_rotation, beam_damage, beam_color, PRIDE_EDGE_BEAM_DURATION, "pride_laser")
 	_spawn_burst_particles(beam_center, _with_alpha(PRIDE_LIGHT_COLOR, 0.55), 8, 0.18, 80.0)
 
 func _start_pride_inverted_cross_pattern(overlap: bool) -> void:
@@ -1990,8 +2000,8 @@ func _create_pride_inverted_cross_beam_after_delay(main_center: Vector2, main_si
 		return
 	var beam_damage = _get_pride_damage(PRIDE_INVERTED_CROSS_DAMAGE_MULTIPLIER)
 	var beam_color = _with_alpha(PRIDE_LIGHT_COLOR, 0.36)
-	_create_damaging_area(main_center, main_size, main_rotation, beam_damage, beam_color, PRIDE_EDGE_BEAM_DURATION)
-	_create_damaging_area(crossbar_center, crossbar_size, crossbar_rotation, beam_damage, beam_color, PRIDE_EDGE_BEAM_DURATION)
+	_create_damaging_area(main_center, main_size, main_rotation, beam_damage, beam_color, PRIDE_EDGE_BEAM_DURATION, "pride_laser")
+	_create_damaging_area(crossbar_center, crossbar_size, crossbar_rotation, beam_damage, beam_color, PRIDE_EDGE_BEAM_DURATION, "pride_laser")
 	_spawn_burst_particles(main_center, _with_alpha(PRIDE_LIGHT_COLOR, 0.55), 10, 0.18, 80.0)
 
 func _start_pride_aimed_fireballs(amount: int, spread_degrees: float) -> void:
@@ -2048,7 +2058,7 @@ func _spawn_pride_light_beams(include_diagonals: bool) -> void:
 func _create_pride_beams_after_delay(center: Vector2, beam_size: Vector2, rotations: Array, delay: float) -> void:
 	await get_tree().create_timer(delay, false).timeout
 	for rotation_angle in rotations:
-		_create_damaging_area(center, beam_size, rotation_angle, _get_pride_damage(PRIDE_LIGHT_BEAM_DAMAGE_MULTIPLIER), _with_alpha(PRIDE_LIGHT_COLOR, 0.35), 0.5)
+		_create_damaging_area(center, beam_size, rotation_angle, _get_pride_damage(PRIDE_LIGHT_BEAM_DAMAGE_MULTIPLIER), _with_alpha(PRIDE_LIGHT_COLOR, 0.35), 0.5, "pride_laser")
 
 func _start_pride_judgement() -> void:
 	pride_movement_mode = PRIDE_MOVEMENT_LASER
@@ -2089,7 +2099,7 @@ func _spawn_pride_judgement_wave(wave_index: int) -> void:
 
 func _spawn_pride_judgement_beam(beam_position: Vector2, beam_size: Vector2) -> void:
 	_spawn_rect_telegraph(beam_position, beam_size, 0.0, _with_alpha(PRIDE_LIGHT_COLOR, 0.23), 0.75)
-	_create_damaging_area_after_delay(beam_position, beam_size, 0.0, _get_pride_damage(PRIDE_JUDGEMENT_BEAM_DAMAGE_MULTIPLIER), _with_alpha(PRIDE_LIGHT_COLOR, 0.38), 0.75, 0.5)
+	_create_damaging_area_after_delay(beam_position, beam_size, 0.0, _get_pride_damage(PRIDE_JUDGEMENT_BEAM_DAMAGE_MULTIPLIER), _with_alpha(PRIDE_LIGHT_COLOR, 0.38), 0.75, 0.5, "pride_laser")
 
 func _on_projectile_hit_special_area(area, projectile) -> void:
 	if not is_instance_valid(area):
@@ -2253,13 +2263,14 @@ func die() -> void:
 	_set_boss_edge_indicator_visible(false)
 	_cleanup_boss_objects()
 
-	var should_grant_rewards = Global.pecado < 7
+	var should_grant_rewards = grants_progression_reward and (Global.is_endless_mode() or sin_id < 7)
 	if should_grant_rewards and player and player.has_method("gain_xp"):
 		player.gain_xp(xp_drop)
 	if should_grant_rewards and player and player.has_method("on_enemy_killed"):
 		player.on_enemy_killed(self)
 
-	Global.pecado += 1
+	if advances_story_progress and Global.is_story_mode():
+		Global.pecado += 1
 	boss_defeated.emit()
 	queue_free()
 
@@ -2393,7 +2404,7 @@ func _set_boss_edge_indicator_visible(is_visible: bool) -> void:
 
 func _finish_action(cooldown: float) -> void:
 	current_sub_state = BossSubState.RECOVERY
-	action_cooldown = cooldown
+	action_cooldown = cooldown * clampf(endless_action_cooldown_multiplier, 0.45, 1.0)
 	is_performing_action = false
 	if current_state == BossState.PRIDE:
 		pride_movement_mode = PRIDE_MOVEMENT_DEFAULT
@@ -2410,18 +2421,19 @@ func _spawn_enemy_projectile(spawn_position: Vector2, projectile_direction: Vect
 	projectile.speed = projectile_speed
 	return projectile
 
-func _create_damaging_area_after_delay(area_position: Vector2, size: Vector2, area_rotation: float, area_damage: float, color: Color, delay: float, duration: float) -> void:
+func _create_damaging_area_after_delay(area_position: Vector2, size: Vector2, area_rotation: float, area_damage: float, color: Color, delay: float, duration: float, achievement_damage_type: String = "") -> void:
 	await get_tree().create_timer(delay, false).timeout
 	if is_dead or not is_inside_tree():
 		return
-	_create_damaging_area(area_position, size, area_rotation, area_damage, color, duration)
+	_create_damaging_area(area_position, size, area_rotation, area_damage, color, duration, achievement_damage_type)
 
-func _create_damaging_area(area_position: Vector2, size: Vector2, area_rotation: float, area_damage: float, color: Color, duration: float) -> void:
+func _create_damaging_area(area_position: Vector2, size: Vector2, area_rotation: float, area_damage: float, color: Color, duration: float, achievement_damage_type: String = "") -> void:
 	var area = Area2D.new()
 	area.name = "BossDamagingArea"
 	area.collision_layer = 0
 	area.collision_mask = Global.PLAYER_LAYER_MASK
 	area.set_meta("damage", area_damage)
+	area.set_meta("achievement_damage_type", achievement_damage_type)
 	_add_rect_collision(area, size)
 	_add_rect_visual(area, size, _get_active_attack_color(color), 0)
 
@@ -2429,7 +2441,7 @@ func _create_damaging_area(area_position: Vector2, size: Vector2, area_rotation:
 	if not _add_child_at_global(_get_ground_area_vfx_parent(), area, area_position, area_rotation):
 		return
 	if player and _is_point_inside_rotated_rect(player.global_position, area_position, size, area_rotation):
-		player.take_damage(area_damage, area_position)
+		player.take_damage(area_damage, area_position, 1.0, self, achievement_damage_type)
 	var tree = get_tree()
 	if tree == null:
 		return
@@ -2438,7 +2450,7 @@ func _create_damaging_area(area_position: Vector2, size: Vector2, area_rotation:
 
 func _on_damaging_area_body_entered(body: Node, area) -> void:
 	if body.is_in_group(Global.GROUP_PLAYER):
-		body.take_damage(float(area.get_meta("damage", damage)), area.global_position)
+		body.take_damage(float(area.get_meta("damage", damage)), area.global_position, 1.0, self, str(area.get_meta("achievement_damage_type", "")))
 
 func _setup_health_bar() -> void:
 	if health_bar:

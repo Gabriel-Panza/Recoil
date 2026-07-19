@@ -25,7 +25,7 @@ func _ready() -> void:
 	collision_mask = collision_mask & ~Global.ENEMY_COLLISION_MASK
 	orbit_direction = 1 if randf() > 0.5 else -1
 	
-	max_health = 50 + ((Global.pecado - 1) * 30)
+	max_health = 50 + ((Global.get_difficulty_index() - 1) * 30)
 	current_health = max_health
 	speed *= 1.67
 	_configure_enemy_sprite_sheet(AGILE_SPRITESHEET, AGILE_FRAME_SIZE, AGILE_FRAMES_PER_ROW, ["walk"], {}, 6.0, Vector2(1.45, 1.45), AGILE_FRAME_SPACING)

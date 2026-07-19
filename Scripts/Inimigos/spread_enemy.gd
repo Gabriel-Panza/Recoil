@@ -12,7 +12,7 @@ const SPREAD_STATES: Array = ["walk", "charge", "shoot"]
 func _ready() -> void:
 	super()
 
-	max_health = 80 + ((Global.pecado - 1) * 25)
+	max_health = 80 + ((Global.get_difficulty_index() - 1) * 25)
 	current_health = max_health
 	_configure_enemy_sprite_sheet(SPREAD_SPRITESHEET, SPREAD_FRAME_SIZE, SPREAD_FRAMES_PER_ROW, SPREAD_STATES, {}, 7.0, Vector2(1.18, 1.18))
 	_play_pecado_animation("walk")

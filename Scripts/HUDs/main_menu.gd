@@ -1,5 +1,8 @@
 extends Control
 
+const SETTINGS_OVERLAY_SCRIPT = preload("res://Scripts/HUDs/settings_overlay.gd")
+const CODEX_OVERLAY_SCRIPT = preload("res://Scripts/HUDs/codex_overlay.gd")
+
 const MAX_VISIBLE_RANKING_RUNS: int = 5
 const OPTIONS_MENU_DEFAULT_SEPARATION: int = 7
 const OPTIONS_LANGUAGE_BUTTON_CENTER: Vector2 = Vector2(51.4, 31.8)
@@ -70,13 +73,25 @@ var roulette_navigation_order: Array = []
 var selected_option_label: Label
 var selected_option_label_text: String = ""
 var selected_option_label_tween: Tween
+var settings_overlay: SettingsOverlay
+var advanced_settings_button: Button
+var codex_overlay: CodexOverlay
+var codex_button: Button
+var mode_selector_layer: CanvasLayer
+var mode_selector_locked_label: Label
+var ranking_mode: String = Global.GAME_MODE_STORY
+var ranking_story_button: Button
+var ranking_endless_button: Button
 
 func _ready() -> void:
 	_setup_audio()
 	ranking_panel.visible = false
 	_setup_roulette_menu()
 	_setup_secondary_panels()
+	_setup_ranking_tabs()
 	_setup_language_button()
+	_setup_advanced_settings()
+	_setup_codex()
 	I18n.language_changed.connect(_on_language_changed)
 	_refresh_localized_text()
 	_open_returned_cutscenes_gallery_if_requested()
@@ -102,6 +117,19 @@ func _open_returned_cutscenes_gallery_if_requested() -> void:
 	_show_content_panel(cutscenes_panel)
 
 func _input(event: InputEvent) -> void:
+	if mode_selector_layer != null:
+		if event.is_action_pressed("ui_cancel"):
+			_close_mode_selector()
+			get_viewport().set_input_as_handled()
+		return
+	if settings_overlay != null and settings_overlay.is_open():
+		return
+	if codex_overlay != null and codex_overlay.is_open():
+		return
+	if event.is_action_pressed("codex") and $Menu.visible:
+		codex_overlay.open_overlay()
+		get_viewport().set_input_as_handled()
+		return
 	if not _is_roulette_input_active():
 		return
 
@@ -122,16 +150,110 @@ func _input(event: InputEvent) -> void:
 	elif event.is_action_pressed("ui_down"):
 		get_viewport().set_input_as_handled()
 		_request_roulette_navigation_step(1)
+	elif event.is_action_pressed("ui_accept"):
+		get_viewport().set_input_as_handled()
+		_request_selected_option_label_action()
 
 func _on_start_game_pressed() -> void:
 	_request_roulette_action("start")
 
 func _execute_start_game() -> void:
 	_play_sfx()
+	_open_mode_selector()
+
+func _start_story_mode() -> void:
+	Global.selected_game_mode = Global.GAME_MODE_STORY
+	_close_mode_selector()
 	Global.intro_cutscene_return_target = Global.INTRO_CUTSCENE_RETURN_GAME
 	Global.open_cutscenes_gallery_on_menu_ready = false
 	await get_tree().create_timer(0.1).timeout
 	get_tree().change_scene_to_file("res://Cenas/HUDs/IntroCutscene.tscn")
+
+func _start_endless_mode() -> void:
+	if not Global.story_completed:
+		if mode_selector_locked_label != null:
+			mode_selector_locked_label.visible = true
+		return
+	Global.selected_game_mode = Global.GAME_MODE_ENDLESS
+	_close_mode_selector()
+	await get_tree().create_timer(0.1).timeout
+	get_tree().change_scene_to_file("res://Cenas/General/gameScene.tscn")
+
+func _open_mode_selector() -> void:
+	if mode_selector_layer != null:
+		return
+	mode_selector_layer = CanvasLayer.new()
+	mode_selector_layer.name = "ModeSelectorLayer"
+	mode_selector_layer.layer = 100
+	add_child(mode_selector_layer)
+
+	var overlay = ColorRect.new()
+	overlay.color = PopupStyle.OVERLAY_COLOR
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	mode_selector_layer.add_child(overlay)
+
+	var panel = PanelContainer.new()
+	panel.position = Vector2(306.0, 139.0)
+	panel.size = Vector2(540.0, 370.0)
+	panel.custom_minimum_size = panel.size
+	PopupStyle.apply_panel(panel)
+	mode_selector_layer.add_child(panel)
+
+	var margin = MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 34)
+	margin.add_theme_constant_override("margin_top", 28)
+	margin.add_theme_constant_override("margin_right", 34)
+	margin.add_theme_constant_override("margin_bottom", 24)
+	panel.add_child(margin)
+	var layout = VBoxContainer.new()
+	layout.add_theme_constant_override("separation", 14)
+	margin.add_child(layout)
+
+	var title = Label.new()
+	title.text = I18n.t("mode.title")
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 30)
+	PopupStyle.apply_title(title)
+	layout.add_child(title)
+
+	var story_button = Button.new()
+	story_button.text = I18n.t("mode.story")
+	story_button.custom_minimum_size = Vector2(0.0, 58.0)
+	PopupStyle.apply_button(story_button)
+	story_button.pressed.connect(_start_story_mode)
+	layout.add_child(story_button)
+
+	var endless_button = Button.new()
+	endless_button.text = I18n.t("mode.endless") if Global.story_completed else I18n.t("mode.endless_locked")
+	endless_button.custom_minimum_size = Vector2(0.0, 58.0)
+	endless_button.tooltip_text = "" if Global.story_completed else Global.wrap_tooltip_text(I18n.t("mode.unlock_tooltip"))
+	PopupStyle.apply_button(endless_button)
+	endless_button.pressed.connect(_start_endless_mode)
+	layout.add_child(endless_button)
+
+	mode_selector_locked_label = Label.new()
+	mode_selector_locked_label.text = I18n.t("mode.unlock_tooltip")
+	mode_selector_locked_label.visible = false
+	mode_selector_locked_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	mode_selector_locked_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	mode_selector_locked_label.add_theme_font_size_override("font_size", 15)
+	mode_selector_locked_label.add_theme_color_override("font_color", Color(1.0, 0.62, 0.28))
+	layout.add_child(mode_selector_locked_label)
+
+	var back_button = Button.new()
+	back_button.text = I18n.t("common.back")
+	back_button.custom_minimum_size = Vector2(0.0, 44.0)
+	PopupStyle.apply_button(back_button)
+	back_button.pressed.connect(_close_mode_selector)
+	layout.add_child(back_button)
+	story_button.call_deferred("grab_focus")
+
+func _close_mode_selector() -> void:
+	if is_instance_valid(mode_selector_layer):
+		mode_selector_layer.queue_free()
+	mode_selector_layer = null
+	mode_selector_locked_label = null
 	
 func _on_exit_button_pressed() -> void:
 	_request_roulette_action("exit")
@@ -150,12 +272,54 @@ func _execute_options_menu() -> void:
 	if language_button != null:
 		language_button.visible = true
 	$Menu.visible = false
+	if advanced_settings_button != null:
+		advanced_settings_button.visible = true
+		advanced_settings_button.grab_focus()
+	if codex_button != null:
+		codex_button.visible = false
+
+func _setup_advanced_settings() -> void:
+	settings_overlay = SETTINGS_OVERLAY_SCRIPT.new()
+	add_child(settings_overlay)
+	advanced_settings_button = Button.new()
+	advanced_settings_button.name = "AdvancedSettingsButton"
+	advanced_settings_button.text = I18n.t("settings.advanced_button")
+	advanced_settings_button.position = Vector2(594.0, 510.0)
+	advanced_settings_button.size = Vector2(238.0, 42.0)
+	advanced_settings_button.visible = false
+	_style_panel_button(advanced_settings_button)
+	advanced_settings_button.pressed.connect(settings_overlay.open_overlay)
+	add_child(advanced_settings_button)
+
+func _setup_codex() -> void:
+	codex_overlay = CODEX_OVERLAY_SCRIPT.new()
+	add_child(codex_overlay)
+	codex_button = Button.new()
+	codex_button.name = "CodexButton"
+	codex_button.text = "C"
+	codex_button.tooltip_text = I18n.t("menu.codex_tooltip")
+	codex_button.position = Vector2(1076.0, 570.0)
+	codex_button.size = Vector2(56.0, 56.0)
+	codex_button.add_theme_font_size_override("font_size", 25)
+	codex_button.add_theme_color_override("font_color", Color(0.96, 0.9, 0.78))
+	codex_button.add_theme_color_override("font_focus_color", Color(1.0, 0.72, 0.32))
+	var normal_style = _make_card_style(Color(0.11, 0.03, 0.05, 0.98), Color(0.68, 0.18, 0.11, 1.0))
+	normal_style.set_corner_radius_all(28)
+	var hover_style = _make_card_style(Color(0.22, 0.06, 0.06, 0.98), Color(1.0, 0.48, 0.18, 1.0))
+	hover_style.set_corner_radius_all(28)
+	codex_button.add_theme_stylebox_override("normal", normal_style)
+	codex_button.add_theme_stylebox_override("hover", hover_style)
+	codex_button.add_theme_stylebox_override("focus", hover_style)
+	codex_button.pressed.connect(codex_overlay.open_overlay)
+	add_child(codex_button)
 
 func _on_ranking_button_pressed() -> void:
 	_request_roulette_action("ranking")
 
 func _execute_ranking_menu() -> void:
 	_play_sfx()
+	ranking_mode = Global.GAME_MODE_STORY
+	_refresh_ranking_tab_texts()
 	_refresh_ranking()
 	_show_content_panel(ranking_panel)
 
@@ -196,10 +360,22 @@ func _show_content_panel(panel: Control) -> void:
 	if panel != null:
 		panel.visible = true
 	$Menu.visible = false
+	if codex_button != null:
+		codex_button.visible = false
+	_focus_first_button(panel)
+
+func _focus_first_button(root: Node) -> void:
+	if root == null:
+		return
+	var button = _get_first_button(root)
+	if button != null:
+		button.call_deferred("grab_focus")
 
 func _return_to_main_menu() -> void:
 	_hide_content_panels()
 	$Menu.visible = true
+	if codex_button != null:
+		codex_button.visible = true
 
 func _hide_content_panels() -> void:
 	ranking_panel.visible = false
@@ -212,19 +388,82 @@ func _refresh_ranking() -> void:
 	for child in ranking_list.get_children():
 		child.queue_free()
 
-	var runs = Global.get_ranked_runs()
+	var runs = Global.get_ranked_runs(ranking_mode)
 	if runs.is_empty():
 		_add_ranking_label(I18n.t("ranking.no_runs"))
 		return
 
 	for i in range(min(runs.size(), MAX_VISIBLE_RANKING_RUNS)):
 		var run = runs[i]
-		var ranking_text = "%02d. %s - %s" % [
-			i + 1,
-			Global.format_pecados_derrotados(int(run.get("pecados_derrotados", 0))),
-			str(run.get("tempo_formatado", "00:00"))
-		]
+		var ranking_text = ""
+		if ranking_mode == Global.GAME_MODE_ENDLESS:
+			ranking_text = I18n.t("ranking.endless_entry", [
+				i + 1,
+				int(run.get("score", 0)),
+				int(run.get("circle", 1)),
+				int(run.get("bosses_defeated", 0)),
+				str(run.get("tempo_formatado", "00:00")),
+				I18n.t("ranking.retired") if bool(run.get("retired", false)) else I18n.t("ranking.died"),
+			])
+		else:
+			ranking_text = "%02d. %s - %s" % [
+				i + 1,
+				Global.format_pecados_derrotados(int(run.get("pecados_derrotados", 0))),
+				str(run.get("tempo_formatado", "00:00"))
+			]
 		_add_ranking_label(ranking_text, str(run.get("data", "")))
+
+func _setup_ranking_tabs() -> void:
+	var tab_row = HBoxContainer.new()
+	tab_row.name = "RankingTabs"
+	tab_row.position = Vector2(200.0, 88.0)
+	tab_row.size = Vector2(400.0, 42.0)
+	tab_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	tab_row.add_theme_constant_override("separation", 10)
+	ranking_panel.add_child(tab_row)
+	ranking_story_button = Button.new()
+	ranking_endless_button = Button.new()
+	for button in [ranking_story_button, ranking_endless_button]:
+		button.custom_minimum_size = Vector2(190.0, 38.0)
+		button.add_theme_font_size_override("font_size", 18)
+		button.toggle_mode = true
+		PopupStyle.apply_button(button)
+		tab_row.add_child(button)
+	ranking_story_button.pressed.connect(Callable(self, "_set_ranking_mode").bind(Global.GAME_MODE_STORY))
+	ranking_endless_button.pressed.connect(Callable(self, "_set_ranking_mode").bind(Global.GAME_MODE_ENDLESS))
+	var scroll = ranking_panel.get_node_or_null("ScrollContainer") as Control
+	if scroll != null:
+		scroll.position = Vector2(scroll.position.x, 140.0)
+		scroll.size = Vector2(scroll.size.x, 288.0)
+	_refresh_ranking_tab_texts()
+
+func _set_ranking_mode(mode: String) -> void:
+	ranking_mode = mode
+	_refresh_ranking_tab_texts()
+	_refresh_ranking()
+
+func _refresh_ranking_tab_texts() -> void:
+	if ranking_story_button != null:
+		ranking_story_button.text = I18n.t("ranking.story")
+		_apply_ranking_tab_state(ranking_story_button, ranking_mode == Global.GAME_MODE_STORY)
+	if ranking_endless_button != null:
+		ranking_endless_button.text = I18n.t("ranking.endless")
+		_apply_ranking_tab_state(ranking_endless_button, ranking_mode == Global.GAME_MODE_ENDLESS)
+
+func _apply_ranking_tab_state(button: Button, selected: bool) -> void:
+	button.set_pressed_no_signal(selected)
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.34, 0.055, 0.035, 0.98) if selected else Color(0.095, 0.025, 0.04, 0.96)
+	style.border_color = Color(1.0, 0.52, 0.18) if selected else Color(0.48, 0.14, 0.1)
+	style.set_border_width_all(3 if selected else 2)
+	style.set_corner_radius_all(4)
+	style.content_margin_left = 10
+	style.content_margin_right = 10
+	button.add_theme_stylebox_override("normal", style)
+	button.add_theme_stylebox_override("pressed", style)
+	button.add_theme_stylebox_override("hover", style)
+	button.add_theme_color_override("font_color", Color(1.0, 0.84, 0.48) if selected else Color(0.82, 0.7, 0.62))
+	button.add_theme_color_override("font_pressed_color", Color(1.0, 0.84, 0.48))
 
 func _add_ranking_label(text: String, tooltip: String = "") -> void:
 	var label = Label.new()
@@ -321,7 +560,7 @@ func _add_content_panel_back_button(panel: Control, callable: Callable) -> Butto
 	var button = Button.new()
 	button.position = Vector2((MENU_PANEL_SIZE.x - MENU_PANEL_BACK_SIZE.x) * 0.5, 460.0)
 	button.size = MENU_PANEL_BACK_SIZE
-	button.focus_mode = Control.FOCUS_NONE
+	button.focus_mode = Control.FOCUS_ALL
 	_style_panel_button(button)
 	panel.add_child(button)
 	if not button.pressed.is_connected(callable):
@@ -332,7 +571,7 @@ func _add_credits_back_button(panel: Control, callable: Callable) -> Button:
 	var button = Button.new()
 	button.position = CREDITS_BACK_POSITION
 	button.size = MENU_PANEL_BACK_SIZE
-	button.focus_mode = Control.FOCUS_NONE
+	button.focus_mode = Control.FOCUS_ALL
 	_style_panel_button(button)
 	panel.add_child(button)
 	if not button.pressed.is_connected(callable):
@@ -440,7 +679,7 @@ func _create_cutscene_card(label_text: String, callable: Callable) -> Button:
 	var card = Button.new()
 	card.text = label_text
 	card.custom_minimum_size = Vector2(210.0, 120.0)
-	card.focus_mode = Control.FOCUS_NONE
+	card.focus_mode = Control.FOCUS_ALL
 	card.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	card.add_theme_font_size_override("font_size", 25)
 	card.add_theme_constant_override("outline_size", 4)
@@ -991,13 +1230,19 @@ func _refresh_localized_text() -> void:
 		language_button.text = I18n.t("settings.language_button")
 		language_button.tooltip_text = Global.wrap_tooltip_text(I18n.t("settings.language_tooltip"))
 	_set_selected_option_label_for_current_item(false)
+	if advanced_settings_button != null:
+		advanced_settings_button.text = I18n.t("settings.advanced_button")
 	var title = get_node_or_null("RankingPanel/Title")
 	if title is Label:
 		(title as Label).text = I18n.t("ranking.title")
 	var back_button = get_node_or_null("RankingPanel/BackButton")
 	if back_button is Button:
 		(back_button as Button).text = I18n.t("common.back")
+	_refresh_ranking_tab_texts()
 	_refresh_secondary_panels()
+	if mode_selector_layer != null:
+		_close_mode_selector()
+		_open_mode_selector()
 
 func _play_sfx() -> void:
 	var sfx = get_node_or_null("SFX_Button")
@@ -1009,4 +1254,8 @@ func _on_back_button_pressed() -> void:
 	$OptionsMenu.visible = false
 	if language_button != null:
 		language_button.visible = false
+	if advanced_settings_button != null:
+		advanced_settings_button.visible = false
 	$Menu.visible = true
+	if codex_button != null:
+		codex_button.visible = true

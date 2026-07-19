@@ -5,6 +5,7 @@ const MODE_MOVEMENT: String = "movement"
 const MODE_RECOIL: String = "recoil"
 const MODE_DASH: String = "dash"
 const MODE_ELITES: String = "elites"
+const MODE_ENDLESS: String = "endless"
 
 var mode: String = MODE_MOVEMENT
 
@@ -23,6 +24,8 @@ func _draw() -> void:
 	match mode:
 		MODE_ELITES:
 			_draw_elite_demo()
+		MODE_ENDLESS:
+			_draw_endless_demo()
 		MODE_DASH:
 			_draw_dash_demo()
 		_:
@@ -77,6 +80,22 @@ func _draw_elite_demo() -> void:
 	_draw_elite_enemy(centers[0], Color(0.82, 0.86, 0.88, 1.0), Color(0.65, 0.70, 0.72, 0.50), "shield", t)
 	_draw_elite_enemy(centers[1], Color(1.0, 0.66, 0.08, 1.0), Color(1.0, 0.62, 0.08, 0.34), "blast", t)
 	_draw_elite_enemy(centers[2], Color(0.82, 0.02, 0.06, 1.0), Color(0.92, 0.05, 0.08, 0.35), "drain", t)
+
+func _draw_endless_demo() -> void:
+	var t = float(Time.get_ticks_msec()) / 1000.0
+	var center = size * Vector2(0.5, 0.53)
+	var pulse = 1.0 + sin(t * 2.2) * 0.035
+	for ring_index in range(3, 0, -1):
+		var radius = (34.0 + float(ring_index) * 28.0) * pulse
+		var ring_color = Color(0.64, 0.42, 0.96, 0.30 + float(3 - ring_index) * 0.16)
+		draw_arc(center, radius, 0.0, TAU, 64, ring_color, 5.0)
+	var hand_angle = -PI * 0.5 + fmod(t, 4.0) / 4.0 * TAU
+	draw_line(center, center + Vector2.RIGHT.rotated(hand_angle) * 58.0, Color(1.0, 0.78, 0.30), 5.0)
+	draw_circle(center, 8.0, Color(1.0, 0.78, 0.30))
+	for i in range(7):
+		var marker_angle = -PI * 0.5 + TAU * float(i) / 7.0
+		var marker_pos = center + Vector2.RIGHT.rotated(marker_angle) * 105.0
+		draw_circle(marker_pos, 8.0, Color(0.88, 0.18, 0.10, 0.95))
 
 func _draw_elite_enemy(center: Vector2, outline_color: Color, aura_color: Color, icon: String, t: float) -> void:
 	var pulse = 1.0 + 0.07 * sin(t * TAU)
