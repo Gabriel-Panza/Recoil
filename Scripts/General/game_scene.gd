@@ -830,6 +830,9 @@ func _add_textured_arena_floor_layer(arena: Node2D, profile: Dictionary) -> void
 	var floor_texture = profile.get("floor_texture", null) as Texture2D
 	if floor_texture == null:
 		return
+	if str(profile.get("shape", ARENA_SHAPE_RECT)) == ARENA_SHAPE_SERPENT:
+		_add_textured_serpent_floor_layer(arena, profile, floor_texture)
+		return
 
 	var floor = Polygon2D.new()
 	floor.name = "ArenaTileLayer"
@@ -837,6 +840,22 @@ func _add_textured_arena_floor_layer(arena: Node2D, profile: Dictionary) -> void
 	floor.polygon = _build_arena_polygon(profile)
 	floor.texture = floor_texture
 	floor.uv = _build_floor_texture_uv(floor.polygon, floor_texture)
+	floor.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	arena.add_child(floor)
+
+func _add_textured_serpent_floor_layer(arena: Node2D, profile: Dictionary, floor_texture: Texture2D) -> void:
+	var size = profile.get("size", _get_arena_pixel_size()) as Vector2
+	var floor = Line2D.new()
+	floor.name = "ArenaTileLayer"
+	floor.z_index = 0
+	floor.width = _get_serpent_half_width(size) * 2.0
+	floor.points = _build_serpent_center_line(size)
+	floor.joint_mode = Line2D.LINE_JOINT_ROUND
+	floor.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	floor.end_cap_mode = Line2D.LINE_CAP_ROUND
+	floor.texture = floor_texture
+	floor.texture_mode = Line2D.LINE_TEXTURE_TILE
+	floor.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
 	floor.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	arena.add_child(floor)
 
@@ -895,12 +914,29 @@ func _add_arena_floor_underlay(arena: Node2D, profile: Dictionary) -> void:
 
 	if str(profile.get("fill", ARENA_FILL_TILEMAP)) == ARENA_FILL_ROUND_TILES:
 		return
+	if str(profile.get("shape", ARENA_SHAPE_RECT)) == ARENA_SHAPE_SERPENT:
+		_add_serpent_floor_underlay(arena, profile)
+		return
 
 	var underlay = Polygon2D.new()
 	underlay.name = "ArenaFloorUnderlay"
 	underlay.z_index = 0
 	underlay.polygon = _build_visual_floor_polygon(profile)
 	underlay.color = profile.get("floor_underlay_color", _get_default_floor_underlay_color(profile))
+	arena.add_child(underlay)
+
+func _add_serpent_floor_underlay(arena: Node2D, profile: Dictionary) -> void:
+	var size = profile.get("size", _get_arena_pixel_size()) as Vector2
+	var bleed = float(profile.get("floor_bleed", 1.0))
+	var underlay = Line2D.new()
+	underlay.name = "ArenaFloorUnderlay"
+	underlay.z_index = 0
+	underlay.width = _get_serpent_half_width(size) * 2.0 * bleed
+	underlay.points = _build_serpent_center_line(size)
+	underlay.joint_mode = Line2D.LINE_JOINT_ROUND
+	underlay.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	underlay.end_cap_mode = Line2D.LINE_CAP_ROUND
+	underlay.default_color = profile.get("floor_underlay_color", _get_default_floor_underlay_color(profile))
 	arena.add_child(underlay)
 
 func _build_visual_floor_polygon(profile: Dictionary) -> PackedVector2Array:
@@ -1422,16 +1458,16 @@ func _build_flame_circle_points(size: Vector2) -> PackedVector2Array:
 	return points
 
 func _build_serpent_points(size: Vector2) -> PackedVector2Array:
-	var samples = 38
+	var center_line = _build_serpent_center_line(size)
 	var amplitude = size.x * 0.26
 	var half_height = size.y * 0.5
-	var thickness = min(size.x * 0.115, 106.0)
+	var thickness = _get_serpent_half_width(size)
 	var left_side = []
 	var right_side = []
 
-	for i in range(samples):
-		var t = float(i) / float(samples - 1)
-		var center = _get_serpent_center_point(t, amplitude, half_height)
+	for i in range(center_line.size()):
+		var t = float(i) / float(center_line.size() - 1)
+		var center = center_line[i]
 		var tangent = _get_serpent_tangent(t, amplitude, half_height)
 		var normal = Vector2(-tangent.y, tangent.x).normalized()
 		var width = thickness * (0.92 + 0.12 * sin(TAU * t))
@@ -1444,6 +1480,19 @@ func _build_serpent_points(size: Vector2) -> PackedVector2Array:
 	for i in range(right_side.size() - 1, -1, -1):
 		points.append(right_side[i])
 	return points
+
+func _build_serpent_center_line(size: Vector2) -> PackedVector2Array:
+	var points = PackedVector2Array()
+	var samples = 38
+	var amplitude = size.x * 0.26
+	var half_height = size.y * 0.5
+	for i in range(samples):
+		var t = float(i) / float(samples - 1)
+		points.append(_get_serpent_center_point(t, amplitude, half_height))
+	return points
+
+func _get_serpent_half_width(size: Vector2) -> float:
+	return min(size.x * 0.115, 106.0)
 
 func _get_serpent_center_point(t: float, amplitude: float, half_height: float) -> Vector2:
 	return Vector2(sin((t - 0.5) * TAU) * amplitude, lerp(-half_height, half_height, t))

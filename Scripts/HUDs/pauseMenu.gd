@@ -82,6 +82,7 @@ func _ready() -> void:
 	_setup_language_button()
 	_setup_advanced_settings()
 	_setup_continue_endless_button()
+	_setup_end_screen_action_buttons()
 	I18n.language_changed.connect(_on_language_changed)
 	_refresh_localized_text()
 
@@ -334,25 +335,42 @@ func _setup_death_recap_button(recap_parent: Panel) -> void:
 	death_recap_button.offset_bottom = DEATH_RECAP_BUTTON_RECT.position.y + DEATH_RECAP_BUTTON_RECT.size.y
 	death_recap_button.focus_mode = Control.FOCUS_NONE
 	death_recap_button.mouse_filter = Control.MOUSE_FILTER_STOP
-	death_recap_button.add_theme_font_size_override("font_size", 20)
-	death_recap_button.add_theme_constant_override("outline_size", 4)
-	death_recap_button.add_theme_color_override("font_color", Color(0.882353, 0.0, 0.0, 1.0))
-	death_recap_button.add_theme_color_override("font_hover_color", Color(1.0, 0.25, 0.2, 1.0))
-	death_recap_button.add_theme_color_override("font_pressed_color", Color(1.0, 0.72, 0.45, 1.0))
-	var style = StyleBoxFlat.new()
-	style.bg_color = Color(0.08, 0.0, 0.0, 0.58)
-	style.border_color = Color(0.88, 0.12, 0.05, 0.92)
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(4)
-	death_recap_button.add_theme_stylebox_override("normal", style)
-	death_recap_button.add_theme_stylebox_override("hover", style)
-	death_recap_button.add_theme_stylebox_override("pressed", style)
-	death_recap_button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	_apply_end_screen_button_style(death_recap_button)
 	_update_death_recap_button_text()
 
 	var callable = Callable(self, "_on_death_recap_button_pressed")
 	if not death_recap_button.pressed.is_connected(callable):
 		death_recap_button.pressed.connect(callable)
+
+func _setup_end_screen_action_buttons() -> void:
+	var button_paths = [
+		"GameOver/MarginContainer/TextureButton",
+		"GameOver/MarginContainer2/TextureButton",
+		"GameWin/MarginContainer2/TextureButton",
+	]
+	for button_path in button_paths:
+		var button = get_node_or_null(button_path) as Button
+		if button != null:
+			_apply_end_screen_button_style(button)
+
+func _apply_end_screen_button_style(button: Button) -> void:
+	button.add_theme_font_size_override("font_size", 20)
+	button.add_theme_constant_override("outline_size", 4)
+	button.add_theme_color_override("font_color", Color(0.882353, 0.0, 0.0, 1.0))
+	button.add_theme_color_override("font_hover_color", Color(1.0, 0.25, 0.2, 1.0))
+	button.add_theme_color_override("font_pressed_color", Color(1.0, 0.72, 0.45, 1.0))
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.08, 0.0, 0.0, 0.58)
+	style.border_color = Color(0.88, 0.12, 0.05, 0.92)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(4)
+	button.add_theme_stylebox_override("normal", style)
+	button.add_theme_stylebox_override("hover", style)
+	button.add_theme_stylebox_override("pressed", style)
+	var focus_style = style.duplicate() as StyleBoxFlat
+	focus_style.border_color = Color(1.0, 0.45, 0.16, 1.0)
+	focus_style.set_border_width_all(3)
+	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new() if button.focus_mode == Control.FOCUS_NONE else focus_style)
 
 func _sync_death_recap_visibility(recap_parent: Panel = null) -> void:
 	if recap_parent == null:
@@ -501,15 +519,15 @@ func _refresh_localized_text() -> void:
 	if advanced_settings_button != null:
 		advanced_settings_button.text = I18n.t("settings.advanced_button")
 
-	var retry_label = get_node_or_null("GameOver/MarginContainer/TextureButton/Label")
-	if retry_label is Label:
-		(retry_label as Label).text = I18n.t("common.retry")
-	var game_over_menu_label = get_node_or_null("GameOver/MarginContainer2/TextureButton/Label")
-	if game_over_menu_label is Label:
-		(game_over_menu_label as Label).text = I18n.t("common.menu")
-	var game_win_menu_label = get_node_or_null("GameWin/MarginContainer2/TextureButton/Label")
-	if game_win_menu_label is Label:
-		(game_win_menu_label as Label).text = I18n.t("common.menu")
+	var retry_button = get_node_or_null("GameOver/MarginContainer/TextureButton") as Button
+	if retry_button != null:
+		retry_button.text = I18n.t("common.retry")
+	var game_over_menu_button = get_node_or_null("GameOver/MarginContainer2/TextureButton") as Button
+	if game_over_menu_button != null:
+		game_over_menu_button.text = I18n.t("common.menu")
+	var game_win_menu_button = get_node_or_null("GameWin/MarginContainer2/TextureButton") as Button
+	if game_win_menu_button != null:
+		game_win_menu_button.text = I18n.t("common.menu")
 	if continue_endless_button != null:
 		continue_endless_button.text = I18n.t("endless.continue")
 	_update_death_recap_button_text()

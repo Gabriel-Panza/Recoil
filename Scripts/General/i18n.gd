@@ -7,6 +7,7 @@ const LANG_PT_BR: String = "pt_BR"
 const SETTINGS_PATH: String = "user://settings.cfg"
 const SETTINGS_SECTION: String = "localization"
 const SETTINGS_LANGUAGE_KEY: String = "language"
+const PIXEL_FONT: FontFile = preload("res://Fonts/cg-pixel-4x5.otf")
 
 var current_language: String = LANG_EN
 
@@ -227,8 +228,8 @@ const TEXT = {
 		"recap.defeat": "Defeat",
 		"recap.victory": "Victory",
 		"recap.retired": "Retired",
-		"recap.button": "Death Recap",
-		"recap.hide_button": "Hide Recap",
+		"recap.button": "Run Recap",
+		"recap.hide_button": "Hide Run Recap",
 		"rarity.passive_common": "common",
 		"rarity.passive_rare": "rare",
 		"rarity.passive_cursed": "cursed",
@@ -596,8 +597,8 @@ const TEXT = {
 		"recap.defeat": "Derrota",
 		"recap.victory": "Vitoria",
 		"recap.retired": "Retirada",
-		"recap.button": "Resumo",
-		"recap.hide_button": "Ocultar Resumo",
+		"recap.button": "Resumo da Run",
+		"recap.hide_button": "Ocultar Resumo da Run",
 		"rarity.passive_common": "comum",
 		"rarity.passive_rare": "rara",
 		"rarity.passive_cursed": "amaldicoada",
@@ -752,6 +753,7 @@ const TEXT = {
 }
 
 func _ready() -> void:
+	ThemeDB.fallback_font = PIXEL_FONT
 	_load_language()
 	TranslationServer.set_locale(current_language)
 

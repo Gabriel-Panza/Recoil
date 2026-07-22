@@ -34,7 +34,7 @@ const CONFETTI_MAX_VELOCITY: float = 180.0
 const CONFETTI_SCALE_MIN: float = 6.0
 const CONFETTI_SCALE_MAX: float = 14.0
 const STYLED_BACKGROUND_NODE_NAME: String = "StyledPopupBackground"
-const POPUP_CENTER_OFFSET: Vector2 = Vector2(24.0, 0.0)
+const POPUP_CENTER_OFFSET: Vector2 = Vector2(8.0, 0.0)
 const PAUSE_CONTROL_PATH: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/PauseControl"
 
 var player
