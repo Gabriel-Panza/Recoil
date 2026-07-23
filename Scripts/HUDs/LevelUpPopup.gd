@@ -7,9 +7,10 @@ const DASH_COOLDOWN_COMMON_ROLL_CHANCE: float = 0.5
 const CONTRACT_EXTRA_CURSED_ROLL_CHANCE: float = 0.075
 const DEFAULT_VIEWPORT_SIZE: Vector2 = Vector2(1152.0, 648.0)
 const OPTION_BUTTON_COUNT: int = 3
-const OPTION_LABEL_FONT_SIZE: int = 32
+const OPTION_LABEL_FONT_SIZE: int = 21
+const OPTION_LABEL_MIN_FONT_SIZE: int = 15
 const REROLL_BUTTON_SIZE: Vector2 = Vector2(72.0, 42.0)
-const REROLL_BUTTON_RIGHT_MARGIN: float = 8.0
+const REROLL_BUTTON_RIGHT_MARGIN: float = -30.0
 const SLOT_ROLL_BASE_TICKS: int = 14
 const SLOT_ROLL_STOP_TICK_STEP: int = 6
 const SLOT_ROLL_INTERVAL: float = 0.075
@@ -34,7 +35,7 @@ const CONFETTI_MAX_VELOCITY: float = 180.0
 const CONFETTI_SCALE_MIN: float = 6.0
 const CONFETTI_SCALE_MAX: float = 14.0
 const STYLED_BACKGROUND_NODE_NAME: String = "StyledPopupBackground"
-const POPUP_CENTER_OFFSET: Vector2 = Vector2(8.0, 0.0)
+const POPUP_CENTER_OFFSET: Vector2 = Vector2(-8.0, 0.0)
 const PAUSE_CONTROL_PATH: NodePath = "/root/GameScene/Player/Camera2D/CanvasLayer/HUD/PauseControl"
 
 var player
@@ -87,10 +88,10 @@ func _setup_title_label() -> void:
 		title_label.name = "TitleLabel"
 		title_label.offset_left = 16
 		title_label.offset_top = -48
-		title_label.offset_right = 632
+		title_label.offset_right = 542
 		title_label.offset_bottom = -10
 		title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		title_label.add_theme_font_size_override("font_size", 20)
+		title_label.add_theme_font_size_override("font_size", 15)
 		add_child(title_label)
 	PopupStyle.apply_title(title_label)
 	title_label.visible = false
@@ -100,14 +101,15 @@ func _setup_skip_button() -> void:
 	if skip_button == null:
 		skip_button = Button.new()
 		skip_button.name = "SkipButton"
-		skip_button.offset_left = 260
+		skip_button.offset_left = 219
 		skip_button.offset_top = 214
-		skip_button.offset_right = 388
+		skip_button.offset_right = 347
 		skip_button.offset_bottom = 252
-		skip_button.add_theme_font_size_override("font_size", 16)
+		skip_button.add_theme_font_size_override("font_size", 12)
 		add_child(skip_button)
 
 	PopupStyle.apply_button(skip_button)
+	skip_button.add_theme_font_size_override("font_size", 12)
 	skip_button.text = I18n.t("levelup.skip")
 	skip_button.tooltip_text = _wrap_tooltip_text(I18n.t("levelup.skip_tooltip"))
 	var skip_callable = Callable(self, "_on_skip_button_pressed")
@@ -635,21 +637,22 @@ func _apply_option_to_button(button: Button, option: Dictionary, is_blocked: boo
 	button.self_modulate = Color(0.62, 0.62, 0.62, 1.0) if is_blocked else Color.WHITE
 	PopupStyle.apply_button(button)
 	_set_special_level_up_button_effect(button, option, is_blocked)
-	_layout_option_button_label(button)
+	_fit_option_button_label(button)
 
-func _layout_option_button_label(button: Button) -> void:
+func _fit_option_button_label(button: Button) -> void:
 	var label = _get_button_label(button)
 	if label == null:
 		return
-
-	label.anchor_left = 0.0
-	label.anchor_top = 0.0
-	label.anchor_right = 1.0
-	label.anchor_bottom = 1.0
-	label.offset_left = 0.0
-	label.offset_top = 0.0
-	label.offset_right = -88.0
-	label.offset_bottom = 0.0
+	var available_width = maxf(button.size.x - 100.0, 1.0)
+	var font = label.get_theme_font("font")
+	var outline = label.get_theme_constant("outline_size")
+	var selected_size = OPTION_LABEL_MIN_FONT_SIZE
+	for candidate_size in range(OPTION_LABEL_FONT_SIZE, OPTION_LABEL_MIN_FONT_SIZE - 1, -1):
+		var text_width = font.get_string_size(label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, candidate_size).x + float(outline * 2)
+		if text_width <= available_width:
+			selected_size = candidate_size
+			break
+	label.add_theme_font_size_override("font_size", selected_size)
 
 func _update_reroll_button(button: Button, option_index: int, is_blocked: bool, show_skip: bool) -> void:
 	var reroll_button = _get_or_create_reroll_button(button, option_index)
@@ -683,7 +686,7 @@ func _get_or_create_reroll_button(button: Button, option_index: int) -> Button:
 	reroll_button.offset_top = -REROLL_BUTTON_SIZE.y * 0.5
 	reroll_button.offset_right = -REROLL_BUTTON_RIGHT_MARGIN
 	reroll_button.offset_bottom = REROLL_BUTTON_SIZE.y * 0.5
-	reroll_button.add_theme_font_size_override("font_size", 16)
+	reroll_button.add_theme_font_size_override("font_size", 11)
 	PopupStyle.apply_button(reroll_button)
 	reroll_button.pressed.connect(Callable(self, "_on_reroll_button_pressed").bind(option_index))
 	button.add_child(reroll_button)
@@ -922,7 +925,7 @@ func _get_color_for_rarity(rarity: String) -> Color:
 		"passive_common":
 			return Color(0, 1, 0.1, 1)
 		"passive_rare":
-			return Color(0.1, 0.0, 1, 1.0)
+			return Color(0.08, 0.82, 1.0, 1.0)
 		"passive_cursed":
 			return Color(0.78, 0.05, 0.58, 1.0)
 		"active_sin", "passive_sin":

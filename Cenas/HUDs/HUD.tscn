@@ -53,6 +53,7 @@ theme_override_constants/margin_bottom = 10
 
 [node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/BarraLateralDireita/MarginContainer" unique_id=800542999]
 layout_mode = 2
+theme_override_constants/separation = 6
 
 [node name="HP_MaxHealth" type="Label" parent="HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer" unique_id=1234186629]
 layout_mode = 2
@@ -61,7 +62,7 @@ tooltip_text = "Current HP over max HP. Reaching 0 ends the run."
 mouse_filter = 0
 theme_override_colors/font_color = Color(1, 0.25882354, 0.2, 1)
 theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 12
 text = "Health: 1000/1000"
 horizontal_alignment = 2
 
@@ -71,7 +72,7 @@ tooltip_text = "Damage dealt by bullets and most damage-based effects."
 mouse_filter = 0
 theme_override_colors/font_color = Color(1, 0.25882354, 0.2, 1)
 theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 12
 text = "Attack: 35"
 horizontal_alignment = 2
 
@@ -81,7 +82,7 @@ tooltip_text = "Shots per second compared to your base speed. Lower cooldown mea
 mouse_filter = 0
 theme_override_colors/font_color = Color(1, 0.25882354, 0.2, 1)
 theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 12
 text = "Atk-Speed: 100%"
 horizontal_alignment = 2
 
@@ -91,38 +92,8 @@ tooltip_text = "Pushback after shooting. Higher values launch you farther."
 mouse_filter = 0
 theme_override_colors/font_color = Color(1, 0.25882354, 0.2, 1)
 theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 12
 text = "Recoil Force: 500"
-horizontal_alignment = 2
-
-[node name="ActiveSkillTitle" type="Label" parent="HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer" unique_id=161205942]
-layout_mode = 2
-tooltip_text = "Boss active skills currently equipped in the E and R slots."
-mouse_filter = 0
-theme_override_colors/font_color = Color(1, 1, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 18
-text = "Active Skills"
-horizontal_alignment = 2
-
-[node name="ActiveSkillE" type="Label" parent="HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer" unique_id=836020543]
-layout_mode = 2
-tooltip_text = "No active skill equipped"
-mouse_filter = 0
-theme_override_colors/font_color = Color(1, 1, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 16
-text = "E: -"
-horizontal_alignment = 2
-
-[node name="ActiveSkillR" type="Label" parent="HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer" unique_id=219164510]
-layout_mode = 2
-tooltip_text = "No active skill equipped"
-mouse_filter = 0
-theme_override_colors/font_color = Color(1, 1, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 16
-text = "R: -"
 horizontal_alignment = 2
 
 [node name="ProgressBar" type="TextureProgressBar" parent="." unique_id=1518424678]
@@ -144,7 +115,7 @@ tooltip_text = "Current player level."
 mouse_filter = 0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_fonts/font = ExtResource("3_7w3ya")
-theme_override_font_sizes/font_size = 15
+theme_override_font_sizes/font_size = 11
 text = "Level 1"
 horizontal_alignment = 1
 

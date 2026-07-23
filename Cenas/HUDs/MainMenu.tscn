@@ -248,7 +248,7 @@ offset_right = 736.0
 offset_bottom = 86.0
 theme_override_colors/font_color = Color(0.882353, 0, 0, 1)
 theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 36
+theme_override_font_sizes/font_size = 27
 text = "Ranking"
 horizontal_alignment = 1
 
@@ -276,7 +276,7 @@ theme_override_colors/font_pressed_color = Color(0.666667, 0, 0, 1)
 theme_override_colors/font_hover_color = Color(0.882353, 0, 0, 1)
 theme_override_colors/font_hover_pressed_color = Color(0.882353, 0, 0, 1)
 theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 18
 text = "Back"
 
 [node name="SFX_Button" type="AudioStreamPlayer" parent="." unique_id=1121777857]

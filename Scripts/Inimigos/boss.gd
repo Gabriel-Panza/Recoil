@@ -40,7 +40,8 @@ const WRATH_FISSURE_WIDTH: float = 46.0
 const WRATH_FISSURE_LENGTH_PHASE_1: float = 330.0
 const WRATH_FISSURE_LENGTH_PHASE_2: float = 430.0
 const WRATH_FISSURE_DAMAGE_MULTIPLIER: float = 0.78
-const WRATH_FISSURE_TELEGRAPH_DURATION: float = 0.46
+const WRATH_BOMB_TELEGRAPH_DURATION: float = 0.56
+const WRATH_FISSURE_TELEGRAPH_DURATION: float = 0.40
 const WRATH_FISSURE_DAMAGE_DURATION: float = 0.32
 const LUST_WALL_THICKNESS: float = 24.0
 const LUST_WALL_LENGTH: float = 260.0
@@ -111,6 +112,9 @@ const SLOTH_COLOR: Color = Color(0.25, 0.95, 1.0, 1.0)
 const GLUTTONY_COLOR: Color = Color(0.961, 0.89, 0.263, 1.0)
 const ENVY_COLOR: Color = Color(0.25, 0.95, 1.0, 1.0)
 const WRATH_COLOR: Color = Color(1.0, 0.333, 0.051, 1.0)
+const WRATH_ATTACK_COLOR: Color = Color(1.0, 0.58, 0.04, 1.0)
+const WRATH_TELEGRAPH_COLOR: Color = Color(1.0, 0.84, 0.18, 1.0)
+const WRATH_OUTLINE_COLOR: Color = Color(0.12, 0.025, 0.004, 0.96)
 const LUST_COLOR: Color = Color(1.0, 0.09, 0.451, 1.0)
 const GREED_COLOR: Color = Color(1.0, 0.78, 0.0, 1.0)
 const PRIDE_LIGHT_COLOR: Color = Color(1.0, 0.961, 0.765, 1.0)
@@ -131,16 +135,27 @@ const PRIDE_EDGE_CROSSBAR_OFFSET_RATIO: float = 0.65
 const PRIDE_MOVEMENT_DEFAULT: String = "default"
 const PRIDE_MOVEMENT_LASER: String = "laser"
 const PRIDE_MOVEMENT_CLOSE: String = "close"
-const PRIDE_DEFAULT_DISTANCE: float = 220.0
-const PRIDE_LASER_DISTANCE: float = 280.0
-const PRIDE_CLOSE_DISTANCE: float = 125.0
+const PRIDE_DEFAULT_DISTANCE: float = 210.0
+const PRIDE_LASER_DISTANCE: float = 245.0
+const PRIDE_CLOSE_DISTANCE: float = 135.0
+const PRIDE_VISIBLE_MARGIN: float = 72.0
+const PRIDE_EDGE_SAFETY_MARGIN: float = 34.0
+const PRIDE_DODGE_SCAN_INTERVAL: float = 0.12
+const PRIDE_DODGE_DETECTION_RADIUS: float = 245.0
+const PRIDE_DODGE_PREDICTION_TIME: float = 0.42
+const PRIDE_DODGE_TRIGGER_DISTANCE: float = 72.0
+const PRIDE_DODGE_DISTANCE: float = 105.0
+const PRIDE_DODGE_DURATION: float = 0.34
+const PRIDE_DODGE_COOLDOWN: float = 0.62
+const PRIDE_ORBIT_SWITCH_MIN_TIME: float = 1.6
+const PRIDE_ORBIT_SWITCH_MAX_TIME: float = 2.8
 const PRIDE_FIRE_ORB_DAMAGE_MULTIPLIER: float = 0.65
 const PRIDE_AIMED_FIREBALL_DAMAGE_MULTIPLIER: float = 0.65
 const PRIDE_EDGE_BEAM_DAMAGE_MULTIPLIER: float = 0.8
 const PRIDE_INVERTED_CROSS_DAMAGE_MULTIPLIER: float = 0.8
 const PRIDE_LIGHT_BEAM_DAMAGE_MULTIPLIER: float = 0.8
 const PRIDE_JUDGEMENT_BEAM_DAMAGE_MULTIPLIER: float = 0.8
-const BOSS_INDICATOR_LAYER: int = 75
+const BOSS_INDICATOR_LAYER: int = 0
 const BOSS_INDICATOR_PADDING: float = 35.0
 const DAMAGE_FEEDBACK_COLOR: Color = Color(1.0, 0.08, 0.08, 1.0)
 const HEAL_FEEDBACK_COLOR: Color = Color(0.18, 1.0, 0.32, 1.0)
@@ -206,6 +221,12 @@ var greed_previous_player_position: Vector2 = Vector2.ZERO
 var greed_previous_can_shoot: bool = true
 var pride_edge_overlay_cooldown: float = 0.0
 var pride_movement_mode: String = PRIDE_MOVEMENT_DEFAULT
+var pride_orbit_direction: float = 1.0
+var pride_orbit_switch_timer: float = 0.0
+var pride_dodge_scan_timer: float = 0.0
+var pride_dodge_cooldown: float = 0.0
+var pride_dodge_remaining: float = 0.0
+var pride_dodge_direction: Vector2 = Vector2.ZERO
 var boss_indicator_layer: CanvasLayer
 var boss_indicator_node: Node2D
 var footstep_sfx_player: AudioStreamPlayer
@@ -226,6 +247,8 @@ func _ready() -> void:
 	current_health = max_health
 	base_speed = speed
 	base_damage = damage
+	pride_orbit_direction = -1.0 if randf() < 0.5 else 1.0
+	pride_orbit_switch_timer = randf_range(PRIDE_ORBIT_SWITCH_MIN_TIME, PRIDE_ORBIT_SWITCH_MAX_TIME)
 	if player:
 		greed_previous_player_position = player.global_position
 		greed_previous_can_shoot = player.can_shoot
@@ -429,21 +452,21 @@ func _is_envy_close_enough_to_attack() -> bool:
 	return global_position.distance_to(player.global_position) <= _get_envy_attack_distance() + ENVY_ATTACK_READY_BUFFER
 
 func handle_wrath(delta: float) -> void:
-	_move_toward_player(delta, 1.15)
+	_move_toward_player(delta, 1.28)
 	if not _can_start_action():
 		return
 
 	var roll = randf()
 	if phase == 1:
 		if roll < 0.62:
-			_start_wrath_bomb_volley(3, 2.5)
-		else:
-			_start_wrath_fissure_combo(2)
-	else:
-		if roll < 0.46:
-			_start_wrath_bomb_volley(5, 1.75)
+			_start_wrath_bomb_volley(4, 2.2)
 		else:
 			_start_wrath_fissure_combo(3)
+	else:
+		if roll < 0.46:
+			_start_wrath_bomb_volley(6, 1.55)
+		else:
+			_start_wrath_fissure_combo(4)
 
 func handle_lust(delta: float) -> void:
 	_move_lust_around_arena(delta, 0.7)
@@ -683,13 +706,158 @@ func _is_segment_safe_in_current_arena(from_position: Vector2, to_position: Vect
 	return true
 
 func _move_pride_for_current_attack(delta: float) -> void:
+	if _update_pride_projectile_dodge(delta):
+		return
+
+	pride_orbit_switch_timer -= delta
+	if pride_orbit_switch_timer <= 0.0:
+		pride_orbit_direction *= -1.0
+		pride_orbit_switch_timer = randf_range(PRIDE_ORBIT_SWITCH_MIN_TIME, PRIDE_ORBIT_SWITCH_MAX_TIME)
+
+	var desired_distance = PRIDE_DEFAULT_DISTANCE
+	var speed_multiplier = 0.78
 	match pride_movement_mode:
 		PRIDE_MOVEMENT_CLOSE:
-			_keep_distance_from_player(delta, PRIDE_CLOSE_DISTANCE, 0.98)
+			desired_distance = PRIDE_CLOSE_DISTANCE
+			speed_multiplier = 0.96
 		PRIDE_MOVEMENT_LASER:
-			_keep_distance_from_player(delta, PRIDE_LASER_DISTANCE, 0.78)
-		_:
-			_keep_distance_from_player(delta, PRIDE_DEFAULT_DISTANCE, 0.72)
+			desired_distance = PRIDE_LASER_DISTANCE
+			speed_multiplier = 0.82
+
+	_move_pride_in_visible_orbit(delta, desired_distance, speed_multiplier)
+
+func _move_pride_in_visible_orbit(delta: float, desired_distance: float, speed_multiplier: float) -> void:
+	if player == null:
+		return
+
+	var visible_rect = _get_pride_visible_rect()
+	var to_boss = player.global_position.direction_to(global_position)
+	if to_boss == Vector2.ZERO:
+		to_boss = Vector2.RIGHT
+	var distance = global_position.distance_to(player.global_position)
+	var tangent = Vector2(-to_boss.y, to_boss.x) * pride_orbit_direction
+	var radial_correction = clampf((distance - desired_distance) / 70.0, -1.0, 1.0)
+	var move_direction = (tangent - to_boss * radial_correction * 0.9).normalized()
+
+	if not visible_rect.has_point(global_position):
+		move_direction = global_position.direction_to(_clamp_point_to_rect(global_position, visible_rect))
+
+	var movement_speed = _get_current_speed(speed_multiplier)
+	var next_position = global_position + move_direction * movement_speed * delta * 2.0
+	if not _is_inside_current_arena(next_position, PRIDE_EDGE_SAFETY_MARGIN):
+		pride_orbit_direction *= -1.0
+		tangent *= -1.0
+		move_direction = (tangent + global_position.direction_to(player.global_position) * 0.42).normalized()
+		next_position = global_position + move_direction * movement_speed * delta * 2.0
+		if not _is_inside_current_arena(next_position, PRIDE_EDGE_SAFETY_MARGIN):
+			var safe_target = _clamp_to_current_arena(player.global_position + to_boss * desired_distance, PRIDE_EDGE_SAFETY_MARGIN)
+			move_direction = global_position.direction_to(safe_target)
+
+	velocity = move_direction * movement_speed
+	move_and_slide()
+
+func _update_pride_projectile_dodge(delta: float) -> bool:
+	pride_dodge_scan_timer = max(pride_dodge_scan_timer - delta, 0.0)
+	pride_dodge_cooldown = max(pride_dodge_cooldown - delta, 0.0)
+	pride_dodge_remaining = max(pride_dodge_remaining - delta, 0.0)
+
+	if pride_dodge_remaining > 0.0 and pride_dodge_direction != Vector2.ZERO:
+		var dodge_speed = _get_current_speed(1.38 if phase == 1 else 1.52)
+		var next_position = global_position + pride_dodge_direction * dodge_speed * delta * 2.0
+		if not _is_inside_current_arena(next_position, PRIDE_EDGE_SAFETY_MARGIN) or not _get_pride_visible_rect().has_point(next_position):
+			pride_dodge_remaining = 0.0
+			pride_dodge_direction = Vector2.ZERO
+			return false
+		velocity = pride_dodge_direction * dodge_speed
+		move_and_slide()
+		return true
+
+	if pride_dodge_cooldown > 0.0 or pride_dodge_scan_timer > 0.0:
+		return false
+	pride_dodge_scan_timer = PRIDE_DODGE_SCAN_INTERVAL
+
+	var threat = _find_pride_projectile_threat()
+	if threat == null:
+		return false
+	var dodge_chance = 0.62 if phase == 1 else 0.74
+	if randf() > dodge_chance:
+		pride_dodge_cooldown = PRIDE_DODGE_COOLDOWN * 0.55
+		return false
+
+	var projectile_direction = threat.get("direction") as Vector2
+	pride_dodge_direction = _choose_pride_dodge_direction(projectile_direction)
+	if pride_dodge_direction == Vector2.ZERO:
+		return false
+	pride_dodge_direction = pride_dodge_direction.rotated(deg_to_rad(randf_range(-9.0, 9.0))).normalized()
+	pride_dodge_remaining = PRIDE_DODGE_DURATION
+	pride_dodge_cooldown = PRIDE_DODGE_COOLDOWN
+	return true
+
+func _find_pride_projectile_threat() -> Node2D:
+	var closest_threat: Node2D = null
+	var best_score = INF
+	var detection_radius_squared = PRIDE_DODGE_DETECTION_RADIUS * PRIDE_DODGE_DETECTION_RADIUS
+	for projectile_node in get_tree().get_nodes_in_group(Global.GROUP_PROJECTILE):
+		if not (projectile_node is Node2D) or not is_instance_valid(projectile_node):
+			continue
+		if projectile_node.is_in_group(Global.GROUP_ENEMY_PROJECTILE):
+			continue
+		var projectile = projectile_node as Node2D
+		var distance_squared = projectile.global_position.distance_squared_to(global_position)
+		if distance_squared > detection_radius_squared:
+			continue
+		var projectile_direction = projectile.get("direction") as Vector2
+		if projectile_direction == Vector2.ZERO:
+			continue
+		projectile_direction = projectile_direction.normalized()
+		var to_boss = projectile.global_position.direction_to(global_position)
+		if projectile_direction.dot(to_boss) < 0.45:
+			continue
+		var projectile_speed = maxf(float(projectile.get("speed")), 1.0)
+		var relative_position = global_position - projectile.global_position
+		var closest_time = clampf(relative_position.dot(projectile_direction) / projectile_speed, 0.0, PRIDE_DODGE_PREDICTION_TIME)
+		var predicted_position = projectile.global_position + projectile_direction * projectile_speed * closest_time
+		var miss_distance = predicted_position.distance_to(global_position)
+		if miss_distance > PRIDE_DODGE_TRIGGER_DISTANCE:
+			continue
+		var threat_score = closest_time * 180.0 + miss_distance + sqrt(distance_squared) * 0.08
+		if threat_score < best_score:
+			best_score = threat_score
+			closest_threat = projectile
+	return closest_threat
+
+func _choose_pride_dodge_direction(projectile_direction: Vector2) -> Vector2:
+	if projectile_direction == Vector2.ZERO:
+		return Vector2.ZERO
+	var perpendicular = Vector2(-projectile_direction.y, projectile_direction.x).normalized()
+	var visible_rect = _get_pride_visible_rect()
+	var best_direction = Vector2.ZERO
+	var best_score = -INF
+	for side in [-1.0, 1.0]:
+		var direction = perpendicular * side
+		var candidate = global_position + direction * PRIDE_DODGE_DISTANCE
+		if not visible_rect.has_point(candidate):
+			continue
+		if not _is_inside_current_arena(candidate, PRIDE_EDGE_SAFETY_MARGIN):
+			continue
+		var player_distance_score = -absf(candidate.distance_to(player.global_position) - PRIDE_DEFAULT_DISTANCE) * 0.16
+		var arena_center_score = -candidate.distance_to(_get_arena_center()) * 0.015
+		var score = player_distance_score + arena_center_score + randf_range(-8.0, 8.0)
+		if score > best_score:
+			best_score = score
+			best_direction = direction
+	return best_direction
+
+func _get_pride_visible_rect() -> Rect2:
+	var viewport = get_viewport()
+	var camera = viewport.get_camera_2d() if viewport != null else null
+	if viewport == null or camera == null:
+		return _get_arena_rect().grow(-PRIDE_VISIBLE_MARGIN)
+	var visible_size = viewport.get_visible_rect().size / camera.zoom
+	return Rect2(camera.global_position - visible_size * 0.5, visible_size).grow(-PRIDE_VISIBLE_MARGIN)
+
+func _clamp_point_to_rect(point: Vector2, rect: Rect2) -> Vector2:
+	return Vector2(clampf(point.x, rect.position.x, rect.end.x), clampf(point.y, rect.position.y, rect.end.y))
 
 func _settle_pride_close_attack_position() -> void:
 	if player == null:
@@ -1261,27 +1429,27 @@ func _update_envy_buff(delta: float) -> void:
 func _start_wrath_bomb_volley(amount: int, fuse_time: float) -> void:
 	is_performing_action = true
 	current_sub_state = BossSubState.TELEGRAPH
-	_spawn_action_charge_vfx(global_position, 80.0, WRATH_COLOR, MIN_TELEGRAPH_DURATION, 34)
-	await get_tree().create_timer(MIN_TELEGRAPH_DURATION, false).timeout
+	_spawn_action_charge_vfx(global_position, 80.0, WRATH_TELEGRAPH_COLOR, WRATH_BOMB_TELEGRAPH_DURATION, 34)
+	await get_tree().create_timer(WRATH_BOMB_TELEGRAPH_DURATION, false).timeout
 
 	current_sub_state = BossSubState.ATTACK
 	for i in range(amount):
 		var target = player.global_position + Vector2(randf_range(-90.0, 90.0), randf_range(-70.0, 70.0))
 		var bomb_position = global_position + Vector2(randf_range(-18.0, 18.0), randf_range(-18.0, 18.0))
-		var telegraph_duration = MIN_TELEGRAPH_DURATION
-		_spawn_line_telegraph(bomb_position, target, WRATH_COLOR, telegraph_duration, 2.0)
+		var telegraph_duration = WRATH_BOMB_TELEGRAPH_DURATION
+		_spawn_wrath_line_telegraph(bomb_position, target, telegraph_duration)
 		await get_tree().create_timer(telegraph_duration, false).timeout
 		if is_dead or player == null:
 			return
 		_create_wrath_bomb(bomb_position, target, fuse_time)
-		await get_tree().create_timer(0.62 if phase == 1 else 0.5, false).timeout
+		await get_tree().create_timer(0.48 if phase == 1 else 0.36, false).timeout
 
-	_finish_action(0.5 if phase == 1 else 0.35)
+	_finish_action(0.36 if phase == 1 else 0.25)
 
 func _start_wrath_fissure_combo(fissure_count: int) -> void:
 	is_performing_action = true
 	current_sub_state = BossSubState.TELEGRAPH
-	_spawn_action_charge_vfx(global_position, 92.0, WRATH_COLOR, WRATH_FISSURE_TELEGRAPH_DURATION, 30)
+	_spawn_action_charge_vfx(global_position, 92.0, WRATH_TELEGRAPH_COLOR, WRATH_FISSURE_TELEGRAPH_DURATION, 30)
 	await get_tree().create_timer(WRATH_FISSURE_TELEGRAPH_DURATION, false).timeout
 
 	current_sub_state = BossSubState.ATTACK
@@ -1298,9 +1466,9 @@ func _start_wrath_fissure_combo(fissure_count: int) -> void:
 		direction = direction.rotated(deg_to_rad(randf_range(-10.0, 10.0)))
 		_spawn_wrath_fissure(source_position, direction, _get_wrath_fissure_length(), WRATH_FISSURE_TELEGRAPH_DURATION)
 		if i < fissure_count - 1:
-			await get_tree().create_timer(0.17 if phase == 1 else 0.12, false).timeout
+			await get_tree().create_timer(0.14 if phase == 1 else 0.09, false).timeout
 
-	_finish_action(0.62 if phase == 1 else 0.42)
+	_finish_action(0.46 if phase == 1 else 0.30)
 
 func _get_wrath_fissure_length() -> float:
 	return WRATH_FISSURE_LENGTH_PHASE_2 if phase == 2 else WRATH_FISSURE_LENGTH_PHASE_1
@@ -1314,8 +1482,8 @@ func _spawn_wrath_fissure(origin: Vector2, direction: Vector2, length: float, te
 	var size = Vector2(length, WRATH_FISSURE_WIDTH + (8.0 if phase == 2 else 0.0))
 	var angle = normalized_direction.angle()
 	var fissure_damage = max(float(roundi(float(damage) * WRATH_FISSURE_DAMAGE_MULTIPLIER / 5.0) * 5), 5.0)
-	_spawn_rect_telegraph(center, size, angle, _with_alpha(WRATH_COLOR, 0.26), telegraph_delay)
-	_create_damaging_area_after_delay(center, size, angle, fissure_damage, _with_alpha(WRATH_COLOR, 0.38), telegraph_delay, WRATH_FISSURE_DAMAGE_DURATION)
+	_spawn_rect_telegraph(center, size, angle, _with_alpha(WRATH_TELEGRAPH_COLOR, 0.42), telegraph_delay, WRATH_OUTLINE_COLOR, 4.0)
+	_create_damaging_area_after_delay(center, size, angle, fissure_damage, _with_alpha(WRATH_ATTACK_COLOR, 0.62), telegraph_delay, WRATH_FISSURE_DAMAGE_DURATION, "", WRATH_OUTLINE_COLOR, 3.0)
 
 func _create_wrath_bomb(from_position: Vector2, target_position: Vector2, fuse_time: float) -> void:
 	var bomb = Area2D.new()
@@ -1329,9 +1497,10 @@ func _create_wrath_bomb(from_position: Vector2, target_position: Vector2, fuse_t
 	bomb.set_meta("pushed", false)
 
 	_add_circle_collision(bomb, WRATH_BOMB_RADIUS)
-	_add_circle_visual(bomb, WRATH_BOMB_RADIUS, _with_alpha(WRATH_COLOR, 0.78), 12)
-	_add_ring_visual(bomb, WRATH_BOMB_RADIUS + 3.0, _with_alpha(WRATH_COLOR, 0.92), 2.0, 13)
-	_add_loop_particles(bomb, "WrathBombFuse", _with_alpha(WRATH_COLOR, 0.65), 18, 0.38, 12.0, 56.0, 14)
+	_add_circle_visual(bomb, WRATH_BOMB_RADIUS, _with_alpha(WRATH_ATTACK_COLOR, 0.9), 12)
+	_add_ring_visual(bomb, WRATH_BOMB_RADIUS + 4.0, WRATH_OUTLINE_COLOR, 5.0, 13)
+	_add_ring_visual(bomb, WRATH_BOMB_RADIUS + 3.0, _with_alpha(WRATH_TELEGRAPH_COLOR, 0.98), 2.4, 14)
+	_add_loop_particles(bomb, "WrathBombFuse", _with_alpha(WRATH_TELEGRAPH_COLOR, 0.82), 18, 0.38, 12.0, 56.0, 15)
 
 	bomb.body_entered.connect(Callable(self, "_on_wrath_bomb_body_entered").bind(bomb))
 	_add_child_at_global(_get_vfx_parent(), bomb, from_position)
@@ -1378,9 +1547,9 @@ func _explode_wrath_bomb(bomb, force_boss_damage: bool) -> void:
 	var was_pushed = bool(bomb.get_meta("pushed", false))
 	active_bombs.erase(bomb)
 	bomb.queue_free()
-	_spawn_burst_particles(explosion_position, _with_alpha(WRATH_COLOR, 0.92), 46, 0.38, 220.0)
-	_spawn_circle_telegraph(explosion_position, WRATH_BOMB_EXPLOSION_RADIUS, _with_alpha(WRATH_COLOR, 0.18), MIN_TELEGRAPH_DURATION)
-	_spawn_ring_vfx(explosion_position, WRATH_BOMB_EXPLOSION_RADIUS, _with_alpha(WRATH_COLOR, 0.44), 0.28)
+	_spawn_burst_particles(explosion_position, _with_alpha(WRATH_ATTACK_COLOR, 0.98), 46, 0.38, 220.0)
+	_spawn_circle_telegraph(explosion_position, WRATH_BOMB_EXPLOSION_RADIUS, _with_alpha(WRATH_TELEGRAPH_COLOR, 0.28), MIN_TELEGRAPH_DURATION)
+	_spawn_ring_vfx(explosion_position, WRATH_BOMB_EXPLOSION_RADIUS, _with_alpha(WRATH_TELEGRAPH_COLOR, 0.76), 0.28)
 
 	if player and _is_point_inside_iso_aoe(player.global_position, explosion_position, WRATH_BOMB_EXPLOSION_RADIUS):
 		player.take_damage(WRATH_BOMB_DAMAGE, explosion_position)
@@ -2421,13 +2590,13 @@ func _spawn_enemy_projectile(spawn_position: Vector2, projectile_direction: Vect
 	projectile.speed = projectile_speed
 	return projectile
 
-func _create_damaging_area_after_delay(area_position: Vector2, size: Vector2, area_rotation: float, area_damage: float, color: Color, delay: float, duration: float, achievement_damage_type: String = "") -> void:
+func _create_damaging_area_after_delay(area_position: Vector2, size: Vector2, area_rotation: float, area_damage: float, color: Color, delay: float, duration: float, achievement_damage_type: String = "", outline_color: Color = Color.TRANSPARENT, outline_width: float = 0.0) -> void:
 	await get_tree().create_timer(delay, false).timeout
 	if is_dead or not is_inside_tree():
 		return
-	_create_damaging_area(area_position, size, area_rotation, area_damage, color, duration, achievement_damage_type)
+	_create_damaging_area(area_position, size, area_rotation, area_damage, color, duration, achievement_damage_type, outline_color, outline_width)
 
-func _create_damaging_area(area_position: Vector2, size: Vector2, area_rotation: float, area_damage: float, color: Color, duration: float, achievement_damage_type: String = "") -> void:
+func _create_damaging_area(area_position: Vector2, size: Vector2, area_rotation: float, area_damage: float, color: Color, duration: float, achievement_damage_type: String = "", outline_color: Color = Color.TRANSPARENT, outline_width: float = 0.0) -> void:
 	var area = Area2D.new()
 	area.name = "BossDamagingArea"
 	area.collision_layer = 0
@@ -2436,6 +2605,8 @@ func _create_damaging_area(area_position: Vector2, size: Vector2, area_rotation:
 	area.set_meta("achievement_damage_type", achievement_damage_type)
 	_add_rect_collision(area, size)
 	_add_rect_visual(area, size, _get_active_attack_color(color), 0)
+	if outline_width > 0.0 and outline_color.a > 0.0:
+		_add_rect_outline(area, size, outline_color, outline_width, 1)
 
 	area.body_entered.connect(Callable(self, "_on_damaging_area_body_entered").bind(area))
 	if not _add_child_at_global(_get_ground_area_vfx_parent(), area, area_position, area_rotation):
@@ -2609,6 +2780,18 @@ func _add_rect_visual(parent: Node, size: Vector2, color: Color, visual_z_index:
 	visual.z_index = visual_z_index
 	parent.add_child(visual)
 	return visual
+
+func _add_rect_outline(parent: Node, size: Vector2, color: Color, width: float, visual_z_index: int) -> Line2D:
+	var outline = Line2D.new()
+	var points = _build_rect_points(size)
+	points.append(points[0])
+	outline.points = points
+	outline.width = width
+	outline.default_color = _get_area_aura_vfx_color(color)
+	outline.joint_mode = Line2D.LINE_JOINT_SHARP
+	outline.z_index = visual_z_index
+	parent.add_child(outline)
+	return outline
 
 func _add_ring_visual(parent: Node, radius: float, color: Color, width: float, visual_z_index: int) -> Line2D:
 	var ring = Line2D.new()
@@ -2812,6 +2995,10 @@ func _spawn_line_telegraph(from_position: Vector2, to_position: Vector2, color: 
 	timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(telegraph))
 	return telegraph
 
+func _spawn_wrath_line_telegraph(from_position: Vector2, to_position: Vector2, duration: float) -> void:
+	_spawn_line_telegraph(from_position, to_position, WRATH_OUTLINE_COLOR, duration, 6.0)
+	_spawn_line_telegraph(from_position, to_position, WRATH_TELEGRAPH_COLOR, duration, 2.6)
+
 func _get_top_screen_warning_position(fall_start_position: Vector2) -> Vector2:
 	var viewport = get_viewport()
 	var camera = viewport.get_camera_2d() if viewport != null else null
@@ -2906,12 +3093,14 @@ func _spawn_circle_telegraph(center: Vector2, radius: float, color: Color, durat
 	timer.timeout.connect(Callable(self, "_queue_free_if_valid").bind(telegraph))
 	return telegraph
 
-func _spawn_rect_telegraph(center: Vector2, size: Vector2, rect_rotation: float, color: Color, duration: float) -> Node2D:
+func _spawn_rect_telegraph(center: Vector2, size: Vector2, rect_rotation: float, color: Color, duration: float, outline_color: Color = Color.TRANSPARENT, outline_width: float = 0.0) -> Node2D:
 	var telegraph = Node2D.new()
 	var fill = Polygon2D.new()
 	fill.polygon = _build_rect_points(size)
 	fill.color = _get_area_aura_vfx_color(color)
 	telegraph.add_child(fill)
+	if outline_width > 0.0 and outline_color.a > 0.0:
+		_add_rect_outline(telegraph, size, outline_color, outline_width, 1)
 	if not _add_child_at_global(_get_ground_area_vfx_parent(), telegraph, center, rect_rotation):
 		return telegraph
 

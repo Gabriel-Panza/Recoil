@@ -5,6 +5,7 @@
 
 [node name="LevelUpPopup" type="Panel" unique_id=775706461]
 process_mode = 3
+z_index = 20
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
@@ -23,7 +24,7 @@ layout_mode = 1
 anchors_preset = -1
 offset_left = -27.0
 offset_top = -60.0
-offset_right = 683.0
+offset_right = 593.0
 offset_bottom = 240.0
 grow_horizontal = 2
 grow_vertical = 2
@@ -37,66 +38,72 @@ patch_margin_bottom = 10
 layout_mode = 0
 offset_left = 16.0
 offset_top = -7.0
-offset_right = 632.0
+offset_right = 542.0
 offset_bottom = 201.0
 size_flags_stretch_ratio = 0.0
 theme_override_constants/separation = 10
 
 [node name="Button1" type="Button" parent="VBoxContainer" unique_id=254546289]
+custom_minimum_size = Vector2(0, 44)
 layout_direction = 1
 layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "___________________________________________"
+theme_override_font_sizes/font_size = 21
+text = "_____________________"
 
 [node name="Label" type="Label" parent="VBoxContainer/Button1" unique_id=477822215]
 layout_mode = 0
-offset_right = 616.0
-offset_bottom = 56.0
+offset_top = 5.0
+offset_right = 526.0
+offset_bottom = 61.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 32
+theme_override_font_sizes/font_size = 21
 text = "Option 1"
 horizontal_alignment = 1
 
 [node name="Button2" type="Button" parent="VBoxContainer" unique_id=229808152]
+custom_minimum_size = Vector2(0, 44)
 layout_direction = 1
 layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "___________________________________________"
+theme_override_font_sizes/font_size = 21
+text = "_____________________"
 
 [node name="Label" type="Label" parent="VBoxContainer/Button2" unique_id=1951167246]
 layout_mode = 0
-offset_right = 616.0
-offset_bottom = 56.0
+offset_top = 5.0
+offset_right = 526.0
+offset_bottom = 61.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 32
+theme_override_font_sizes/font_size = 21
 text = "Option 2"
 horizontal_alignment = 1
 
 [node name="Button3" type="Button" parent="VBoxContainer" unique_id=413636694]
+custom_minimum_size = Vector2(0, 44)
 layout_direction = 1
 layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "___________________________________________"
+theme_override_font_sizes/font_size = 21
+text = "_____________________"
 
 [node name="Label" type="Label" parent="VBoxContainer/Button3" unique_id=1062689931]
 layout_mode = 0
-offset_right = 616.0
-offset_bottom = 56.0
+offset_top = 5.0
+offset_right = 526.0
+offset_bottom = 61.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_font_sizes/font_size = 32
+theme_override_font_sizes/font_size = 21
 text = "Option 3"
 horizontal_alignment = 1
 
 [node name="SkipButton" type="Button" parent="." unique_id=1671081308]
 visible = false
 layout_mode = 0
-offset_left = 260.0
+offset_left = 219.0
 offset_top = 214.0
-offset_right = 388.0
+offset_right = 347.0
 offset_bottom = 252.0
 tooltip_text = "Skip this level up"
 theme_override_colors/font_color = Color(1, 1, 0, 1)
 theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
 theme_override_constants/outline_size = 3
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 12
 text = "Skip"

@@ -98,7 +98,7 @@ func _build_ui() -> void:
 	dialogue_label.offset_right = -28.0
 	dialogue_label.offset_bottom = -26.0
 	dialogue_label.add_theme_font_override("normal_font", CUTSCENE_FONT)
-	dialogue_label.add_theme_font_size_override("normal_font_size", 17)
+	dialogue_label.add_theme_font_size_override("normal_font_size", 15)
 	dialogue_label.add_theme_constant_override("line_separation", 4)
 	dialogue_panel.add_child(dialogue_label)
 
@@ -112,11 +112,11 @@ func _build_ui() -> void:
 	advance_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	advance_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	advance_label.add_theme_font_override("font", CUTSCENE_FONT)
-	advance_label.add_theme_font_size_override("font_size", 18)
+	advance_label.add_theme_font_size_override("font_size", 14)
 	advance_label.add_theme_color_override("font_color", Color(0.72, 0.66, 0.8, 0.9))
 	advance_label.add_theme_color_override("font_outline_color", Color.BLACK)
 	advance_label.add_theme_constant_override("outline_size", 3)
-	advance_label.add_theme_constant_override("line_spacing", 2)
+	advance_label.add_theme_constant_override("line_spacing", 7)
 	add_child(advance_label)
 
 func _make_dialogue_style() -> StyleBoxFlat:

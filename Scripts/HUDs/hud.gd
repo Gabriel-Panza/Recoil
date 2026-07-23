@@ -19,8 +19,10 @@ var special_passive_tooltip_area: Control
 var skill_status_top_background: TextureRect
 var skill_status_list_background: NinePatchRect
 var arm_mutation_toast_layer: CanvasLayer
-var arm_mutation_toast: Panel
+var arm_mutation_toast: Button
 var arm_mutation_toast_tween: Tween
+var arm_mutation_popup_owns_pause: bool = false
+var skill_hud_font_layout_signature: String = ""
 const SKILL_STATUS_TOP_TEXTURE = preload("res://Sprites/Menu/hud_skills_and_passives.png")
 const SKILL_STATUS_LIST_TEXTURE = preload("res://Sprites/Menu/hud_list_of_passives.png")
 const HUD_PIXEL_FONT = preload("res://Fonts/cg-pixel-4x5.otf")
@@ -30,7 +32,7 @@ const SKILL_STATUS_TOP_SIZE = Vector2(69.0, 40.0) * SKILL_STATUS_SCALE
 const SKILL_STATUS_LIST_WIDTH = 69.0 * SKILL_STATUS_SCALE
 const SKILL_STATUS_LIST_MIN_HEIGHT = 10.0 * SKILL_STATUS_SCALE
 const SKILL_STATUS_LIST_VERTICAL_PADDING = 10.0
-const SKILL_STATUS_PASSIVE_LINE_HEIGHT = 17.0
+const SKILL_STATUS_PASSIVE_LINE_HEIGHT = 21.0
 const SKILL_STATUS_ARM_MUTATION_LINE_COUNT = 4
 const SKILL_STATUS_SPECIAL_PASSIVE_LINE_COUNT = 6
 const SKILL_STATUS_LIST_PATCH_LEFT = 3
@@ -41,9 +43,8 @@ const ACTIVE_SKILL_E_OFFSET = Vector2(46.0, 28.0)
 const ACTIVE_SKILL_R_OFFSET = Vector2(46.0, 62.0)
 const SKILL_STATUS_BACKGROUND_ALPHA = 0.72
 const SKILL_STATUS_LABEL_ALPHA = 0.88
-const ARM_MUTATION_TOAST_SIZE: Vector2 = Vector2(520.0, 118.0)
-const ARM_MUTATION_TOAST_BOTTOM_MARGIN: float = 44.0
-const ARM_MUTATION_TOAST_HOLD_TIME: float = 4.0
+const SKILL_STATUS_Z_INDEX: int = 2
+const ARM_MUTATION_TOAST_SIZE: Vector2 = Vector2(650.0, 205.0)
 const ARM_MUTATION_TOAST_LAYER: int = 125
 const ARM_MUTATION_TOAST_SCREEN_MARGIN: float = 24.0
 
@@ -128,6 +129,7 @@ func _setup_skill_status_background() -> void:
 	skill_status_top_background.stretch_mode = TextureRect.STRETCH_SCALE
 	skill_status_top_background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	skill_status_top_background.self_modulate = Color(1.0, 1.0, 1.0, SKILL_STATUS_BACKGROUND_ALPHA)
+	skill_status_top_background.z_index = SKILL_STATUS_Z_INDEX
 
 	skill_status_list_background = _get_or_create_skill_status_nine_patch("SkillStatusListBackground")
 	skill_status_list_background.position = SKILL_STATUS_POSITION + Vector2(0.0, SKILL_STATUS_TOP_SIZE.y)
@@ -138,6 +140,7 @@ func _setup_skill_status_background() -> void:
 	skill_status_list_background.patch_margin_bottom = SKILL_STATUS_LIST_PATCH_BOTTOM
 	skill_status_list_background.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	skill_status_list_background.self_modulate = Color(1.0, 1.0, 1.0, SKILL_STATUS_BACKGROUND_ALPHA)
+	skill_status_list_background.z_index = SKILL_STATUS_Z_INDEX
 
 	move_child(skill_status_top_background, 0)
 	move_child(skill_status_list_background, 1)
@@ -153,7 +156,7 @@ func _get_or_create_skill_status_texture_rect(node_name: String) -> TextureRect:
 
 	var texture_rect = TextureRect.new()
 	texture_rect.name = node_name
-	texture_rect.z_index = 0
+	texture_rect.z_index = SKILL_STATUS_Z_INDEX
 	texture_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(texture_rect)
 	return texture_rect
@@ -169,7 +172,7 @@ func _get_or_create_skill_status_nine_patch(node_name: String) -> NinePatchRect:
 
 	var nine_patch = NinePatchRect.new()
 	nine_patch.name = node_name
-	nine_patch.z_index = 0
+	nine_patch.z_index = SKILL_STATUS_Z_INDEX
 	nine_patch.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(nine_patch)
 	return nine_patch
@@ -178,6 +181,7 @@ func _setup_passive_status_label() -> void:
 	passive_status_label = get_node_or_null("PassiveStatusHud")
 	if passive_status_label != null:
 		passive_status_label.mouse_filter = Control.MOUSE_FILTER_PASS
+		passive_status_label.z_index = SKILL_STATUS_Z_INDEX
 		_apply_skill_status_label_alpha(passive_status_label)
 		_setup_passive_tooltip_areas()
 		return
@@ -186,12 +190,12 @@ func _setup_passive_status_label() -> void:
 	passive_status_label.name = "PassiveStatusHud"
 	passive_status_label.position = SKILL_STATUS_POSITION + Vector2(10.0, SKILL_STATUS_TOP_SIZE.y + 5.0)
 	passive_status_label.size = Vector2(SKILL_STATUS_LIST_WIDTH - 20.0, SKILL_STATUS_LIST_MIN_HEIGHT)
-	passive_status_label.z_index = 0
+	passive_status_label.z_index = SKILL_STATUS_Z_INDEX
 	passive_status_label.mouse_filter = Control.MOUSE_FILTER_PASS
 	passive_status_label.add_theme_color_override("font_color", Color(1.0, 1.0, 0.3, 1.0))
 	passive_status_label.add_theme_constant_override("outline_size", 3)
-	passive_status_label.add_theme_font_size_override("font_size", 12)
-	passive_status_label.add_theme_constant_override("line_spacing", 0)
+	passive_status_label.add_theme_font_size_override("font_size", 11)
+	passive_status_label.add_theme_constant_override("line_spacing", 4)
 	passive_status_label.text = "- %s" % I18n.t("common.none")
 	passive_status_label.tooltip_text = ""
 	_apply_skill_status_label_alpha(passive_status_label)
@@ -223,11 +227,11 @@ func _create_active_skill_hud_label(label_name: String) -> Label:
 	var label = Label.new()
 	label.name = label_name
 	label.size = Vector2(SKILL_STATUS_LIST_WIDTH - 56.0, 20.0)
-	label.z_index = 0
+	label.z_index = SKILL_STATUS_Z_INDEX
 	label.mouse_filter = Control.MOUSE_FILTER_PASS
 	label.add_theme_color_override("font_color", Color(1.0, 1.0, 0.3, 1.0))
 	label.add_theme_constant_override("outline_size", 3)
-	label.add_theme_font_size_override("font_size", 14)
+	label.add_theme_font_size_override("font_size", 13)
 	label.text = I18n.t("common.none")
 	_apply_skill_status_label_alpha(label)
 	add_child(label)
@@ -245,12 +249,12 @@ func _style_active_skill_hud_title_label(label: Label) -> void:
 
 	label.position = SKILL_STATUS_POSITION + ACTIVE_SKILL_TITLE_OFFSET
 	label.size = Vector2(SKILL_STATUS_LIST_WIDTH - 20.0, 20.0)
-	label.z_index = 0
+	label.z_index = SKILL_STATUS_Z_INDEX
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 1.0))
 	label.add_theme_font_override("font", HUD_PIXEL_FONT)
 	label.add_theme_constant_override("outline_size", 0)
-	label.add_theme_font_size_override("font_size", 15)
+	label.add_theme_font_size_override("font_size", 14)
 	label.text = I18n.t("hud.active_skills")
 	label.tooltip_text = Global.wrap_tooltip_text(I18n.t("hud.active_skills_tooltip"))
 
@@ -270,6 +274,51 @@ func _update_active_skill_hud_labels() -> void:
 func _update_status_hud_labels() -> void:
 	_update_active_skill_hud_labels()
 	_update_passive_status_label()
+	_fit_skill_hud_font_sizes()
+
+func _fit_skill_hud_font_sizes() -> void:
+	var signature = "%s|%s|%s|%s|%.1f" % [
+		active_skill_title_label.text if active_skill_title_label != null else "",
+		active_skill_e_label.text if active_skill_e_label != null else "",
+		active_skill_r_label.text if active_skill_r_label != null else "",
+		passive_status_label.text if passive_status_label != null else "",
+		SKILL_STATUS_LIST_WIDTH,
+	]
+	if signature == skill_hud_font_layout_signature:
+		return
+	skill_hud_font_layout_signature = signature
+
+	_fit_label_group_to_width([active_skill_title_label, active_skill_e_label, active_skill_r_label], 10, 18)
+	_fit_label_group_to_width([passive_status_label], 9, 16)
+
+func _fit_label_group_to_width(label_candidates: Array, minimum_size: int, maximum_size: int) -> void:
+	var labels: Array[Label] = []
+	for candidate in label_candidates:
+		if candidate is Label:
+			labels.append(candidate as Label)
+	if labels.is_empty():
+		return
+
+	var selected_size = minimum_size
+	for candidate_size in range(maximum_size, minimum_size - 1, -1):
+		var all_fit = true
+		for label in labels:
+			var available_width = maxf(label.size.x - 4.0, 1.0)
+			var font = label.get_theme_font("font")
+			var outline = label.get_theme_constant("outline_size")
+			for line in label.text.split("\n"):
+				var text_width = font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, candidate_size).x + float(outline * 2)
+				if text_width > available_width:
+					all_fit = false
+					break
+			if not all_fit:
+				break
+		if all_fit:
+			selected_size = candidate_size
+			break
+
+	for label in labels:
+		label.add_theme_font_size_override("font_size", selected_size)
 
 func _update_passive_status_label() -> void:
 	if passive_status_label == null or player == null:
@@ -422,6 +471,8 @@ func _on_arm_mutation_unlocked(tier: int, _arm_id: String, mutation_name: String
 
 func _show_arm_mutation_toast(tier: int, mutation_name: String, mutation_description: String, color: Color) -> void:
 	_clear_arm_mutation_toast()
+	arm_mutation_popup_owns_pause = not get_tree().paused
+	get_tree().paused = true
 
 	arm_mutation_toast_layer = CanvasLayer.new()
 	arm_mutation_toast_layer.name = "ArmMutationToastLayer"
@@ -436,17 +487,22 @@ func _show_arm_mutation_toast(tier: int, mutation_name: String, mutation_descrip
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	arm_mutation_toast_layer.add_child(root)
 
-	var panel = Panel.new()
+	var panel = Button.new()
 	panel.name = "ArmMutationToast"
 	panel.process_mode = Node.PROCESS_MODE_ALWAYS
 	panel.custom_minimum_size = _get_arm_mutation_toast_size()
 	panel.size = _get_arm_mutation_toast_size()
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	panel.focus_mode = Control.FOCUS_ALL
+	panel.text = ""
 	panel.modulate = Color(1.0, 1.0, 1.0, 0.0)
-	panel.add_theme_stylebox_override("panel", PopupStyle.make_style(PopupStyle.PANEL_BG, Color(color.r, color.g, color.b, 0.95), 3))
+	var panel_style = PopupStyle.make_style(PopupStyle.PANEL_BG, Color(color.r, color.g, color.b, 0.95), 3)
+	for style_name in ["normal", "hover", "pressed", "focus"]:
+		panel.add_theme_stylebox_override(style_name, panel_style)
 	_anchor_arm_mutation_toast_panel(panel)
 	root.add_child(panel)
 	arm_mutation_toast = panel
+	panel.pressed.connect(_dismiss_arm_mutation_popup)
 
 	var margin = MarginContainer.new()
 	margin.process_mode = Node.PROCESS_MODE_ALWAYS
@@ -467,25 +523,26 @@ func _show_arm_mutation_toast(tier: int, mutation_name: String, mutation_descrip
 	var title = _make_arm_mutation_toast_label(
 		I18n.t("arm_mutation.toast_title", [_get_arm_mutation_tier_label(tier)]),
 		Color(color.r, color.g, color.b, 1.0),
-		15,
-		4
+		22,
+		5
 	)
 	layout.add_child(title)
 
-	var name_label = _make_arm_mutation_toast_label(mutation_name, PopupStyle.TITLE_COLOR, 22, 5)
+	var name_label = _make_arm_mutation_toast_label(mutation_name, PopupStyle.TITLE_COLOR, 16, 4)
 	layout.add_child(name_label)
 
-	var description = _make_arm_mutation_toast_label(mutation_description, PopupStyle.TEXT_COLOR, 13, 3)
+	var description = _make_arm_mutation_toast_label(mutation_description, PopupStyle.TEXT_COLOR, 10, 3)
 	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	description.custom_minimum_size = Vector2(_get_arm_mutation_toast_size().x - 44.0, 34.0)
 	layout.add_child(description)
 
+	var dismiss_hint = _make_arm_mutation_toast_label(I18n.t("arm_mutation.dismiss_hint"), Color(0.55, 0.82, 1.0), 10, 3)
+	layout.add_child(dismiss_hint)
+
 	arm_mutation_toast_tween = create_tween().bind_node(panel)
 	arm_mutation_toast_tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	arm_mutation_toast_tween.tween_property(panel, "modulate:a", 1.0, 0.18).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	arm_mutation_toast_tween.tween_interval(ARM_MUTATION_TOAST_HOLD_TIME)
-	arm_mutation_toast_tween.tween_property(panel, "modulate:a", 0.0, 0.28).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-	arm_mutation_toast_tween.tween_callback(Callable(self, "_queue_free_arm_mutation_toast").bind(panel))
+	panel.grab_focus.call_deferred()
 
 func _make_arm_mutation_toast_label(text: String, color: Color, font_size: int, outline_size: int) -> Label:
 	var label = Label.new()
@@ -508,25 +565,18 @@ func _get_arm_mutation_toast_size() -> Vector2:
 func _anchor_arm_mutation_toast_panel(panel: Control) -> void:
 	var toast_size = _get_arm_mutation_toast_size()
 	panel.anchor_left = 0.5
-	panel.anchor_top = 1.0
+	panel.anchor_top = 0.5
 	panel.anchor_right = 0.5
-	panel.anchor_bottom = 1.0
+	panel.anchor_bottom = 0.5
 	panel.offset_left = -toast_size.x * 0.5
 	panel.offset_right = toast_size.x * 0.5
-	panel.offset_top = -ARM_MUTATION_TOAST_BOTTOM_MARGIN - toast_size.y
-	panel.offset_bottom = -ARM_MUTATION_TOAST_BOTTOM_MARGIN
+	panel.offset_top = -toast_size.y * 0.5
+	panel.offset_bottom = toast_size.y * 0.5
 
 func _get_web_safe_toast_outline_size(outline_size: int) -> int:
 	if Global.is_web_build():
 		return mini(outline_size, 2)
 	return outline_size
-
-func _get_arm_mutation_toast_position() -> Vector2:
-	var viewport_size = get_viewport_rect().size
-	return Vector2(
-		(viewport_size.x - ARM_MUTATION_TOAST_SIZE.x) * 0.5,
-		max(96.0, viewport_size.y - ARM_MUTATION_TOAST_SIZE.y - ARM_MUTATION_TOAST_BOTTOM_MARGIN)
-	)
 
 func _get_arm_mutation_tier_label(tier: int) -> String:
 	match tier:
@@ -548,14 +598,12 @@ func _clear_arm_mutation_toast() -> void:
 	if is_instance_valid(arm_mutation_toast):
 		arm_mutation_toast.queue_free()
 	arm_mutation_toast = null
+	if arm_mutation_popup_owns_pause and get_tree() != null:
+		get_tree().paused = false
+	arm_mutation_popup_owns_pause = false
 
-func _queue_free_arm_mutation_toast(panel) -> void:
-	if arm_mutation_toast == panel:
-		arm_mutation_toast = null
-		arm_mutation_toast_tween = null
-	if is_instance_valid(arm_mutation_toast_layer):
-		arm_mutation_toast_layer.queue_free()
-	arm_mutation_toast_layer = null
+func _dismiss_arm_mutation_popup() -> void:
+	_clear_arm_mutation_toast()
 
 func _apply_effect(option) -> void:
 	var option_data = option if option is Dictionary else {}

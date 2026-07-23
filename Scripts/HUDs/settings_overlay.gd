@@ -9,12 +9,14 @@ const ACTION_LABELS := {
 	&"dash": ["Dash", "Dash"],
 	&"active_e": ["Active Skill 1", "Habilidade Ativa 1"],
 	&"active_r": ["Active Skill 2", "Habilidade Ativa 2"],
+	&"inspect_tooltip": ["Inspect Tooltip", "Inspecionar Tooltip"],
 }
 
 var root_control: Control
 var panel: PanelContainer
 var tabs: TabContainer
 var resolution_select: OptionButton
+var resolution_options: Array[Vector2i] = []
 var window_mode_select: OptionButton
 var vsync_toggle: CheckButton
 var quality_select: OptionButton
@@ -99,18 +101,18 @@ func _build_ui() -> void:
 	layout.add_theme_constant_override("separation", 12)
 	margin.add_child(layout)
 
-	var title = _make_label(_tr("SETTINGS", "CONFIGURACOES"), 32, Color(1.0, 0.64, 0.28))
+	var title = _make_label(_tr("SETTINGS", "CONFIGURACOES"), 24, Color(1.0, 0.64, 0.28))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	layout.add_child(title)
 
 	tabs = TabContainer.new()
 	tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	tabs.add_theme_font_size_override("font_size", 19)
+	tabs.add_theme_font_size_override("font_size", 14)
 	layout.add_child(tabs)
 	_build_video_tab()
 	_build_controls_tab()
 
-	capture_message = _make_label("", 16, Color(1.0, 0.76, 0.38))
+	capture_message = _make_label("", 12, Color(1.0, 0.76, 0.38))
 	capture_message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	capture_message.custom_minimum_size.y = 24.0
 	layout.add_child(capture_message)
@@ -138,7 +140,7 @@ func _build_video_tab() -> void:
 		var browser_hint = _make_label(_tr(
 			"Canvas size and fullscreen are controlled by the browser or itch.io page.",
 			"O tamanho da tela e o modo tela cheia sao controlados pelo navegador ou pela pagina do itch.io."
-		), 16, Color(0.82, 0.78, 0.72))
+		), 12, Color(0.82, 0.78, 0.72))
 		browser_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		content.add_child(browser_hint)
 	else:
@@ -146,13 +148,12 @@ func _build_video_tab() -> void:
 		window_mode_select.add_item(_tr("Windowed", "Janela"), Global.WINDOW_MODE_WINDOWED)
 		window_mode_select.add_item(_tr("Fullscreen", "Tela Cheia"), Global.WINDOW_MODE_FULLSCREEN)
 		window_mode_select.add_item(_tr("Borderless", "Sem Bordas"), Global.WINDOW_MODE_BORDERLESS)
-		window_mode_select.item_selected.connect(func(index): Global.set_window_mode(window_mode_select.get_item_id(index)))
+		window_mode_select.item_selected.connect(_on_window_mode_selected)
 		_add_setting_row(content, _tr("Display Mode", "Modo de Tela"), window_mode_select)
 		first_focus = window_mode_select
 
 		resolution_select = OptionButton.new()
-		for resolution in Global.SUPPORTED_RESOLUTIONS:
-			resolution_select.add_item("%d x %d" % [resolution.x, resolution.y])
+		_populate_resolution_options()
 		resolution_select.item_selected.connect(_on_resolution_selected)
 		_add_setting_row(content, _tr("Resolution", "Resolucao"), resolution_select)
 
@@ -174,7 +175,7 @@ func _build_video_tab() -> void:
 	var deck_hint = _make_label(_tr(
 		"Steam Deck: use 1280 x 800 or Fullscreen. UI scaling is automatic.",
 		"Steam Deck: use 1280 x 800 ou Tela Cheia. A interface escala automaticamente."
-	), 15, Color(0.82, 0.78, 0.72))
+	), 11, Color(0.82, 0.78, 0.72))
 	deck_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(deck_hint)
 
@@ -212,7 +213,7 @@ func _build_controls_tab() -> void:
 	var aim_hint = _make_label(_tr(
 		"Controller aim: Right Stick. A/RT shoot, B dashes, Start pauses. In menus, A confirms and B returns.",
 		"Mira no controle: Analogico Direito. A/RT atiram, B usa dash e Start pausa. Nos menus, A confirma e B volta."
-	), 15, Color(0.82, 0.78, 0.72))
+	), 11, Color(0.82, 0.78, 0.72))
 	aim_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(aim_hint)
 
@@ -233,10 +234,16 @@ func _refresh_values() -> void:
 	if vsync_toggle != null:
 		vsync_toggle.button_pressed = Global.vsync_enabled
 	if resolution_select != null:
-		for i in range(Global.SUPPORTED_RESOLUTIONS.size()):
-			if Global.SUPPORTED_RESOLUTIONS[i] == Global.window_resolution:
+		_populate_resolution_options()
+		for i in range(resolution_options.size()):
+			if resolution_options[i] == Global.window_resolution:
 				resolution_select.select(i)
 				break
+		resolution_select.disabled = Global.window_mode != Global.WINDOW_MODE_WINDOWED
+		resolution_select.tooltip_text = _tr(
+			"Fullscreen and borderless modes use the monitor's native resolution.",
+			"Tela cheia e sem bordas usam a resolucao nativa do monitor."
+		) if resolution_select.disabled else ""
 	for action in Global.REMAPPABLE_ACTIONS:
 		(binding_buttons["%s_keyboard" % action] as Button).text = Global.get_action_binding_text(action, false)
 		(binding_buttons["%s_gamepad" % action] as Button).text = Global.get_action_binding_text(action, true)
@@ -249,8 +256,22 @@ func _select_option_id(option: OptionButton, id: int) -> void:
 			return
 
 func _on_resolution_selected(index: int) -> void:
-	if index >= 0 and index < Global.SUPPORTED_RESOLUTIONS.size():
-		Global.set_window_resolution(Global.SUPPORTED_RESOLUTIONS[index])
+	if index >= 0 and index < resolution_options.size():
+		Global.set_window_resolution(resolution_options[index])
+
+func _on_window_mode_selected(index: int) -> void:
+	Global.set_window_mode(window_mode_select.get_item_id(index))
+	_refresh_values()
+
+func _populate_resolution_options() -> void:
+	if resolution_select == null:
+		return
+	resolution_options = Global.get_available_window_resolutions()
+	resolution_select.clear()
+	var native_resolution := Global.get_current_screen_resolution()
+	for resolution in resolution_options:
+		var suffix := _tr(" (Native)", " (Nativa)") if resolution == native_resolution else ""
+		resolution_select.add_item("%d x %d%s" % [resolution.x, resolution.y, suffix])
 
 func _begin_binding_capture(action: StringName, gamepad: bool) -> void:
 	capture_action = action
@@ -299,7 +320,7 @@ func _make_label(text: String, font_size: int, color: Color) -> Label:
 	return label
 
 func _make_sized_label(text: String, width: float) -> Label:
-	var label = _make_label(text, 18, Color(0.95, 0.88, 0.76))
+	var label = _make_label(text, 14, Color(0.95, 0.88, 0.76))
 	label.custom_minimum_size = Vector2(width, 42)
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	return label
@@ -308,7 +329,7 @@ func _make_button(text: String, minimum_size: Vector2) -> Button:
 	var button = Button.new()
 	button.text = text
 	button.custom_minimum_size = minimum_size
-	button.add_theme_font_size_override("font_size", 18)
+	button.add_theme_font_size_override("font_size", 14)
 	button.add_theme_color_override("font_color", Color(0.96, 0.9, 0.78))
 	button.add_theme_color_override("font_hover_color", Color(1.0, 0.72, 0.32))
 	button.add_theme_color_override("font_focus_color", Color(1.0, 0.72, 0.32))

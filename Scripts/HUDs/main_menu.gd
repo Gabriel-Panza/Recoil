@@ -5,13 +5,17 @@ const CODEX_OVERLAY_SCRIPT = preload("res://Scripts/HUDs/codex_overlay.gd")
 
 const MAX_VISIBLE_RANKING_RUNS: int = 5
 const OPTIONS_MENU_DEFAULT_SEPARATION: int = 7
-const OPTIONS_LANGUAGE_BUTTON_CENTER: Vector2 = Vector2(51.4, 31.8)
-const OPTIONS_LANGUAGE_BUTTON_SIZE: Vector2 = Vector2(48.0, 28.0)
-const OPTIONS_LANGUAGE_BUTTON_FONT_SIZE: int = 16
+const OPTIONS_LANGUAGE_BUTTON_SIZE: Vector2 = Vector2(64.0, 36.0)
+const OPTIONS_LANGUAGE_BUTTON_FONT_SIZE: int = 12
+const OPTIONS_LANGUAGE_BUTTON_Y_OFFSET: float = 4.5
+const OPTIONS_ADVANCED_BUTTON_SIZE: Vector2 = Vector2(280.0, 42.0)
+const OPTIONS_FOOTER_MARGIN: Vector2 = Vector2(42.0, 50.0)
+const OPTIONS_LABEL_COLOR: Color = Color(1.0, 0.64, 0.28, 1.0)
+const OPTIONS_LABEL_HOVER_COLOR: Color = Color(1.0, 0.78, 0.38, 1.0)
 const ROULETTE_SPIN_DURATION: float = 0.48
 const MENU_OPTION_LABEL_POSITION: Vector2 = Vector2(320.0, 291.0)
 const MENU_OPTION_LABEL_SIZE: Vector2 = Vector2(820.0, 68.0)
-const MENU_OPTION_LABEL_FONT_SIZE: int = 42
+const MENU_OPTION_LABEL_FONT_SIZE: int = 32
 const MENU_OPTION_LABEL_KEYS = {
 	"start": "menu.option.play",
 	"options": "menu.option.options",
@@ -213,7 +217,7 @@ func _open_mode_selector() -> void:
 	var title = Label.new()
 	title.text = I18n.t("mode.title")
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 30)
+	title.add_theme_font_size_override("font_size", 23)
 	PopupStyle.apply_title(title)
 	layout.add_child(title)
 
@@ -237,7 +241,7 @@ func _open_mode_selector() -> void:
 	mode_selector_locked_label.visible = false
 	mode_selector_locked_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	mode_selector_locked_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	mode_selector_locked_label.add_theme_font_size_override("font_size", 15)
+	mode_selector_locked_label.add_theme_font_size_override("font_size", 11)
 	mode_selector_locked_label.add_theme_color_override("font_color", Color(1.0, 0.62, 0.28))
 	layout.add_child(mode_selector_locked_label)
 
@@ -284,12 +288,16 @@ func _setup_advanced_settings() -> void:
 	advanced_settings_button = Button.new()
 	advanced_settings_button.name = "AdvancedSettingsButton"
 	advanced_settings_button.text = I18n.t("settings.advanced_button")
-	advanced_settings_button.position = Vector2(594.0, 510.0)
-	advanced_settings_button.size = Vector2(238.0, 42.0)
+	advanced_settings_button.size = OPTIONS_ADVANCED_BUTTON_SIZE
 	advanced_settings_button.visible = false
 	_style_panel_button(advanced_settings_button)
+	advanced_settings_button.add_theme_font_size_override("font_size", 14)
+	advanced_settings_button.add_theme_color_override("font_color", OPTIONS_LABEL_COLOR)
+	advanced_settings_button.add_theme_color_override("font_hover_color", OPTIONS_LABEL_HOVER_COLOR)
+	advanced_settings_button.add_theme_color_override("font_focus_color", OPTIONS_LABEL_HOVER_COLOR)
 	advanced_settings_button.pressed.connect(settings_overlay.open_overlay)
-	add_child(advanced_settings_button)
+	$OptionsMenu.add_child(advanced_settings_button)
+	_position_options_footer_controls($OptionsMenu)
 
 func _setup_codex() -> void:
 	codex_overlay = CODEX_OVERLAY_SCRIPT.new()
@@ -300,7 +308,7 @@ func _setup_codex() -> void:
 	codex_button.tooltip_text = I18n.t("menu.codex_tooltip")
 	codex_button.position = Vector2(1076.0, 570.0)
 	codex_button.size = Vector2(56.0, 56.0)
-	codex_button.add_theme_font_size_override("font_size", 25)
+	codex_button.add_theme_font_size_override("font_size", 19)
 	codex_button.add_theme_color_override("font_color", Color(0.96, 0.9, 0.78))
 	codex_button.add_theme_color_override("font_focus_color", Color(1.0, 0.72, 0.32))
 	var normal_style = _make_card_style(Color(0.11, 0.03, 0.05, 0.98), Color(0.68, 0.18, 0.11, 1.0))
@@ -425,7 +433,7 @@ func _setup_ranking_tabs() -> void:
 	ranking_endless_button = Button.new()
 	for button in [ranking_story_button, ranking_endless_button]:
 		button.custom_minimum_size = Vector2(190.0, 38.0)
-		button.add_theme_font_size_override("font_size", 18)
+		button.add_theme_font_size_override("font_size", 14)
 		button.toggle_mode = true
 		PopupStyle.apply_button(button)
 		tab_row.add_child(button)
@@ -471,7 +479,7 @@ func _add_ranking_label(text: String, tooltip: String = "") -> void:
 	label.tooltip_text = Global.wrap_tooltip_text(tooltip)
 	label.add_theme_color_override("font_color", Color(0.88, 0.0, 0.0))
 	label.add_theme_constant_override("outline_size", 4)
-	label.add_theme_font_size_override("font_size", 24)
+	label.add_theme_font_size_override("font_size", 18)
 	ranking_list.add_child(label)
 
 func _setup_secondary_panels() -> void:
@@ -527,7 +535,7 @@ func _add_content_panel_title(panel: Control) -> Label:
 	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	title.add_theme_color_override("font_color", Color(0.88, 0.0, 0.0))
 	title.add_theme_constant_override("outline_size", 4)
-	title.add_theme_font_size_override("font_size", 36)
+	title.add_theme_font_size_override("font_size", 27)
 	panel.add_child(title)
 	return title
 
@@ -539,7 +547,7 @@ func _add_credits_panel_title(panel: Control) -> Label:
 	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	title.add_theme_color_override("font_color", Color(0.88, 0.0, 0.0))
 	title.add_theme_constant_override("outline_size", 4)
-	title.add_theme_font_size_override("font_size", 42)
+	title.add_theme_font_size_override("font_size", 32)
 	panel.add_child(title)
 	return title
 
@@ -653,7 +661,7 @@ func _create_credit_card(person_name: String, role_text: String, portrait: Textu
 	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	name_label.add_theme_color_override("font_color", Color(1.0, 0.78, 0.36))
 	name_label.add_theme_constant_override("outline_size", 3)
-	name_label.add_theme_font_size_override("font_size", 24)
+	name_label.add_theme_font_size_override("font_size", 18)
 	text_box.add_child(name_label)
 
 	var role_label = Label.new()
@@ -661,7 +669,7 @@ func _create_credit_card(person_name: String, role_text: String, portrait: Textu
 	role_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	role_label.add_theme_color_override("font_color", Color(0.96, 0.9, 0.76))
 	role_label.add_theme_constant_override("outline_size", 2)
-	role_label.add_theme_font_size_override("font_size", 19)
+	role_label.add_theme_font_size_override("font_size", 14)
 	text_box.add_child(role_label)
 
 	return card
@@ -681,7 +689,7 @@ func _create_cutscene_card(label_text: String, callable: Callable) -> Button:
 	card.custom_minimum_size = Vector2(210.0, 120.0)
 	card.focus_mode = Control.FOCUS_ALL
 	card.alignment = HORIZONTAL_ALIGNMENT_CENTER
-	card.add_theme_font_size_override("font_size", 25)
+	card.add_theme_font_size_override("font_size", 19)
 	card.add_theme_constant_override("outline_size", 4)
 	card.add_theme_color_override("font_color", Color(1.0, 0.78, 0.36))
 	card.add_theme_color_override("font_hover_color", Color(1.0, 0.92, 0.62))
@@ -726,7 +734,7 @@ func _make_art_slot_style() -> StyleBoxFlat:
 	return style
 
 func _style_panel_button(button: Button) -> void:
-	button.add_theme_font_size_override("font_size", 24)
+	button.add_theme_font_size_override("font_size", 18)
 	button.add_theme_constant_override("outline_size", 4)
 	button.add_theme_color_override("font_color", Color(0.96, 0.9, 0.76))
 	button.add_theme_color_override("font_hover_color", Color(1.0, 0.78, 0.36))
@@ -1053,7 +1061,11 @@ func _setup_selected_option_label(roulette_parent: Node) -> void:
 	selected_option_label.add_theme_font_size_override("font_size", MENU_OPTION_LABEL_FONT_SIZE)
 	selected_option_label.add_theme_color_override("font_color", Color8(168, 132, 243, 255))
 	selected_option_label.add_theme_color_override("font_outline_color", Color.BLACK)
-	selected_option_label.add_theme_constant_override("outline_size", 8)
+	selected_option_label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.78))
+	selected_option_label.add_theme_constant_override("outline_size", 12)
+	selected_option_label.add_theme_constant_override("shadow_offset_x", 4)
+	selected_option_label.add_theme_constant_override("shadow_offset_y", 5)
+	selected_option_label.add_theme_constant_override("shadow_outline_size", 2)
 	var callable = Callable(self, "_on_selected_option_label_gui_input")
 	if not selected_option_label.gui_input.is_connected(callable):
 		selected_option_label.gui_input.connect(callable)
@@ -1157,34 +1169,29 @@ func _setup_language_button() -> void:
 	var options_menu = get_node_or_null("OptionsMenu")
 	if options_menu == null:
 		return
-	var button_parent = options_menu.get_parent()
-	if button_parent == null:
-		return
 	var container = options_menu.get_node_or_null("VBoxContainer")
 	if container == null:
 		return
 	container.add_theme_constant_override("separation", OPTIONS_MENU_DEFAULT_SEPARATION)
 
-	var existing_language_button = button_parent.get_node_or_null("LanguageButton")
+	var existing_language_button = options_menu.get_node_or_null("LanguageButton")
 	if existing_language_button is Button:
 		language_button = existing_language_button as Button
 	if language_button == null:
-		existing_language_button = options_menu.get_node_or_null("LanguageButton")
+		existing_language_button = options_menu.get_parent().get_node_or_null("LanguageButton")
 		if existing_language_button is Button:
 			language_button = existing_language_button as Button
-			options_menu.remove_child(language_button)
-			button_parent.add_child(language_button)
+			language_button.reparent(options_menu, false)
 	if language_button == null:
 		existing_language_button = container.get_node_or_null("LanguageButton")
 		if existing_language_button is Button:
 			language_button = existing_language_button as Button
-			container.remove_child(language_button)
-			button_parent.add_child(language_button)
+			language_button.reparent(options_menu, false)
 	if language_button == null:
 		language_button = Button.new()
 		language_button.name = "LanguageButton"
 		language_button.process_mode = Node.PROCESS_MODE_ALWAYS
-		button_parent.add_child(language_button)
+		options_menu.add_child(language_button)
 	_style_options_language_button(language_button, options_menu as Control)
 	language_button.visible = (options_menu as CanvasItem).visible
 
@@ -1193,28 +1200,52 @@ func _setup_language_button() -> void:
 		language_button.pressed.connect(callable)
 
 func _style_options_language_button(button: Button, options_menu: Control) -> void:
-	var center_position = options_menu.position + (OPTIONS_LANGUAGE_BUTTON_CENTER * options_menu.scale)
 	button.layout_mode = 0
 	button.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	button.offset_left = center_position.x - (OPTIONS_LANGUAGE_BUTTON_SIZE.x * 0.5)
-	button.offset_top = center_position.y - (OPTIONS_LANGUAGE_BUTTON_SIZE.y * 0.5)
-	button.offset_right = button.offset_left + OPTIONS_LANGUAGE_BUTTON_SIZE.x
-	button.offset_bottom = button.offset_top + OPTIONS_LANGUAGE_BUTTON_SIZE.y
 	button.custom_minimum_size = OPTIONS_LANGUAGE_BUTTON_SIZE
-	button.flat = true
-	button.focus_mode = Control.FOCUS_NONE
+	button.flat = false
+	button.focus_mode = Control.FOCUS_ALL
 	button.mouse_filter = Control.MOUSE_FILTER_STOP
 	button.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_style_panel_button(button)
 	button.add_theme_font_size_override("font_size", OPTIONS_LANGUAGE_BUTTON_FONT_SIZE)
-	button.add_theme_constant_override("outline_size", 0)
-	button.add_theme_color_override("font_color", Color(1.0, 0.62, 0.24, 1.0))
-	button.add_theme_color_override("font_hover_color", Color(1.0, 0.90, 0.58, 1.0))
+	button.add_theme_constant_override("outline_size", 2)
+	button.add_theme_color_override("font_color", OPTIONS_LABEL_COLOR)
+	button.add_theme_color_override("font_hover_color", OPTIONS_LABEL_HOVER_COLOR)
+	button.add_theme_color_override("font_focus_color", OPTIONS_LABEL_HOVER_COLOR)
 	button.add_theme_color_override("font_pressed_color", Color(1.0, 0.42, 0.18, 1.0))
-	button.add_theme_stylebox_override("normal", StyleBoxEmpty.new())
-	button.add_theme_stylebox_override("hover", StyleBoxEmpty.new())
-	button.add_theme_stylebox_override("pressed", StyleBoxEmpty.new())
-	button.add_theme_stylebox_override("disabled", StyleBoxEmpty.new())
-	button.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+	button.add_theme_stylebox_override("focus", _make_card_style(Color(0.18, 0.05, 0.06, 0.96), Color(1.0, 0.48, 0.18, 1.0)))
+	_position_options_footer_controls(options_menu)
+
+func _position_options_footer_controls(options_menu: Control) -> void:
+	if options_menu == null:
+		return
+	var frame = options_menu.get_node_or_null("NinePatchRect") as Control
+	if frame == null:
+		return
+
+	var inverse_scale = Vector2(
+		1.0 / max(options_menu.scale.x, 0.001),
+		1.0 / max(options_menu.scale.y, 0.001)
+	)
+	var frame_end = frame.position + frame.size
+	var footer_bottom = frame_end.y - OPTIONS_FOOTER_MARGIN.y * inverse_scale.y
+
+	if language_button != null:
+		language_button.scale = inverse_scale
+		language_button.position = Vector2(
+			frame.position.x + OPTIONS_FOOTER_MARGIN.x * inverse_scale.x,
+			footer_bottom - OPTIONS_LANGUAGE_BUTTON_SIZE.y * inverse_scale.y + OPTIONS_LANGUAGE_BUTTON_Y_OFFSET * inverse_scale.y
+		)
+		language_button.size = OPTIONS_LANGUAGE_BUTTON_SIZE
+
+	if advanced_settings_button != null:
+		advanced_settings_button.scale = inverse_scale
+		advanced_settings_button.position = Vector2(
+			frame_end.x - (OPTIONS_FOOTER_MARGIN.x + OPTIONS_ADVANCED_BUTTON_SIZE.x) * inverse_scale.x,
+			footer_bottom - OPTIONS_ADVANCED_BUTTON_SIZE.y * inverse_scale.y
+		)
+		advanced_settings_button.size = OPTIONS_ADVANCED_BUTTON_SIZE
 
 func _on_language_button_pressed() -> void:
 	_play_sfx()

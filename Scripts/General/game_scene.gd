@@ -339,7 +339,7 @@ func _setup_endless_timer_label() -> void:
 	endless_timer_label.position = Vector2(-320.0, 92.0)
 	endless_timer_label.size = Vector2(300.0, 110.0)
 	endless_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	endless_timer_label.add_theme_font_size_override("font_size", 20)
+	endless_timer_label.add_theme_font_size_override("font_size", 15)
 	endless_timer_label.add_theme_constant_override("outline_size", 5)
 	endless_timer_label.add_theme_color_override("font_color", Color(1.0, 0.72, 0.34))
 	layer.add_child(endless_timer_label)
@@ -412,20 +412,20 @@ func _show_starting_arm_selection() -> void:
 	panel.add_child(margin)
 
 	var layout = VBoxContainer.new()
-	layout.add_theme_constant_override("separation", 18)
+	layout.add_theme_constant_override("separation", 22)
 	margin.add_child(layout)
 
 	var title = Label.new()
 	title.text = I18n.t("start.title")
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 26)
+	title.add_theme_font_size_override("font_size", 24)
 	title.add_theme_color_override("font_color", Color(1.0, 0.72, 0.42, 1.0))
 	layout.add_child(title)
 
 	var subtitle = Label.new()
 	subtitle.text = I18n.t("start.subtitle")
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	subtitle.add_theme_font_size_override("font_size", 15)
+	subtitle.add_theme_font_size_override("font_size", 13)
 	subtitle.add_theme_color_override("font_color", Color(0.95, 0.86, 0.76, 1.0))
 	layout.add_child(subtitle)
 
@@ -440,13 +440,14 @@ func _show_starting_arm_selection() -> void:
 		button.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.custom_minimum_size = Vector2(0, 190)
+		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		button.text = "%s\n\n%s\n%s" % [
 			I18n.arm_option_name(arm_id, str(option["name"])),
 			I18n.arm_summary(arm_id, str(option["summary"])),
 			I18n.arm_details(arm_id, str(option["details"]))
 		]
-		button.tooltip_text = Global.wrap_tooltip_text(I18n.arm_details(arm_id, str(option["details"])))
-		button.add_theme_font_size_override("font_size", 17)
+		button.add_theme_font_size_override("font_size", 16)
+		button.add_theme_constant_override("line_spacing", 6)
 		button.add_theme_color_override("font_color", Color(1.0, 0.95, 0.82, 1.0))
 		button.add_theme_stylebox_override("normal", _make_starting_arm_style(Color(0.16, 0.07, 0.075, 0.98), Color(0.52, 0.18, 0.12, 0.95), 2))
 		button.add_theme_stylebox_override("hover", _make_starting_arm_style(Color(0.26, 0.10, 0.08, 0.98), Color(1.0, 0.54, 0.20, 1.0), 3))
@@ -487,11 +488,11 @@ func _show_movement_tutorial() -> void:
 
 	movement_tutorial_seen = true
 	var tutorial_lines = [
-		"------------------------------------------------------------",
+		"-----------------------------------",
 		I18n.t("tutorial.controller_1" if Global.last_input_is_gamepad else "tutorial.movement_1"),
 		I18n.t("tutorial.controller_2" if Global.last_input_is_gamepad else "tutorial.movement_2"),
 		I18n.t("tutorial.controller_3" if Global.last_input_is_gamepad else "tutorial.movement_3"),
-		"------------------------------------------------------------"
+		"-----------------------------------"
 	]
 	await _show_tutorial_popup(
 		TutorialAnimation.MODE_MOVEMENT,
@@ -505,11 +506,11 @@ func _show_elite_tutorial() -> void:
 		TutorialAnimation.MODE_ELITES,
 		I18n.t("tutorial.elite_title"),
 		[
-			"------------------------------------------------------------",
+			"-----------------------------------",
 			I18n.t("tutorial.elite_armored"),
 			I18n.t("tutorial.elite_unstable"),
 			I18n.t("tutorial.elite_vampiric"),
-			"------------------------------------------------------------"
+			"-----------------------------------"
 		],
 		I18n.t("tutorial.ok")
 	)
@@ -577,7 +578,7 @@ func _show_tutorial_popup(animation_mode: String, title_text: String, info_lines
 	var title = Label.new()
 	title.text = title_text
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 25)
+	title.add_theme_font_size_override("font_size", 19)
 	PopupStyle.apply_title(title)
 	layout.add_child(title)
 
@@ -599,7 +600,7 @@ func _show_tutorial_popup(animation_mode: String, title_text: String, info_lines
 		var label = Label.new()
 		label.text = "- %s" % str(line)
 		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		label.add_theme_font_size_override("font_size", 17)
+		label.add_theme_font_size_override("font_size", 13)
 		PopupStyle.apply_text(label)
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		text_box.add_child(label)
@@ -609,7 +610,7 @@ func _show_tutorial_popup(animation_mode: String, title_text: String, info_lines
 	continue_button.text = button_text
 	continue_button.custom_minimum_size = Vector2(150.0, 42.0)
 	continue_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	continue_button.add_theme_font_size_override("font_size", 18)
+	continue_button.add_theme_font_size_override("font_size", 14)
 	PopupStyle.apply_button(continue_button)
 	continue_button.pressed.connect(Callable(self, "_on_tutorial_continue_pressed").bind(continue_button))
 	layout.add_child(continue_button)
@@ -662,7 +663,7 @@ func _add_tutorial_animation_window(parent: VBoxContainer, label_text: String, a
 	var title = Label.new()
 	title.text = label_text
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 14)
+	title.add_theme_font_size_override("font_size", 11)
 	PopupStyle.apply_title(title)
 	parent.add_child(title)
 
@@ -848,16 +849,28 @@ func _add_textured_serpent_floor_layer(arena: Node2D, profile: Dictionary, floor
 	var floor = Line2D.new()
 	floor.name = "ArenaTileLayer"
 	floor.z_index = 0
-	floor.width = _get_serpent_half_width(size) * 2.0
+	# The collision serpent varies its width along the curve. Mirroring that
+	# profile keeps the textured floor fully inside the S-shaped boundary.
+	floor.width = _get_serpent_half_width(size) * 2.0 * 1.04
+	floor.width_curve = _build_serpent_width_curve()
 	floor.points = _build_serpent_center_line(size)
 	floor.joint_mode = Line2D.LINE_JOINT_ROUND
-	floor.begin_cap_mode = Line2D.LINE_CAP_ROUND
-	floor.end_cap_mode = Line2D.LINE_CAP_ROUND
+	floor.begin_cap_mode = Line2D.LINE_CAP_NONE
+	floor.end_cap_mode = Line2D.LINE_CAP_NONE
 	floor.texture = floor_texture
 	floor.texture_mode = Line2D.LINE_TEXTURE_TILE
 	floor.texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
 	floor.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	arena.add_child(floor)
+
+func _build_serpent_width_curve() -> Curve:
+	var width_curve = Curve.new()
+	var samples = 38
+	for i in range(samples):
+		var t = float(i) / float(samples - 1)
+		var collision_width_ratio = 0.92 + 0.12 * sin(TAU * t)
+		width_curve.add_point(Vector2(t, collision_width_ratio / 1.04))
+	return width_curve
 
 func _build_floor_texture_uv(polygon: PackedVector2Array, texture: Texture2D) -> PackedVector2Array:
 	var uv = PackedVector2Array()
@@ -2163,7 +2176,7 @@ func _create_contract_offer_layer(contract: Dictionary) -> void:
 
 	var panel = PanelContainer.new()
 	panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
-	panel.custom_minimum_size = Vector2(680.0, 320.0)
+	panel.custom_minimum_size = Vector2(680.0, 250.0)
 	panel.size = panel.custom_minimum_size
 	panel.position = ((_get_design_viewport_size() - panel.size) * 0.5).round()
 	PopupStyle.apply_panel(panel)
@@ -2171,19 +2184,19 @@ func _create_contract_offer_layer(contract: Dictionary) -> void:
 
 	var margin = MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 28)
-	margin.add_theme_constant_override("margin_top", 24)
+	margin.add_theme_constant_override("margin_top", 20)
 	margin.add_theme_constant_override("margin_right", 28)
-	margin.add_theme_constant_override("margin_bottom", 24)
+	margin.add_theme_constant_override("margin_bottom", 20)
 	panel.add_child(margin)
 
 	var layout = VBoxContainer.new()
-	layout.add_theme_constant_override("separation", 16)
+	layout.add_theme_constant_override("separation", 12)
 	margin.add_child(layout)
 
 	var title = Label.new()
 	title.text = str(contract.get("name", I18n.t("contract.fallback_name")))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 26)
+	title.add_theme_font_size_override("font_size", 20)
 	title.add_theme_color_override("font_color", Color(1.0, 0.72, 0.36, 1.0))
 	layout.add_child(title)
 
@@ -2194,7 +2207,7 @@ func _create_contract_offer_layer(contract: Dictionary) -> void:
 	])
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	body.add_theme_font_size_override("font_size", 18)
+	body.add_theme_font_size_override("font_size", 14)
 	body.add_theme_color_override("font_color", Color(0.96, 0.86, 0.75, 1.0))
 	layout.add_child(body)
 
@@ -2221,7 +2234,7 @@ func _make_contract_button(text: String) -> Button:
 	button.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 	button.custom_minimum_size = Vector2(160.0, 44.0)
 	button.text = text
-	button.add_theme_font_size_override("font_size", 18)
+	button.add_theme_font_size_override("font_size", 14)
 	PopupStyle.apply_button(button)
 	return button
 
@@ -2792,13 +2805,13 @@ func _setup_debug_panel() -> void:
 	title.name = "DebugTitle"
 	title.text = I18n.t("debug.title")
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 18)
+	title.add_theme_font_size_override("font_size", 14)
 	PopupStyle.apply_title(title)
 	layout.add_child(title)
 
 	debug_status_label = Label.new()
 	debug_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	debug_status_label.add_theme_font_size_override("font_size", 13)
+	debug_status_label.add_theme_font_size_override("font_size", 10)
 	PopupStyle.apply_text(debug_status_label)
 	layout.add_child(debug_status_label)
 

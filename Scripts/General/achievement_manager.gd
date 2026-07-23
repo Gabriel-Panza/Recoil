@@ -393,7 +393,7 @@ func _show_next_toast() -> void:
 	label.text = "%s\n%s" % [I18n.t("achievement.unlocked"), I18n.t("achievement.%s.name" % achievement_id)]
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 20)
+	label.add_theme_font_size_override("font_size", 15)
 	label.add_theme_color_override("font_color", Color(1.0, 0.82, 0.42))
 	label.add_theme_constant_override("outline_size", 4)
 	panel.add_child(label)

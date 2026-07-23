@@ -8,12 +8,15 @@ var damage = null
 var player
 var hit_queue: Array = []
 var pierced_targets: Array = []
+var enemy_contrast_backdrop: Polygon2D
 
 @onready var aparencia = get_node_or_null("AnimatedProjectile") if get_node_or_null("AnimatedProjectile") else get_node_or_null("Sprite2D")
 @onready var particles: CPUParticles2D = get_node_or_null("CPUParticles2D")
 
 func _ready() -> void:
 	player = get_node_or_null(PLAYER_PATH)
+	z_index = Global.PROJECTILE_RENDER_Z_INDEX
+	z_as_relative = false
 	rotation = direction.angle()
 	area_entered.connect(_on_area_entered)
 	body_entered.connect(_on_body_entered)
@@ -30,6 +33,7 @@ func _ready() -> void:
 		speed *= float(get_meta("projectile_speed_multiplier"))
 
 	_configure_projectile_vfx()
+	_configure_enemy_projectile_contrast()
 
 func _process(delta: float) -> void:
 	_apply_projectile_mutations(delta)
@@ -149,6 +153,7 @@ func _try_ricochet_from_body(body: Node) -> bool:
 		damage = max(float(damage) * 0.5, 12.0)
 		set_meta("vfx_color", Color(1.0, 0.78, 0.08, 0.95))
 		_configure_projectile_vfx()
+		_configure_enemy_projectile_contrast()
 
 	_notify_player_projectile_ricochet(incoming_direction, direction)
 	return true
@@ -163,12 +168,6 @@ func _apply_projectile_mutations(delta: float) -> void:
 		var fast_direction = player.call("get_fast_mutation_homing_direction", global_position, direction, delta)
 		if fast_direction is Vector2 and fast_direction != Vector2.ZERO:
 			direction = fast_direction.normalized()
-			rotation = direction.angle()
-
-	if bool(get_meta("unstable_ricochet_homing_enabled", false)) and bool(get_meta("unstable_has_ricocheted", false)) and player.has_method("get_unstable_ricochet_homing_direction"):
-		var unstable_direction = player.call("get_unstable_ricochet_homing_direction", global_position, direction, delta)
-		if unstable_direction is Vector2 and unstable_direction != Vector2.ZERO:
-			direction = unstable_direction.normalized()
 			rotation = direction.angle()
 
 func _notify_player_projectile_enemy_hit(target: Node, enemy_damage: float) -> void:
@@ -243,6 +242,26 @@ func _configure_projectile_vfx() -> void:
 		particles.color = Color(1.0, 0.52, 0.16, 0.85)
 
 	particles.emitting = true
+
+func _configure_enemy_projectile_contrast() -> void:
+	if not is_in_group(Global.GROUP_ENEMY_PROJECTILE):
+		return
+	if not bool(get_meta("enemy_contrast_scaled", false)):
+		if aparencia is Node2D:
+			(aparencia as Node2D).scale *= 1.1
+		set_meta("enemy_contrast_scaled", true)
+	if is_instance_valid(enemy_contrast_backdrop):
+		return
+	enemy_contrast_backdrop = Polygon2D.new()
+	enemy_contrast_backdrop.name = "EnemyContrastBackdrop"
+	enemy_contrast_backdrop.z_index = -1
+	enemy_contrast_backdrop.color = Color(0.055, 0.012, 0.018, 0.92)
+	var points := PackedVector2Array()
+	for index in range(10):
+		var angle = TAU * float(index) / 10.0
+		points.append(Vector2(cos(angle), sin(angle)) * 13.5)
+	enemy_contrast_backdrop.polygon = points
+	add_child(enemy_contrast_backdrop)
 
 func _spawn_hit_particles(hit_position: Vector2) -> void:
 	if Global.should_skip_web_hit_particles():

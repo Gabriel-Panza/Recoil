@@ -96,7 +96,7 @@ func _build_ui() -> void:
 	var header = HBoxContainer.new()
 	header.add_theme_constant_override("separation", 20)
 	layout.add_child(header)
-	var title = _label(_tr("CODEX", "CODEX"), 36, Color(1.0, 0.64, 0.26))
+	var title = _label(_tr("CODEX", "CODEX"), 27, Color(1.0, 0.64, 0.26))
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(title)
 	category_select = OptionButton.new()
@@ -122,7 +122,7 @@ func _build_ui() -> void:
 	back_button.text = _tr("Back", "Voltar")
 	back_button.custom_minimum_size = Vector2(190, 46)
 	back_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	back_button.add_theme_font_size_override("font_size", 20)
+	back_button.add_theme_font_size_override("font_size", 15)
 	back_button.pressed.connect(hide_overlay)
 	layout.add_child(back_button)
 
@@ -191,7 +191,7 @@ func _entry_card(title: String, description: String, discovered: bool) -> Button
 	card.text = "%s\n%s" % [title, description]
 	card.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	card.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	card.add_theme_font_size_override("font_size", 17)
+	card.add_theme_font_size_override("font_size", 13)
 	card.add_theme_color_override("font_color", Color(0.94, 0.87, 0.76) if discovered else Color(0.55, 0.52, 0.52))
 	var card_style = _style(
 		Color(0.12, 0.032, 0.045, 0.98) if discovered else Color(0.045, 0.035, 0.04, 0.96),

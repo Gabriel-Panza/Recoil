@@ -17,7 +17,10 @@ const TEXT = {
 		"language.name": "English",
 		"settings.language_button": "EN",
 		"settings.language_tooltip": "Current language: EN. Click to switch to PT.",
-		"settings.advanced_button": "VIDEO / CONTROLS",
+		"settings.advanced_button": "GRAPHICS / CONTROLS",
+		"settings.inspect_tooltip": "Inspect Tooltip",
+		"tooltip.controller_hint": "INSPECT TOOLTIP: %s",
+		"tooltip.none": "No visible tooltip available.",
 		"common.none": "None",
 		"common.unknown": "unknown",
 		"common.base": "Base",
@@ -120,6 +123,8 @@ const TEXT = {
 		"hud.heal_wave_tooltip": "Heals %.1f%% of max health after each enemy wave. Maximum: %.1f%%.",
 		"hud.dash_cd": "Dash CD: -%.1f%%",
 		"hud.dash_cd_tooltip": "Reduces dash recharge cooldown by %.1f%%. Base cooldown: %.2fs. Current cooldown: %.2fs. Maximum reduction: %.1f%%.",
+		"hud.rerolls": "Rerolls: %d",
+		"hud.rerolls_tooltip": "Rerolls available for level-up choices.",
 		"hud.heal_received": "Heal Received: %.0f%%",
 		"hud.heal_received_tooltip": "Multiplier applied to all healing received.",
 		"hud.active_skills": "Active Skills",
@@ -132,6 +137,7 @@ const TEXT = {
 		"hud.rare_passives": "RARE PASSIVES:",
 		"hud.arm_mutations_tooltip": "Arm Mutations",
 		"arm_mutation.toast_title": "ARM MUTATION %s",
+		"arm_mutation.dismiss_hint": "SPACE / CLICK TO CONTINUE",
 		"hud.boss_passives_tooltip": "Boss Passives",
 		"hud.rare_passives_tooltip": "Rare Passives",
 		"hud.passive_fallback": "Passive",
@@ -259,10 +265,10 @@ const TEXT = {
 		"arm.heavy.summary": "Heavy shots",
 		"arm.heavy.details": "Low control, strong recoil.",
 		"arm.unstable.name": "Unstable Arm",
-		"arm.unstable.description": "Projectiles pierce one target and ricochet once, but come back dangerous.",
+		"arm.unstable.description": "Shots alternate between piercing through one target and ricocheting once before coming back dangerous.",
 		"arm.unstable.option_name": "UNSTABLE ARM",
-		"arm.unstable.summary": "Pierce and ricochet",
-		"arm.unstable.details": "Shots can come back at you.",
+		"arm.unstable.summary": "Alternating trajectories",
+		"arm.unstable.details": "Piercing and ricochet shots alternate.",
 		"arm.none": "No arm",
 		"option.option_1.text": "Recoil Force (+5%)",
 		"option.option_1.description": "+5% recoil force is additive from your base recoil, not your current recoil. Does not appear for the heavy arm and stops appearing at 8.0 recoil force.",
@@ -377,16 +383,19 @@ const TEXT = {
 		"mutation.unstable.1.name": "Ballistic Memory",
 		"mutation.unstable.1.description": "Ricochets leave a delayed echo that repeats part of the trajectory with low damage.",
 		"mutation.unstable.2.name": "Unstable Resonance",
-		"mutation.unstable.2.description": "Hitting a target after a ricochet leaves a resonance. Another shot on that target detonates a short explosion.",
-		"mutation.unstable.3.name": "Errant Seeker",
-		"mutation.unstable.3.description": "After ricocheting off a wall, shots bend slightly toward nearby enemies without perfect tracking."
+		"mutation.unstable.2.description": "Piercing shots mark enemies. Ricochet shots detonate marks on enemies they hit.",
+		"mutation.unstable.3.name": "Paradox Thread",
+		"mutation.unstable.3.description": "After ricocheting, the projectile is linked to you for up to 1.1 seconds. Enemies crossed by the thread take 40% shot damage once."
 	},
 	LANG_PT_BR: {
 		"language.code": "BR",
 		"language.name": "Portugues BR",
 		"settings.language_button": "PT",
 		"settings.language_tooltip": "Idioma atual: PT. Clique para mudar para EN.",
-		"settings.advanced_button": "VIDEO / CONTROLES",
+		"settings.advanced_button": "GRAFICOS / CONTROLES",
+		"settings.inspect_tooltip": "Inspecionar Tooltip",
+		"tooltip.controller_hint": "INSPECIONAR TOOLTIP: %s",
+		"tooltip.none": "Nenhuma tooltip visivel disponivel.",
 		"common.none": "Nenhum",
 		"common.unknown": "desconhecido",
 		"common.base": "Base",
@@ -489,6 +498,8 @@ const TEXT = {
 		"hud.heal_wave_tooltip": "Cura %.1f%% da vida maxima apos cada wave de inimigos. Maximo: %.1f%%.",
 		"hud.dash_cd": "Recarga Dash: -%.1f%%",
 		"hud.dash_cd_tooltip": "Reduz a recarga do dash em %.1f%%. Recarga base: %.2fs. Recarga atual: %.2fs. Reducao maxima: %.1f%%.",
+		"hud.rerolls": "Rerolls: %d",
+		"hud.rerolls_tooltip": "Rerolls disponiveis para as escolhas de level up.",
 		"hud.heal_received": "Cura Recebida: %.0f%%",
 		"hud.heal_received_tooltip": "Multiplicador aplicado a toda cura recebida.",
 		"hud.active_skills": "Skills Ativas",
@@ -501,6 +512,7 @@ const TEXT = {
 		"hud.rare_passives": "PASSIVAS RARAS:",
 		"hud.arm_mutations_tooltip": "Mutacoes do Braco",
 		"arm_mutation.toast_title": "MUTACAO DO BRACO %s",
+		"arm_mutation.dismiss_hint": "ESPACO / CLIQUE PARA CONTINUAR",
 		"hud.boss_passives_tooltip": "Passivas de Boss",
 		"hud.rare_passives_tooltip": "Passivas Raras",
 		"hud.passive_fallback": "Passiva",
@@ -628,10 +640,10 @@ const TEXT = {
 		"arm.heavy.summary": "Tiros fortes",
 		"arm.heavy.details": "Pouco controle, recuo forte.",
 		"arm.unstable.name": "Braco Instavel",
-		"arm.unstable.description": "Projeteis atravessam um alvo e ricocheteiam uma vez, mas voltam perigosos.",
+		"arm.unstable.description": "Os tiros alternam entre atravessar um alvo e ricochetear uma vez antes de voltar perigosos.",
 		"arm.unstable.option_name": "BRACO INSTAVEL",
-		"arm.unstable.summary": "Pierce e ricochete",
-		"arm.unstable.details": "O tiro pode voltar contra voce.",
+		"arm.unstable.summary": "Trajetorias alternadas",
+		"arm.unstable.details": "Tiros perfurantes e ricochetes se alternam.",
 		"arm.none": "Nenhum braco",
 		"option.option_1.text": "Forca Recuo (+5%)",
 		"option.option_1.description": "+5% de forca de recuo e aditivo a partir do recuo base, nao do recuo atual. Nao aparece para o braco pesado e para de aparecer em 8.0 de forca de recuo.",
@@ -746,16 +758,32 @@ const TEXT = {
 		"mutation.unstable.1.name": "Memoria Balistica",
 		"mutation.unstable.1.description": "Ricochetes deixam um eco atrasado que repete parte da trajetoria com dano baixo.",
 		"mutation.unstable.2.name": "Ressonancia Instavel",
-		"mutation.unstable.2.description": "Atingir um alvo depois de ricochetear deixa uma ressonancia. Outro tiro no alvo detona uma explosao curta.",
-		"mutation.unstable.3.name": "Buscador Errante",
-		"mutation.unstable.3.description": "Depois de ricochetear na parede, tiros curvam levemente em direcao a inimigos proximos sem rastrear perfeitamente."
+		"mutation.unstable.2.description": "Tiros perfurantes marcam inimigos. Tiros de ricochete detonam as marcas dos inimigos atingidos.",
+		"mutation.unstable.3.name": "Fio do Paradoxo",
+		"mutation.unstable.3.description": "Depois do ricochete, o projetil fica ligado a voce por ate 1.1 segundos. Inimigos cruzados pelo fio recebem 40% do dano do tiro uma vez."
 	}
 }
 
 func _ready() -> void:
 	ThemeDB.fallback_font = PIXEL_FONT
+	ThemeDB.fallback_font_size = 12
+	get_tree().node_added.connect(_apply_pixel_font_to_node)
+	call_deferred("_apply_pixel_font_to_tree")
 	_load_language()
 	TranslationServer.set_locale(current_language)
+
+func _apply_pixel_font_to_tree() -> void:
+	_apply_pixel_font_to_node(get_tree().root)
+
+func _apply_pixel_font_to_node(node: Node) -> void:
+	if node is Control:
+		var control = node as Control
+		control.add_theme_font_override("font", PIXEL_FONT)
+		if control is RichTextLabel:
+			for font_name in ["normal_font", "bold_font", "italics_font", "bold_italics_font", "mono_font"]:
+				control.add_theme_font_override(font_name, PIXEL_FONT)
+	for child in node.get_children():
+		_apply_pixel_font_to_node(child)
 
 func set_language(language: String) -> void:
 	var safe_language = _sanitize_language(language)

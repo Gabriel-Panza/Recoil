@@ -124,11 +124,11 @@ const ARM_MUTATION_DATA = {
 		},
 		2: {
 			"name": "Unstable Resonance",
-			"description": "Hitting a target after a ricochet leaves a resonance. Another shot on that target detonates a short explosion."
+			"description": "Piercing shots mark enemies. Ricochet shots detonate marks on enemies they hit."
 		},
 		3: {
-			"name": "Errant Seeker",
-			"description": "After ricocheting off a wall, shots bend slightly toward nearby enemies without perfect tracking."
+			"name": "Paradox Thread",
+			"description": "After ricocheting, the projectile is linked to you for up to 1.1 seconds. Enemies crossed by the thread take 40% shot damage once."
 		}
 	}
 }
@@ -165,9 +165,10 @@ const UNSTABLE_MEMORY_ECHO_SPEED_MULTIPLIER: float = 0.72
 const UNSTABLE_RESONANCE_DURATION_MSEC: int = 2500
 const UNSTABLE_RESONANCE_RADIUS: float = 105.0
 const UNSTABLE_RESONANCE_DAMAGE_MULTIPLIER: float = 0.55
-const UNSTABLE_RICOCHET_HOMING_RANGE: float = 520.0
-const UNSTABLE_RICOCHET_HOMING_TURN_RATE: float = 2.2
-const UNSTABLE_RICOCHET_HOMING_MAX_TURN: float = 0.1
+const UNSTABLE_THREAD_DURATION: float = 1.1
+const UNSTABLE_THREAD_DAMAGE_MULTIPLIER: float = 0.4
+const UNSTABLE_THREAD_HIT_RADIUS: float = 22.0
+const UNSTABLE_THREAD_SCAN_INTERVAL: float = 0.04
 
 # --- TIRO ---
 @export var pistol_bullet_scene: PackedScene
@@ -182,6 +183,13 @@ var arm_mutation_tier: int = 0
 var fast_rhythm_combo: int = 0
 var fast_last_shot_msec: int = -1
 var heavy_perfect_window_remaining: float = 0.0
+var unstable_next_shot_is_piercing: bool = true
+var unstable_thread_projectile: Node2D = null
+var unstable_thread_vfx: Node2D = null
+var unstable_thread_time_left: float = 0.0
+var unstable_thread_scan_remaining: float = 0.0
+var unstable_thread_damage: float = 0.0
+var unstable_thread_hit_enemy_ids: Dictionary = {}
 
 var active_abilities = {
 	"E": "",
@@ -476,6 +484,8 @@ func _reset_arm_mutation_runtime_state() -> void:
 	fast_rhythm_combo = 0
 	fast_last_shot_msec = -1
 	heavy_perfect_window_remaining = 0.0
+	unstable_next_shot_is_piercing = true
+	_clear_unstable_paradox_thread()
 
 func _get_arm_mutation_color(arm_id: String) -> Color:
 	match arm_id:
@@ -947,6 +957,7 @@ func _physics_process(delta: float) -> void:
 	_update_movement_force_combo_lock(delta)
 	_update_knockback_immunity(delta)
 	_update_kinetic_reload(delta)
+	_update_unstable_paradox_thread(delta)
 	if heavy_perfect_window_remaining > 0.0:
 		heavy_perfect_window_remaining = max(heavy_perfect_window_remaining - delta, 0.0)
 	_update_shot_cooldown_bar()
@@ -1079,7 +1090,22 @@ func _prepare_arm_mutation_shot(base_angle: float, shot_damage: float) -> Dictio
 			_prepare_fast_mutation_shot(result, base_angle)
 		"heavy":
 			_prepare_heavy_mutation_shot(result)
+		"unstable":
+			_prepare_unstable_shot(result)
 	return result
+
+func _prepare_unstable_shot(result: Dictionary) -> void:
+	var projectile_flags: Dictionary = result["projectile_flags"]
+	if unstable_next_shot_is_piercing:
+		projectile_flags["unstable_piercing_shot"] = true
+		projectile_flags["pierce_remaining_bonus"] = int(projectile_flags.get("pierce_remaining_bonus", 0)) + 1
+		projectile_flags["vfx_color"] = Color(0.72, 0.3, 1.0, 0.95)
+	else:
+		projectile_flags["unstable_ricochet_shot"] = true
+		projectile_flags["ricochet_remaining"] = 1
+		projectile_flags["risk_after_ricochet"] = true
+		projectile_flags["vfx_color"] = Color(0.48, 0.12, 1.0, 0.95)
+	unstable_next_shot_is_piercing = not unstable_next_shot_is_piercing
 
 func _prepare_fast_mutation_shot(result: Dictionary, base_angle: float) -> void:
 	if arm_mutation_tier < 2:
@@ -1329,16 +1355,14 @@ func _configure_heavy_projectile(bullet: Node) -> void:
 		bullet.set_meta("heavy_execution_blast_enabled", true)
 
 func _configure_unstable_projectile(bullet: Node) -> void:
-	bullet.set_meta("pierce_remaining", 1)
-	bullet.set_meta("ricochet_remaining", 1)
-	bullet.set_meta("risk_after_ricochet", true)
 	bullet.set_meta("vfx_color", Color(0.6, 0.2, 1.0, 0.95))
+	bullet.set_meta("unstable_source_damage", float(bullet.get("damage")))
 	if arm_mutation_tier >= 1:
 		bullet.set_meta("unstable_memory_echo", true)
 	if arm_mutation_tier >= 2:
 		bullet.set_meta("unstable_resonance_enabled", true)
 	if arm_mutation_tier >= 3:
-		bullet.set_meta("unstable_ricochet_homing_enabled", true)
+		bullet.set_meta("unstable_paradox_thread_enabled", true)
 
 func _apply_projectile_flags(bullet: Node, projectile_flags: Dictionary) -> void:
 	if projectile_flags.is_empty():
@@ -1374,21 +1398,6 @@ func get_fast_mutation_homing_direction(projectile_position: Vector2, current_di
 		return current_direction
 
 	var turn_amount = clampf(FAST_HOMING_TURN_RATE * delta, 0.0, 0.32)
-	return current_direction.lerp(target_direction, turn_amount).normalized()
-
-func get_unstable_ricochet_homing_direction(projectile_position: Vector2, current_direction: Vector2, delta: float) -> Vector2:
-	if current_arm_id != "unstable" or arm_mutation_tier < 3 or current_direction == Vector2.ZERO:
-		return current_direction
-
-	var target = _get_best_unstable_ricochet_target(projectile_position, current_direction)
-	if target == null:
-		return current_direction
-
-	var target_direction = projectile_position.direction_to(target.global_position)
-	if target_direction == Vector2.ZERO:
-		return current_direction
-
-	var turn_amount = clampf(UNSTABLE_RICOCHET_HOMING_TURN_RATE * delta, 0.0, UNSTABLE_RICOCHET_HOMING_MAX_TURN)
 	return current_direction.lerp(target_direction, turn_amount).normalized()
 
 func _get_best_fast_marked_target(projectile_position: Vector2, current_direction: Vector2) -> Node2D:
@@ -1440,38 +1449,6 @@ func _get_best_fast_marked_target(projectile_position: Vector2, current_directio
 
 	return best_target
 
-func _get_best_unstable_ricochet_target(projectile_position: Vector2, current_direction: Vector2) -> Node2D:
-	var best_target: Node2D = null
-	var best_score = INF
-	var max_distance_sq = UNSTABLE_RICOCHET_HOMING_RANGE * UNSTABLE_RICOCHET_HOMING_RANGE
-	var normalized_direction = current_direction.normalized()
-
-	for enemy in get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
-		if not is_instance_valid(enemy) or not (enemy is Node2D):
-			continue
-		if enemy.get("is_dead") != null and bool(enemy.get("is_dead")):
-			continue
-
-		var enemy_node = enemy as Node2D
-		var to_enemy = projectile_position.direction_to(enemy_node.global_position)
-		if to_enemy == Vector2.ZERO:
-			continue
-
-		var distance_sq = projectile_position.distance_squared_to(enemy_node.global_position)
-		if distance_sq > max_distance_sq:
-			continue
-
-		var alignment = normalized_direction.dot(to_enemy)
-		if alignment < -0.1:
-			continue
-
-		var score = distance_sq / max(alignment + 1.05, 0.1)
-		if score < best_score:
-			best_score = score
-			best_target = enemy_node
-
-	return best_target
-
 func on_player_projectile_hit_enemy(enemy: Node, projectile: Node, dealt_damage: float) -> void:
 	if not is_instance_valid(enemy) or not is_instance_valid(projectile):
 		return
@@ -1499,6 +1476,8 @@ func on_player_projectile_ricochet(projectile: Node, ricochet_position: Vector2,
 	projectile.set_meta("unstable_has_ricocheted", true)
 	if bool(projectile.get_meta("unstable_memory_echo", false)):
 		spawn_unstable_memory_echo(ricochet_position, incoming_direction, projectile.get("damage"))
+	if bool(projectile.get_meta("unstable_paradox_thread_enabled", false)) and projectile is Node2D:
+		_start_unstable_paradox_thread(projectile as Node2D)
 
 func _apply_fast_nervous_mark(enemy: Node) -> void:
 	enemy.set_meta(FAST_MARK_META, Time.get_ticks_msec() + FAST_MARK_DURATION_MSEC)
@@ -1578,15 +1557,129 @@ func _handle_unstable_resonance_hit(enemy: Node, projectile: Node, dealt_damage:
 		return
 
 	var now_msec = Time.get_ticks_msec()
-	var resonance_until = int(enemy.get_meta(UNSTABLE_RESONANCE_META, 0))
-	if resonance_until > now_msec:
-		enemy.remove_meta(UNSTABLE_RESONANCE_META)
-		_trigger_unstable_resonance(_get_node_global_position(enemy, global_position), dealt_damage)
-		return
-
-	if bool(projectile.get_meta("unstable_has_ricocheted", false)):
+	if bool(projectile.get_meta("unstable_piercing_shot", false)):
 		enemy.set_meta(UNSTABLE_RESONANCE_META, now_msec + UNSTABLE_RESONANCE_DURATION_MSEC)
 		_spawn_burst_particles(_get_node_global_position(enemy, global_position), Color(0.72, 0.28, 1.0, 0.82), 10, 0.18, 75.0)
+		return
+
+	if bool(projectile.get_meta("unstable_ricochet_shot", false)):
+		_try_detonate_unstable_resonance(enemy, dealt_damage, now_msec)
+
+func _try_detonate_unstable_resonance(enemy: Node, dealt_damage: float, now_msec: int = -1) -> bool:
+	if not is_instance_valid(enemy):
+		return false
+	if now_msec < 0:
+		now_msec = Time.get_ticks_msec()
+
+	var resonance_until = int(enemy.get_meta(UNSTABLE_RESONANCE_META, 0))
+	if resonance_until <= now_msec:
+		if enemy.has_meta(UNSTABLE_RESONANCE_META):
+			enemy.remove_meta(UNSTABLE_RESONANCE_META)
+		return false
+
+	enemy.remove_meta(UNSTABLE_RESONANCE_META)
+	_trigger_unstable_resonance(_get_node_global_position(enemy, global_position), dealt_damage)
+	return true
+
+func _start_unstable_paradox_thread(projectile: Node2D) -> void:
+	_clear_unstable_paradox_thread()
+	if not is_instance_valid(projectile):
+		return
+
+	var parent = _get_vfx_parent()
+	if parent == null:
+		return
+
+	unstable_thread_projectile = projectile
+	unstable_thread_time_left = UNSTABLE_THREAD_DURATION
+	unstable_thread_scan_remaining = 0.0
+	unstable_thread_damage = max(float(projectile.get_meta("unstable_source_damage", projectile.get("damage"))) * UNSTABLE_THREAD_DAMAGE_MULTIPLIER, 1.0)
+	unstable_thread_hit_enemy_ids.clear()
+
+	unstable_thread_vfx = Node2D.new()
+	unstable_thread_vfx.name = "UnstableParadoxThreadVFX"
+	unstable_thread_vfx.z_index = Global.PROJECTILE_RENDER_Z_INDEX + 1
+	unstable_thread_vfx.z_as_relative = false
+	parent.add_child(unstable_thread_vfx)
+
+	var outline = Line2D.new()
+	outline.name = "Outline"
+	outline.width = 13.0
+	outline.default_color = Color(0.08, 0.015, 0.12, 0.82)
+	outline.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	outline.end_cap_mode = Line2D.LINE_CAP_ROUND
+	unstable_thread_vfx.add_child(outline)
+
+	var core = Line2D.new()
+	core.name = "Core"
+	core.width = 7.0
+	core.default_color = Color(0.74, 0.3, 1.0, 0.92)
+	core.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	core.end_cap_mode = Line2D.LINE_CAP_ROUND
+	unstable_thread_vfx.add_child(core)
+	_update_unstable_thread_lines()
+
+func _update_unstable_paradox_thread(delta: float) -> void:
+	if not is_instance_valid(unstable_thread_vfx):
+		return
+	if not is_instance_valid(unstable_thread_projectile) or unstable_thread_projectile.is_queued_for_deletion():
+		_clear_unstable_paradox_thread()
+		return
+
+	unstable_thread_time_left -= delta
+	if unstable_thread_time_left <= 0.0:
+		_clear_unstable_paradox_thread()
+		return
+
+	_update_unstable_thread_lines()
+	unstable_thread_scan_remaining -= delta
+	if unstable_thread_scan_remaining > 0.0:
+		return
+	unstable_thread_scan_remaining = UNSTABLE_THREAD_SCAN_INTERVAL
+	_damage_enemies_crossing_unstable_thread()
+
+func _update_unstable_thread_lines() -> void:
+	if not is_instance_valid(unstable_thread_vfx) or not is_instance_valid(unstable_thread_projectile):
+		return
+
+	var points = PackedVector2Array([
+		unstable_thread_vfx.to_local(global_position),
+		unstable_thread_vfx.to_local(unstable_thread_projectile.global_position)
+	])
+	for child in unstable_thread_vfx.get_children():
+		if child is Line2D:
+			(child as Line2D).points = points
+
+func _damage_enemies_crossing_unstable_thread() -> void:
+	var segment_start = global_position
+	var segment_end = unstable_thread_projectile.global_position
+	for enemy in get_tree().get_nodes_in_group(Global.GROUP_ENEMY):
+		if not _can_mutation_affect_enemy(enemy):
+			continue
+		var enemy_id = enemy.get_instance_id()
+		if unstable_thread_hit_enemy_ids.has(enemy_id):
+			continue
+
+		var enemy_position = (enemy as Node2D).global_position
+		var closest_point = Geometry2D.get_closest_point_to_segment(enemy_position, segment_start, segment_end)
+		if enemy_position.distance_squared_to(closest_point) > UNSTABLE_THREAD_HIT_RADIUS * UNSTABLE_THREAD_HIT_RADIUS:
+			continue
+
+		unstable_thread_hit_enemy_ids[enemy_id] = true
+		enemy.take_damage(unstable_thread_damage)
+		if arm_mutation_tier >= 2:
+			_try_detonate_unstable_resonance(enemy, unstable_thread_damage)
+		_spawn_burst_particles(enemy_position, Color(0.74, 0.3, 1.0, 0.78), 7, 0.14, 58.0)
+
+func _clear_unstable_paradox_thread() -> void:
+	if is_instance_valid(unstable_thread_vfx) and not unstable_thread_vfx.is_queued_for_deletion():
+		unstable_thread_vfx.queue_free()
+	unstable_thread_projectile = null
+	unstable_thread_vfx = null
+	unstable_thread_time_left = 0.0
+	unstable_thread_scan_remaining = 0.0
+	unstable_thread_damage = 0.0
+	unstable_thread_hit_enemy_ids.clear()
 
 func _trigger_unstable_resonance(center: Vector2, dealt_damage: float) -> void:
 	var resonance_damage = max(dealt_damage * UNSTABLE_RESONANCE_DAMAGE_MULTIPLIER, attack_damage * 0.35)

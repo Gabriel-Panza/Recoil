@@ -19,6 +19,7 @@ config/icon="res://Sprites/icon.svg"
 
 I18n="*res://Scripts/General/i18n.gd"
 Global="*uid://dkq71raesmyqv"
+TooltipAccess="*res://Scripts/HUDs/controller_tooltip_overlay.gd"
 AchievementManager="*res://Scripts/General/achievement_manager.gd"
 AudioManager="*uid://552s1f15pxal"
 

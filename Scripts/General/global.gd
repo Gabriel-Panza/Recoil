@@ -18,7 +18,7 @@ const SETTINGS_PROGRESS_SECTION: String = "progress"
 const SETTINGS_ACHIEVEMENTS_SECTION: String = "achievements"
 const GAME_MODE_STORY: String = "story"
 const GAME_MODE_ENDLESS: String = "endless"
-const CONTROLS_SCHEMA_VERSION: int = 2
+const CONTROLS_SCHEMA_VERSION: int = 3
 const GROUP_MUSIC: String = "Music"
 const GROUP_SFX: String = "SFX"
 const GROUP_PLAYER: String = "Player"
@@ -33,6 +33,7 @@ const ENEMY_LAYER_MASK: int = 4
 const ENEMY_COLLISION_MASK: int = ENEMY_LAYER_MASK
 const ENEMY_BODY_COLLISION_SCALE: float = 0.7
 const CHARACTER_RENDER_Z_INDEX: int = 20
+const PROJECTILE_RENDER_Z_INDEX: int = 30
 const GROUND_AREA_VFX_LAYER_NAME: String = "GroundAreaVFX"
 const GROUND_AREA_VFX_Z_INDEX: int = 10
 const ENEMY_ATTACK_ACTIVE_COLOR_DARKENING: float = 0.3
@@ -53,15 +54,12 @@ const GRAPHICS_HIGH: int = 2
 const WINDOW_MODE_WINDOWED: int = 0
 const WINDOW_MODE_FULLSCREEN: int = 1
 const WINDOW_MODE_BORDERLESS: int = 2
-const SUPPORTED_RESOLUTIONS: Array[Vector2i] = [
-	Vector2i(1152, 648),
-	Vector2i(1280, 720),
-	Vector2i(1280, 800),
-	Vector2i(1600, 900),
-	Vector2i(1920, 1080),
-	Vector2i(2560, 1440),
+const DEFAULT_WINDOW_RESOLUTION := Vector2i(1280, 720)
+const FALLBACK_SCREEN_SIZE := Vector2i(1920, 1080)
+const RESOLUTION_HEIGHT_STEPS: Array[int] = [
+	480, 540, 600, 648, 720, 768, 800, 900, 1080, 1200, 1440, 1600, 2160
 ]
-const REMAPPABLE_ACTIONS: Array[StringName] = [&"shoot", &"dash", &"active_e", &"active_r"]
+const REMAPPABLE_ACTIONS: Array[StringName] = [&"shoot", &"dash", &"active_e", &"active_r", &"inspect_tooltip"]
 const CONTROLLER_AIM_DEADZONE: float = 0.28
 const WEB_SFX_VOICE_LIMITS = {
 	"enemy_footstep": 0,
@@ -81,7 +79,7 @@ var enemy_sprite_frames_cache: Dictionary = {}
 var shader_cache: Dictionary = {}
 var paused_music_watchdog_elapsed: float = 0.0
 var window_mode: int = WINDOW_MODE_WINDOWED
-var window_resolution: Vector2i = Vector2i(1280, 720)
+var window_resolution: Vector2i = DEFAULT_WINDOW_RESOLUTION
 var vsync_enabled: bool = true
 var graphics_quality: int = GRAPHICS_HIGH
 var last_input_is_gamepad: bool = false
@@ -137,7 +135,7 @@ const STARTING_ARM_DATA = {
 		"name": "Fast Arm",
 		"description": "Weak shots, high fire rate, and short recoil for tighter control.",
 		"attack_damage": 33.0,
-		"base_fire_rate": 0.5,
+		"base_fire_rate": 0.51,
 		"min_fire_rate": 0.3,
 		"base_recoil_force": 390.0,
 		"friction": 900.0,
@@ -148,8 +146,8 @@ const STARTING_ARM_DATA = {
 		"name": "Heavy Arm",
 		"description": "Slow shots with high damage and strong recoil for big repositioning plays.",
 		"attack_damage": 90.0,
-		"base_fire_rate": 2.15,
-		"min_fire_rate": 1.75,
+		"base_fire_rate": 2.11,
+		"min_fire_rate": 1.8,
 		"base_recoil_force": 750.0,
 		"friction": 600.0,
 		"attack_speed_upgrade_multiplier": 0.7,
@@ -157,10 +155,10 @@ const STARTING_ARM_DATA = {
 	},
 	"unstable": {
 		"name": "Unstable Arm",
-		"description": "Projectiles pierce one target and ricochet once, but come back dangerous.",
-		"attack_damage": 45.0,
-		"base_fire_rate": 1.35,
-		"min_fire_rate": 1.05,
+		"description": "Shots alternate between piercing through one target and ricocheting once before coming back dangerous.",
+		"attack_damage": 50.0,
+		"base_fire_rate": 1.1,
+		"min_fire_rate": 0.8,
 		"base_recoil_force": 580.0,
 		"friction": 750.0,
 		"attack_speed_upgrade_multiplier": 0.5,
@@ -184,8 +182,8 @@ const STARTING_ARM_OPTIONS = [
 	{
 		"id": "unstable",
 		"name": "UNSTABLE ARM",
-		"summary": "Pierce and ricochet",
-		"details": "Shots can come back at you."
+		"summary": "Alternating trajectories",
+		"details": "Piercing and ricochet shots alternate."
 	}
 ]
 
@@ -414,6 +412,7 @@ func _ensure_input_actions() -> void:
 	_ensure_action(&"dash", 0.2)
 	_ensure_action(&"active_e", 0.2)
 	_ensure_action(&"active_r", 0.2)
+	_ensure_action(&"inspect_tooltip", 0.5)
 	_ensure_action(&"aim_left", CONTROLLER_AIM_DEADZONE)
 	_ensure_action(&"aim_right", CONTROLLER_AIM_DEADZONE)
 	_ensure_action(&"aim_up", CONTROLLER_AIM_DEADZONE)
@@ -434,6 +433,8 @@ func _ensure_input_actions() -> void:
 	_add_default_event_if_missing(&"active_e", _make_joy_button_event(JOY_BUTTON_X))
 	_add_default_event_if_missing(&"active_r", _make_key_event(KEY_R))
 	_add_default_event_if_missing(&"active_r", _make_joy_button_event(JOY_BUTTON_Y))
+	_add_default_event_if_missing(&"inspect_tooltip", _make_key_event(KEY_TAB))
+	_add_default_event_if_missing(&"inspect_tooltip", _make_joy_button_event(JOY_BUTTON_LEFT_SHOULDER))
 	_add_default_event_if_missing(&"aim_left", _make_joy_motion_event(JOY_AXIS_RIGHT_X, -1.0))
 	_add_default_event_if_missing(&"aim_right", _make_joy_motion_event(JOY_AXIS_RIGHT_X, 1.0))
 	_add_default_event_if_missing(&"aim_up", _make_joy_motion_event(JOY_AXIS_RIGHT_Y, -1.0))
@@ -538,11 +539,63 @@ func set_window_mode(value: int) -> void:
 	_save_display_settings()
 
 func set_window_resolution(value: Vector2i) -> void:
-	if value not in SUPPORTED_RESOLUTIONS:
+	var available_resolutions := get_available_window_resolutions()
+	if value not in available_resolutions:
 		return
 	window_resolution = value
 	_apply_video_settings()
 	_save_display_settings()
+
+func get_available_window_resolutions() -> Array[Vector2i]:
+	if is_web_build():
+		return [DEFAULT_WINDOW_RESOLUTION]
+	var screen_size := _get_current_screen_size()
+	var aspect_ratio := float(screen_size.x) / maxf(float(screen_size.y), 1.0)
+	var resolutions: Array[Vector2i] = []
+	for height in RESOLUTION_HEIGHT_STEPS:
+		var width := int(round(float(height) * aspect_ratio / 2.0)) * 2
+		var resolution := Vector2i(width, height)
+		if resolution.x <= screen_size.x and resolution.y <= screen_size.y:
+			_append_unique_resolution(resolutions, resolution)
+	_append_unique_resolution(resolutions, screen_size)
+	resolutions.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+		var area_a := a.x * a.y
+		var area_b := b.x * b.y
+		return area_a < area_b if area_a != area_b else a.x < b.x
+	)
+	return resolutions
+
+func _append_unique_resolution(resolutions: Array[Vector2i], resolution: Vector2i) -> void:
+	if resolution.x >= 640 and resolution.y >= 360 and resolution not in resolutions:
+		resolutions.append(resolution)
+
+func _get_current_screen() -> int:
+	var screen := DisplayServer.window_get_current_screen()
+	if screen < 0 or screen >= DisplayServer.get_screen_count():
+		return 0
+	return screen
+
+func _get_current_screen_size() -> Vector2i:
+	var size := DisplayServer.screen_get_size(_get_current_screen())
+	return size if size.x > 0 and size.y > 0 else FALLBACK_SCREEN_SIZE
+
+func get_current_screen_resolution() -> Vector2i:
+	return _get_current_screen_size()
+
+func _get_closest_available_resolution(target: Vector2i) -> Vector2i:
+	var resolutions := get_available_window_resolutions()
+	if resolutions.is_empty():
+		return DEFAULT_WINDOW_RESOLUTION
+	var closest := resolutions[0]
+	var closest_distance := INF
+	for resolution in resolutions:
+		var width_delta := float(resolution.x - target.x)
+		var height_delta := float(resolution.y - target.y)
+		var distance := width_delta * width_delta + height_delta * height_delta
+		if distance < closest_distance:
+			closest = resolution
+			closest_distance = distance
+	return closest
 
 func set_vsync_enabled(value: bool) -> void:
 	vsync_enabled = value
@@ -583,8 +636,8 @@ func _load_persistent_settings() -> void:
 	if settings_loaded:
 		window_mode = int(config.get_value(SETTINGS_VIDEO_SECTION, "window_mode", window_mode))
 		var stored_resolution = config.get_value(SETTINGS_VIDEO_SECTION, "resolution", window_resolution)
-		if stored_resolution is Vector2i and stored_resolution in SUPPORTED_RESOLUTIONS:
-			window_resolution = stored_resolution
+		if stored_resolution is Vector2i:
+			window_resolution = _get_closest_available_resolution(stored_resolution)
 		vsync_enabled = bool(config.get_value(SETTINGS_VIDEO_SECTION, "vsync", vsync_enabled))
 		graphics_quality = clampi(int(config.get_value(SETTINGS_VIDEO_SECTION, "quality", graphics_quality)), GRAPHICS_LOW, GRAPHICS_HIGH)
 		music_volume_slider_value = float(config.get_value(SETTINGS_AUDIO_SECTION, "music", music_volume_slider_value))
@@ -617,15 +670,30 @@ func _load_persistent_progress(legacy_settings: ConfigFile = null) -> void:
 func _apply_video_settings() -> void:
 	if OS.has_feature("web"):
 		return
-	DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS, window_mode == WINDOW_MODE_BORDERLESS)
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if vsync_enabled else DisplayServer.VSYNC_DISABLED)
+	if Engine.is_embedded_in_editor():
+		settings_changed.emit()
+		return
+	var screen := _get_current_screen()
+	DisplayServer.window_set_current_screen(screen)
 	if window_mode == WINDOW_MODE_FULLSCREEN:
+		DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS, false)
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	elif window_mode == WINDOW_MODE_BORDERLESS:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+		DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS, true)
+		DisplayServer.window_set_position(DisplayServer.screen_get_position(screen))
+		DisplayServer.window_set_size(_get_current_screen_size())
 	else:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+		DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_BORDERLESS, false)
+		window_resolution = _get_closest_available_resolution(window_resolution)
 		DisplayServer.window_set_size(window_resolution)
-		var screen_size = DisplayServer.screen_get_size()
-		DisplayServer.window_set_position((screen_size - window_resolution) / 2)
-	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if vsync_enabled else DisplayServer.VSYNC_DISABLED)
+		var usable_rect := DisplayServer.screen_get_usable_rect(screen)
+		if usable_rect.size.x <= 0 or usable_rect.size.y <= 0:
+			usable_rect = Rect2i(DisplayServer.screen_get_position(screen), _get_current_screen_size())
+		var centered_position := usable_rect.position + (usable_rect.size - window_resolution) / 2
+		DisplayServer.window_set_position(centered_position)
 	settings_changed.emit()
 
 func _save_display_settings() -> void:
@@ -655,7 +723,7 @@ func _save_control_bindings() -> void:
 func _load_control_bindings(config: ConfigFile) -> void:
 	var schema_version = int(config.get_value(SETTINGS_CONTROLS_SECTION, "schema_version", 0))
 	for action in REMAPPABLE_ACTIONS:
-		if schema_version < CONTROLS_SCHEMA_VERSION and action in [&"shoot", &"dash"]:
+		if schema_version < 2 and action in [&"shoot", &"dash"]:
 			continue
 		if not config.has_section_key(SETTINGS_CONTROLS_SECTION, str(action)):
 			continue
