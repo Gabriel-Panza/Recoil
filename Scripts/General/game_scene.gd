@@ -441,17 +441,31 @@ func _show_starting_arm_selection() -> void:
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.custom_minimum_size = Vector2(0, 190)
 		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		button.text = "%s\n\n%s\n%s" % [
+		button.text = ""
+		button.add_theme_stylebox_override("normal", _make_starting_arm_style(Color(0.16, 0.07, 0.075, 0.98), Color(0.52, 0.18, 0.12, 0.95), 2))
+		button.add_theme_stylebox_override("hover", _make_starting_arm_style(Color(0.26, 0.10, 0.08, 0.98), Color(1.0, 0.54, 0.20, 1.0), 3))
+		button.add_theme_stylebox_override("pressed", _make_starting_arm_style(Color(0.34, 0.13, 0.08, 0.98), Color(1.0, 0.76, 0.28, 1.0), 3))
+
+		var option_text = RichTextLabel.new()
+		option_text.bbcode_enabled = true
+		option_text.fit_content = false
+		option_text.scroll_active = false
+		option_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		option_text.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		option_text.offset_left = 14.0
+		option_text.offset_top = 12.0
+		option_text.offset_right = -14.0
+		option_text.offset_bottom = -12.0
+		option_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		option_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		option_text.add_theme_font_size_override("normal_font_size", 16)
+		option_text.add_theme_constant_override("line_separation", 6)
+		option_text.text = "[center][color=#ffa347]%s[/color]\n\n[color=#fff2d1]%s\n%s[/color][/center]" % [
 			I18n.arm_option_name(arm_id, str(option["name"])),
 			I18n.arm_summary(arm_id, str(option["summary"])),
 			I18n.arm_details(arm_id, str(option["details"]))
 		]
-		button.add_theme_font_size_override("font_size", 16)
-		button.add_theme_constant_override("line_spacing", 6)
-		button.add_theme_color_override("font_color", Color(1.0, 0.95, 0.82, 1.0))
-		button.add_theme_stylebox_override("normal", _make_starting_arm_style(Color(0.16, 0.07, 0.075, 0.98), Color(0.52, 0.18, 0.12, 0.95), 2))
-		button.add_theme_stylebox_override("hover", _make_starting_arm_style(Color(0.26, 0.10, 0.08, 0.98), Color(1.0, 0.54, 0.20, 1.0), 3))
-		button.add_theme_stylebox_override("pressed", _make_starting_arm_style(Color(0.34, 0.13, 0.08, 0.98), Color(1.0, 0.76, 0.28, 1.0), 3))
+		button.add_child(option_text)
 		button.pressed.connect(Callable(self, "_on_starting_arm_button_pressed").bind(arm_id))
 		choices.add_child(button)
 		if choices.get_child_count() == 1:

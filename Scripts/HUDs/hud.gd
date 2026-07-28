@@ -32,7 +32,7 @@ const SKILL_STATUS_TOP_SIZE = Vector2(69.0, 40.0) * SKILL_STATUS_SCALE
 const SKILL_STATUS_LIST_WIDTH = 69.0 * SKILL_STATUS_SCALE
 const SKILL_STATUS_LIST_MIN_HEIGHT = 10.0 * SKILL_STATUS_SCALE
 const SKILL_STATUS_LIST_VERTICAL_PADDING = 10.0
-const SKILL_STATUS_PASSIVE_LINE_HEIGHT = 21.0
+const SKILL_STATUS_PASSIVE_LINE_HEIGHT = 24.0
 const SKILL_STATUS_ARM_MUTATION_LINE_COUNT = 4
 const SKILL_STATUS_SPECIAL_PASSIVE_LINE_COUNT = 6
 const SKILL_STATUS_LIST_PATCH_LEFT = 3
@@ -195,7 +195,7 @@ func _setup_passive_status_label() -> void:
 	passive_status_label.add_theme_color_override("font_color", Color(1.0, 1.0, 0.3, 1.0))
 	passive_status_label.add_theme_constant_override("outline_size", 3)
 	passive_status_label.add_theme_font_size_override("font_size", 11)
-	passive_status_label.add_theme_constant_override("line_spacing", 4)
+	passive_status_label.add_theme_constant_override("line_spacing", 7)
 	passive_status_label.text = "- %s" % I18n.t("common.none")
 	passive_status_label.tooltip_text = ""
 	_apply_skill_status_label_alpha(passive_status_label)

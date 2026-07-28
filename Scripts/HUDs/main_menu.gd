@@ -2,6 +2,7 @@ extends Control
 
 const SETTINGS_OVERLAY_SCRIPT = preload("res://Scripts/HUDs/settings_overlay.gd")
 const CODEX_OVERLAY_SCRIPT = preload("res://Scripts/HUDs/codex_overlay.gd")
+const CODEX_BUTTON_ICON: Texture2D = preload("res://Sprites/Menu/Codex_icon.png")
 
 const MAX_VISIBLE_RANKING_RUNS: int = 5
 const OPTIONS_MENU_DEFAULT_SEPARATION: int = 7
@@ -304,13 +305,12 @@ func _setup_codex() -> void:
 	add_child(codex_overlay)
 	codex_button = Button.new()
 	codex_button.name = "CodexButton"
-	codex_button.text = "C"
+	codex_button.icon = CODEX_BUTTON_ICON
+	codex_button.expand_icon = true
+	codex_button.add_theme_constant_override("icon_max_width", 42)
 	codex_button.tooltip_text = I18n.t("menu.codex_tooltip")
 	codex_button.position = Vector2(1076.0, 570.0)
 	codex_button.size = Vector2(56.0, 56.0)
-	codex_button.add_theme_font_size_override("font_size", 19)
-	codex_button.add_theme_color_override("font_color", Color(0.96, 0.9, 0.78))
-	codex_button.add_theme_color_override("font_focus_color", Color(1.0, 0.72, 0.32))
 	var normal_style = _make_card_style(Color(0.11, 0.03, 0.05, 0.98), Color(0.68, 0.18, 0.11, 1.0))
 	normal_style.set_corner_radius_all(28)
 	var hover_style = _make_card_style(Color(0.22, 0.06, 0.06, 0.98), Color(1.0, 0.48, 0.18, 1.0))

@@ -118,7 +118,7 @@ func _setup_heal_after_wave_label() -> void:
 		heal_after_wave_label.name = "HealAfterWave"
 		heal_after_wave_label.layout_mode = 2
 		heal_after_wave_label.mouse_filter = Control.MOUSE_FILTER_STOP
-		heal_after_wave_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		heal_after_wave_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		heal_after_wave_label.add_theme_color_override("font_color", Color(1, 0.25882354, 0.2, 1))
 		heal_after_wave_label.add_theme_constant_override("outline_size", 4)
 		heal_after_wave_label.add_theme_font_size_override("font_size", 12)
@@ -141,7 +141,7 @@ func _setup_dash_cooldown_label() -> void:
 		dash_cooldown_label.name = "DashCooldown"
 		dash_cooldown_label.layout_mode = 2
 		dash_cooldown_label.mouse_filter = Control.MOUSE_FILTER_STOP
-		dash_cooldown_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		dash_cooldown_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		dash_cooldown_label.add_theme_color_override("font_color", Color(0.45, 0.74, 1.0, 1.0))
 		dash_cooldown_label.add_theme_constant_override("outline_size", 4)
 		dash_cooldown_label.add_theme_font_size_override("font_size", 12)
@@ -165,7 +165,7 @@ func _setup_healing_received_label() -> void:
 		healing_received_label.name = "HealingReceived"
 		healing_received_label.layout_mode = 2
 		healing_received_label.mouse_filter = Control.MOUSE_FILTER_STOP
-		healing_received_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		healing_received_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		healing_received_label.add_theme_color_override("font_color", Color(0.45, 0.74, 1.0, 1.0))
 		healing_received_label.add_theme_constant_override("outline_size", 4)
 		healing_received_label.add_theme_font_size_override("font_size", 12)
@@ -185,7 +185,7 @@ func _setup_rerolls_label() -> void:
 		rerolls_label.name = "Rerolls"
 		rerolls_label.layout_mode = 2
 		rerolls_label.mouse_filter = Control.MOUSE_FILTER_STOP
-		rerolls_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		rerolls_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		rerolls_label.add_theme_color_override("font_color", Color(0.45, 0.74, 1.0, 1.0))
 		rerolls_label.add_theme_constant_override("outline_size", 4)
 		rerolls_label.add_theme_font_size_override("font_size", 12)

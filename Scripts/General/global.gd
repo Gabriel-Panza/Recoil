@@ -170,20 +170,20 @@ const STARTING_ARM_OPTIONS = [
 	{
 		"id": "fast",
 		"name": "FAST ARM",
-		"summary": "Weak shots",
+		"summary": "Low Damage",
 		"details": "High control and short recoil."
 	},
 	{
 		"id": "heavy",
 		"name": "HEAVY ARM",
-		"summary": "Heavy shots",
-		"details": "Low control, strong recoil."
+		"summary": "High Damage",
+		"details": "Low control and strong recoil."
 	},
 	{
 		"id": "unstable",
 		"name": "UNSTABLE ARM",
-		"summary": "Alternating trajectories",
-		"details": "Piercing and ricochet shots alternate."
+		"summary": "Medium Damage",
+		"details": "Alternate between piercing and ricochet shots."
 	}
 ]
 

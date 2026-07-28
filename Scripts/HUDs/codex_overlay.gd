@@ -3,6 +3,8 @@ class_name CodexOverlay
 
 signal closed
 
+const CODEX_TITLE_COLOR := Color(1.0, 0.64, 0.26)
+
 const ENEMY_ENTRIES = [
 	{"id": "melee", "en": "Melee", "pt": "Corpo a Corpo", "en_desc": "Pursues the player and attacks at close range.", "pt_desc": "Persegue o jogador e ataca de perto."},
 	{"id": "ranged", "en": "Ranged", "pt": "Atirador", "en_desc": "Keeps its distance and fires aimed projectiles.", "pt_desc": "Mantem distancia e dispara projeteis mirados."},
@@ -96,7 +98,7 @@ func _build_ui() -> void:
 	var header = HBoxContainer.new()
 	header.add_theme_constant_override("separation", 20)
 	layout.add_child(header)
-	var title = _label(_tr("CODEX", "CODEX"), 27, Color(1.0, 0.64, 0.26))
+	var title = _label(_tr("CODEX", "CODEX"), 25, CODEX_TITLE_COLOR)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(title)
 	category_select = OptionButton.new()
@@ -106,6 +108,8 @@ func _build_ui() -> void:
 	category_select.add_item(_tr("Sins", "Pecados"), 2)
 	category_select.add_item(_tr("Passives", "Passivas"), 3)
 	category_select.add_item(_tr("Achievements", "Conquistas"), 4)
+	category_select.add_theme_font_size_override("font_size", 10)
+	category_select.get_popup().add_theme_font_size_override("font_size", 10)
 	category_select.item_selected.connect(func(_index): _refresh_entries())
 	header.add_child(category_select)
 
@@ -122,7 +126,7 @@ func _build_ui() -> void:
 	back_button.text = _tr("Back", "Voltar")
 	back_button.custom_minimum_size = Vector2(190, 46)
 	back_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	back_button.add_theme_font_size_override("font_size", 15)
+	back_button.add_theme_font_size_override("font_size", 13)
 	back_button.pressed.connect(hide_overlay)
 	layout.add_child(back_button)
 
@@ -188,11 +192,7 @@ func _populate_achievements() -> void:
 func _entry_card(title: String, description: String, discovered: bool) -> Button:
 	var card = Button.new()
 	card.custom_minimum_size = Vector2(0, 82)
-	card.text = "%s\n%s" % [title, description]
-	card.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	card.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	card.add_theme_font_size_override("font_size", 13)
-	card.add_theme_color_override("font_color", Color(0.94, 0.87, 0.76) if discovered else Color(0.55, 0.52, 0.52))
+	var text_color := Color(0.94, 0.87, 0.76) if discovered else Color(0.55, 0.52, 0.52)
 	var card_style = _style(
 		Color(0.12, 0.032, 0.045, 0.98) if discovered else Color(0.045, 0.035, 0.04, 0.96),
 		Color(0.62, 0.16, 0.1) if discovered else Color(0.25, 0.22, 0.23),
@@ -204,6 +204,31 @@ func _entry_card(title: String, description: String, discovered: bool) -> Button
 	focus_style.border_color = Color(1.0, 0.65, 0.22)
 	focus_style.set_border_width_all(3)
 	card.add_theme_stylebox_override("focus", focus_style)
+
+	var text_margin := MarginContainer.new()
+	text_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	text_margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	text_margin.add_theme_constant_override("margin_left", 14)
+	text_margin.add_theme_constant_override("margin_top", 9)
+	text_margin.add_theme_constant_override("margin_right", 14)
+	text_margin.add_theme_constant_override("margin_bottom", 9)
+	card.add_child(text_margin)
+
+	var text_layout := VBoxContainer.new()
+	text_layout.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	text_layout.alignment = BoxContainer.ALIGNMENT_CENTER
+	text_layout.add_theme_constant_override("separation", 5)
+	text_margin.add_child(text_layout)
+
+	var title_label := _label(title, 11, CODEX_TITLE_COLOR)
+	title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	text_layout.add_child(title_label)
+
+	var description_label := _label(description, 11, text_color)
+	description_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	description_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	text_layout.add_child(description_label)
 	return card
 
 func _tr(en: String, pt: String) -> String:

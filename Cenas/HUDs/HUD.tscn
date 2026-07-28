@@ -31,9 +31,9 @@ anchors_preset = -1
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_left = 923.0
-offset_top = 193.0
+offset_top = 211.0
 offset_right = 1140.0
-offset_bottom = 441.0
+offset_bottom = 423.0
 grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 3
@@ -53,6 +53,7 @@ theme_override_constants/margin_bottom = 10
 
 [node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/BarraLateralDireita/MarginContainer" unique_id=800542999]
 layout_mode = 2
+alignment = 1
 theme_override_constants/separation = 6
 
 [node name="HP_MaxHealth" type="Label" parent="HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer" unique_id=1234186629]
@@ -64,7 +65,7 @@ theme_override_colors/font_color = Color(1, 0.25882354, 0.2, 1)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 12
 text = "Health: 1000/1000"
-horizontal_alignment = 2
+horizontal_alignment = 1
 
 [node name="Ataque" type="Label" parent="HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer" unique_id=256650153]
 layout_mode = 2
@@ -74,7 +75,7 @@ theme_override_colors/font_color = Color(1, 0.25882354, 0.2, 1)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 12
 text = "Attack: 35"
-horizontal_alignment = 2
+horizontal_alignment = 1
 
 [node name="Atk_Speed" type="Label" parent="HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer" unique_id=357342291]
 layout_mode = 2
@@ -84,7 +85,7 @@ theme_override_colors/font_color = Color(1, 0.25882354, 0.2, 1)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 12
 text = "Atk-Speed: 100%"
-horizontal_alignment = 2
+horizontal_alignment = 1
 
 [node name="Recoil" type="Label" parent="HBoxContainer/BarraLateralDireita/MarginContainer/VBoxContainer" unique_id=41406402]
 layout_mode = 2
@@ -94,7 +95,7 @@ theme_override_colors/font_color = Color(1, 0.25882354, 0.2, 1)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 12
 text = "Recoil Force: 500"
-horizontal_alignment = 2
+horizontal_alignment = 1
 
 [node name="ProgressBar" type="TextureProgressBar" parent="." unique_id=1518424678]
 offset_left = 12.0
