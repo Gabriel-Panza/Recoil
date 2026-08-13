@@ -44,6 +44,8 @@ var steam = null
 var steam_connected: bool = false
 var steam_stats_ready: bool = false
 var steam_sync_pending: bool = false
+var steam_init_status: int = -1
+var steam_init_message: String = "Steam integration unavailable"
 var toast_layer: CanvasLayer
 var toast_queue: Array[String] = []
 var toast_active: bool = false
@@ -253,7 +255,10 @@ func _initialize_steam() -> void:
 	if init_method == "":
 		return
 	var init_result = steam.call(init_method)
+	_capture_steam_init_result(init_result)
 	if not _steam_init_succeeded(init_result):
+		if OS.is_debug_build():
+			push_warning("Steam initialization failed: %s" % steam_init_message)
 		steam = null
 		return
 	steam_connected = true
@@ -269,6 +274,13 @@ func _initialize_steam() -> void:
 	if steam.has_method("isCloudEnabledForAccount") and steam.has_method("setCloudEnabledForApp"):
 		if bool(steam.call("isCloudEnabledForAccount")):
 			steam.call("setCloudEnabledForApp", true)
+
+func _exit_tree() -> void:
+	if steam_connected and steam != null and steam.has_method("steamShutdown"):
+		steam.call("steamShutdown")
+	steam_connected = false
+	steam_stats_ready = false
+	steam_sync_pending = false
 
 func _on_steam_stats_received(_game_id = 0, _result = 0, _user_id = 0) -> void:
 	steam_stats_ready = true
@@ -318,6 +330,17 @@ func _steam_init_succeeded(result) -> bool:
 		return int(result) == 0
 	return true
 
+func _capture_steam_init_result(result) -> void:
+	if result is Dictionary:
+		steam_init_status = int(result.get("status", -1))
+		steam_init_message = str(result.get("verbal", result.get("message", "Unknown Steam result")))
+	elif result is bool:
+		steam_init_status = 0 if result else 1
+		steam_init_message = "Steamworks active" if result else "Steamworks failed to initialize"
+	elif result is int:
+		steam_init_status = int(result)
+		steam_init_message = "Steamworks active" if steam_init_status == 0 else "Steamworks failed with status %d" % steam_init_status
+
 func _push_achievement_to_steam(definition: Dictionary, store: bool = true) -> void:
 	if not steam_connected or not steam_stats_ready or steam == null:
 		return
@@ -348,6 +371,16 @@ func _first_steam_method(candidates: Array[String]) -> String:
 
 func is_steam_connected() -> bool:
 	return steam_connected
+
+func get_steam_diagnostics() -> Dictionary:
+	return {
+		"available": Engine.has_singleton("Steam"),
+		"connected": steam_connected,
+		"stats_ready": steam_stats_ready,
+		"cloud_available": is_steam_cloud_available(),
+		"status": steam_init_status,
+		"message": steam_init_message,
+	}
 
 func is_steam_cloud_available() -> bool:
 	if not steam_connected or steam == null:

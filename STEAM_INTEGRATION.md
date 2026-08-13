@@ -4,7 +4,7 @@ The game owns achievement progress locally. Steam is an optional backend detecte
 
 ## GodotSteam
 
-1. Install a Godot 4 compatible GodotSteam GDExtension.
+1. GodotSteam GDExtension 4.18.1 is installed in `addons/godotsteam` for Godot 4.6.2, Windows x86_64 and Linux x86_64.
 2. Use the production Steam App ID in the export setup and `steam_appid.txt` only for local development.
 3. Register every `steam_id` and non-empty `stat_id` from `Scripts/General/achievement_manager.gd` in Steamworks.
 4. Configure names, descriptions, locked icons, unlocked icons, localization and the Hidden flag in Steamworks.
@@ -38,3 +38,5 @@ Create one client-set Steam achievement for every `steam_id` in `AchievementMana
 - `STAT_STORY_ARMS_COMPLETED`, unlock value 3, progress achievement `ACH_ARSENAL_OF_PENANCE`.
 
 The local manager and Steam use a maximum-value merge. An unlock from either side is copied to the other side; achievements are never cleared by synchronization.
+
+SteamPipe build/export instructions now live in `steamworks/README.md`.
